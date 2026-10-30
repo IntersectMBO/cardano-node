@@ -1,0 +1,144 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# OPTIONS_GHC -Wno-orphans #-}</span><span> </span><span class="hs-comment">-- Outputable, Binary</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE DeriveDataTypeable #-}</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="annot"><span class="hs-comment">-- | Fixity</span></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="GHC.Hs.Basic.html"><span class="hs-identifier">GHC.Hs.Basic</span></a></span><span>
+</span><span id="line-8"></span><span>   </span><span class="hs-special">(</span><span> </span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Language.Haskell.Syntax.Basic.html"><span class="hs-identifier">Language.Haskell.Syntax.Basic</span></a></span><span>
+</span><span id="line-9"></span><span>   </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Prelude.html"><span class="hs-identifier">GHC.Prelude</span></a></span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Utils.Outputable.html"><span class="hs-identifier">GHC.Utils.Outputable</span></a></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Utils.Binary.html"><span class="hs-identifier">GHC.Utils.Binary</span></a></span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.21.2.0-inplace/src/Data.Data.html"><span class="hs-identifier">Data.Data</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Language.Haskell.Syntax.Basic.html"><span class="hs-identifier">Language.Haskell.Syntax.Basic</span></a></span><span>
+</span><span id="line-19"></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="GHC.Utils.Outputable.html#Outputable"><span class="hs-identifier hs-type">Outputable</span></a></span><span> </span><span class="annot"><a href="Language.Haskell.Syntax.Basic.html#LexicalFixity"><span class="hs-identifier hs-type">LexicalFixity</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-21"></span><span>  </span><span id="local-6989586621682516132"><span class="annot"><span class="annottext">ppr :: LexicalFixity -&gt; SDoc
+</span><a href="#local-6989586621682516132"><span class="hs-identifier hs-var hs-var hs-var">ppr</span></a></span></span><span> </span><span class="annot"><span class="annottext">LexicalFixity
+</span><a href="Language.Haskell.Syntax.Basic.html#Prefix"><span class="hs-identifier hs-var">Prefix</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; SDoc
+forall doc. IsLine doc =&gt; String -&gt; doc
+</span><a href="GHC.Utils.Outputable.html#text"><span class="hs-identifier hs-var">text</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Prefix&quot;</span></span><span>
+</span><span id="line-22"></span><span>  </span><span class="annot"><a href="GHC.Utils.Outputable.html#ppr"><span class="hs-identifier hs-var">ppr</span></a></span><span> </span><span class="annot"><span class="annottext">LexicalFixity
+</span><a href="Language.Haskell.Syntax.Basic.html#Infix"><span class="hs-identifier hs-var">Infix</span></a></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; SDoc
+forall doc. IsLine doc =&gt; String -&gt; doc
+</span><a href="GHC.Utils.Outputable.html#text"><span class="hs-identifier hs-var">text</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Infix&quot;</span></span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="GHC.Utils.Outputable.html#Outputable"><span class="hs-identifier hs-type">Outputable</span></a></span><span> </span><span class="annot"><a href="Language.Haskell.Syntax.Basic.html#FixityDirection"><span class="hs-identifier hs-type">FixityDirection</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-25"></span><span>    </span><span id="local-6989586621682516142"><span class="annot"><span class="annottext">ppr :: FixityDirection -&gt; SDoc
+</span><a href="GHC.Utils.Outputable.html#ppr"><span class="hs-identifier hs-var hs-var hs-var">ppr</span></a></span></span><span> </span><span class="annot"><span class="annottext">FixityDirection
+</span><a href="Language.Haskell.Syntax.Basic.html#InfixL"><span class="hs-identifier hs-var">InfixL</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; SDoc
+forall doc. IsLine doc =&gt; String -&gt; doc
+</span><a href="GHC.Utils.Outputable.html#text"><span class="hs-identifier hs-var">text</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;infixl&quot;</span></span><span>
+</span><span id="line-26"></span><span>    </span><span class="annot"><a href="GHC.Utils.Outputable.html#ppr"><span class="hs-identifier hs-var">ppr</span></a></span><span> </span><span class="annot"><span class="annottext">FixityDirection
+</span><a href="Language.Haskell.Syntax.Basic.html#InfixR"><span class="hs-identifier hs-var">InfixR</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; SDoc
+forall doc. IsLine doc =&gt; String -&gt; doc
+</span><a href="GHC.Utils.Outputable.html#text"><span class="hs-identifier hs-var">text</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;infixr&quot;</span></span><span>
+</span><span id="line-27"></span><span>    </span><span class="annot"><a href="GHC.Utils.Outputable.html#ppr"><span class="hs-identifier hs-var">ppr</span></a></span><span> </span><span class="annot"><span class="annottext">FixityDirection
+</span><a href="Language.Haskell.Syntax.Basic.html#InfixN"><span class="hs-identifier hs-var">InfixN</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; SDoc
+forall doc. IsLine doc =&gt; String -&gt; doc
+</span><a href="GHC.Utils.Outputable.html#text"><span class="hs-identifier hs-var">text</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;infix&quot;</span></span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="GHC.Utils.Outputable.html#Outputable"><span class="hs-identifier hs-type">Outputable</span></a></span><span> </span><span class="annot"><a href="Language.Haskell.Syntax.Basic.html#Fixity"><span class="hs-identifier hs-type">Fixity</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-30"></span><span>    </span><span id="local-6989586621682516152"><span class="annot"><span class="annottext">ppr :: Fixity -&gt; SDoc
+</span><a href="GHC.Utils.Outputable.html#ppr"><span class="hs-identifier hs-var hs-var hs-var">ppr</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Language.Haskell.Syntax.Basic.html#Fixity"><span class="hs-identifier hs-type">Fixity</span></a></span><span> </span><span id="local-6989586621682516154"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621682516154"><span class="hs-identifier hs-var">prec</span></a></span></span><span> </span><span id="local-6989586621682516155"><span class="annot"><span class="annottext">FixityDirection
+</span><a href="#local-6989586621682516155"><span class="hs-identifier hs-var">dir</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[SDoc] -&gt; SDoc
+forall doc. IsLine doc =&gt; [doc] -&gt; doc
+</span><a href="GHC.Utils.Outputable.html#hcat"><span class="hs-identifier hs-var">hcat</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">FixityDirection -&gt; SDoc
+forall a. Outputable a =&gt; a -&gt; SDoc
+</span><a href="GHC.Utils.Outputable.html#ppr"><span class="hs-identifier hs-var">ppr</span></a></span><span> </span><span class="annot"><span class="annottext">FixityDirection
+</span><a href="#local-6989586621682516155"><span class="hs-identifier hs-var">dir</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">SDoc
+forall doc. IsLine doc =&gt; doc
+</span><a href="GHC.Utils.Outputable.html#space"><span class="hs-identifier hs-var">space</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int -&gt; SDoc
+forall doc. IsLine doc =&gt; Int -&gt; doc
+</span><a href="GHC.Utils.Outputable.html#int"><span class="hs-identifier hs-var">int</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621682516154"><span class="hs-identifier hs-var">prec</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-31"></span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621682516161"><span class="annot"><a href="GHC.Utils.Binary.html#Binary"><span class="hs-identifier hs-type">Binary</span></a></span><span> </span><span class="annot"><a href="Language.Haskell.Syntax.Basic.html#Fixity"><span class="hs-identifier hs-type">Fixity</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-34"></span><span>    </span><span id="local-6989586621682516172"><span class="annot"><span class="annottext">put_ :: WriteBinHandle -&gt; Fixity -&gt; IO ()
+</span><a href="#local-6989586621682516172"><span class="hs-identifier hs-var hs-var hs-var">put_</span></a></span></span><span> </span><span id="local-6989586621682516174"><span class="annot"><span class="annottext">WriteBinHandle
+</span><a href="#local-6989586621682516174"><span class="hs-identifier hs-var">bh</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Language.Haskell.Syntax.Basic.html#Fixity"><span class="hs-identifier hs-type">Fixity</span></a></span><span> </span><span id="local-6989586621682516175"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621682516175"><span class="hs-identifier hs-var">aa</span></a></span></span><span> </span><span id="local-6989586621682516176"><span class="annot"><span class="annottext">FixityDirection
+</span><a href="#local-6989586621682516176"><span class="hs-identifier hs-var">ab</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-35"></span><span>            </span><span class="annot"><span class="annottext">WriteBinHandle -&gt; Int -&gt; IO ()
+forall a. Binary a =&gt; WriteBinHandle -&gt; a -&gt; IO ()
+</span><a href="GHC.Utils.Binary.html#put_"><span class="hs-identifier hs-var">put_</span></a></span><span> </span><span class="annot"><span class="annottext">WriteBinHandle
+</span><a href="#local-6989586621682516174"><span class="hs-identifier hs-var">bh</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621682516175"><span class="hs-identifier hs-var">aa</span></a></span><span>
+</span><span id="line-36"></span><span>            </span><span class="annot"><span class="annottext">WriteBinHandle -&gt; FixityDirection -&gt; IO ()
+forall a. Binary a =&gt; WriteBinHandle -&gt; a -&gt; IO ()
+</span><a href="GHC.Utils.Binary.html#put_"><span class="hs-identifier hs-var">put_</span></a></span><span> </span><span class="annot"><span class="annottext">WriteBinHandle
+</span><a href="#local-6989586621682516174"><span class="hs-identifier hs-var">bh</span></a></span><span> </span><span class="annot"><span class="annottext">FixityDirection
+</span><a href="#local-6989586621682516176"><span class="hs-identifier hs-var">ab</span></a></span><span>
+</span><span id="line-37"></span><span>    </span><span id="local-6989586621682516182"><span class="annot"><span class="annottext">get :: ReadBinHandle -&gt; IO Fixity
+</span><a href="#local-6989586621682516182"><span class="hs-identifier hs-var hs-var hs-var">get</span></a></span></span><span> </span><span id="local-6989586621682516184"><span class="annot"><span class="annottext">ReadBinHandle
+</span><a href="#local-6989586621682516184"><span class="hs-identifier hs-var">bh</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-38"></span><span>          </span><span id="local-6989586621682516185"><span class="annot"><a href="#local-6989586621682516185"><span class="hs-identifier hs-var">aa</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">ReadBinHandle -&gt; IO Int
+forall a. Binary a =&gt; ReadBinHandle -&gt; IO a
+</span><a href="GHC.Utils.Binary.html#get"><span class="hs-identifier hs-var">get</span></a></span><span> </span><span class="annot"><span class="annottext">ReadBinHandle
+</span><a href="#local-6989586621682516184"><span class="hs-identifier hs-var">bh</span></a></span><span>
+</span><span id="line-39"></span><span>          </span><span id="local-6989586621682516186"><span class="annot"><a href="#local-6989586621682516186"><span class="hs-identifier hs-var">ab</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><a href="GHC.Utils.Binary.html#get"><span class="hs-identifier hs-type">get</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682516184"><span class="hs-identifier hs-type">bh</span></a></span><span>
+</span><span id="line-40"></span><span>          </span><span class="annot"><span class="hs-identifier hs-type">return</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Language.Haskell.Syntax.Basic.html#Fixity"><span class="hs-identifier hs-type">Fixity</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682516185"><span class="hs-identifier hs-type">aa</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682516186"><span class="hs-identifier hs-type">ab</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span>
+</span><span id="line-42"></span><span class="hs-comment">------------------------</span><span>
+</span><span id="line-43"></span><span>
+</span><span id="line-44"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621682516189"><span class="annot"><a href="GHC.Utils.Binary.html#Binary"><span class="hs-identifier hs-type">Binary</span></a></span><span> </span><span class="annot"><a href="Language.Haskell.Syntax.Basic.html#FixityDirection"><span class="hs-identifier hs-type">FixityDirection</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-45"></span><span>    </span><span id="local-6989586621682516196"><span class="annot"><span class="annottext">put_ :: WriteBinHandle -&gt; FixityDirection -&gt; IO ()
+</span><a href="GHC.Utils.Binary.html#put_"><span class="hs-identifier hs-var hs-var hs-var">put_</span></a></span></span><span> </span><span id="local-6989586621682516197"><span class="annot"><span class="annottext">WriteBinHandle
+</span><a href="#local-6989586621682516197"><span class="hs-identifier hs-var">bh</span></a></span></span><span> </span><span class="annot"><span class="annottext">FixityDirection
+</span><a href="Language.Haskell.Syntax.Basic.html#InfixL"><span class="hs-identifier hs-var">InfixL</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-46"></span><span>            </span><span class="annot"><span class="annottext">WriteBinHandle -&gt; Word8 -&gt; IO ()
+</span><a href="GHC.Utils.Binary.html#putByte"><span class="hs-identifier hs-var">putByte</span></a></span><span> </span><span class="annot"><span class="annottext">WriteBinHandle
+</span><a href="#local-6989586621682516197"><span class="hs-identifier hs-var">bh</span></a></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-47"></span><span>    </span><span class="annot"><a href="GHC.Utils.Binary.html#put_"><span class="hs-identifier hs-var">put_</span></a></span><span> </span><span id="local-6989586621682516199"><span class="annot"><span class="annottext">WriteBinHandle
+</span><a href="#local-6989586621682516199"><span class="hs-identifier hs-var">bh</span></a></span></span><span> </span><span class="annot"><span class="annottext">FixityDirection
+</span><a href="Language.Haskell.Syntax.Basic.html#InfixR"><span class="hs-identifier hs-var">InfixR</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-48"></span><span>            </span><span class="annot"><span class="annottext">WriteBinHandle -&gt; Word8 -&gt; IO ()
+</span><a href="GHC.Utils.Binary.html#putByte"><span class="hs-identifier hs-var">putByte</span></a></span><span> </span><span class="annot"><span class="annottext">WriteBinHandle
+</span><a href="#local-6989586621682516199"><span class="hs-identifier hs-var">bh</span></a></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-49"></span><span>    </span><span class="annot"><a href="GHC.Utils.Binary.html#put_"><span class="hs-identifier hs-var">put_</span></a></span><span> </span><span id="local-6989586621682516200"><span class="annot"><span class="annottext">WriteBinHandle
+</span><a href="#local-6989586621682516200"><span class="hs-identifier hs-var">bh</span></a></span></span><span> </span><span class="annot"><span class="annottext">FixityDirection
+</span><a href="Language.Haskell.Syntax.Basic.html#InfixN"><span class="hs-identifier hs-var">InfixN</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-50"></span><span>            </span><span class="annot"><span class="annottext">WriteBinHandle -&gt; Word8 -&gt; IO ()
+</span><a href="GHC.Utils.Binary.html#putByte"><span class="hs-identifier hs-var">putByte</span></a></span><span> </span><span class="annot"><span class="annottext">WriteBinHandle
+</span><a href="#local-6989586621682516200"><span class="hs-identifier hs-var">bh</span></a></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">2</span></span><span>
+</span><span id="line-51"></span><span>    </span><span id="local-6989586621682516210"><span class="annot"><span class="annottext">get :: ReadBinHandle -&gt; IO FixityDirection
+</span><a href="GHC.Utils.Binary.html#get"><span class="hs-identifier hs-var hs-var hs-var">get</span></a></span></span><span> </span><span id="local-6989586621682516211"><span class="annot"><span class="annottext">ReadBinHandle
+</span><a href="#local-6989586621682516211"><span class="hs-identifier hs-var">bh</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-52"></span><span>            </span><span id="local-6989586621682516212"><span class="annot"><a href="#local-6989586621682516212"><span class="hs-identifier hs-var">h</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">ReadBinHandle -&gt; IO Word8
+</span><a href="GHC.Utils.Binary.html#getByte"><span class="hs-identifier hs-var">getByte</span></a></span><span> </span><span class="annot"><span class="annottext">ReadBinHandle
+</span><a href="#local-6989586621682516211"><span class="hs-identifier hs-var">bh</span></a></span><span>
+</span><span id="line-53"></span><span>            </span><span class="hs-keyword">case</span><span> </span><span class="annot"><a href="#local-6989586621682516212"><span class="hs-identifier hs-type">h</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-54"></span><span>              </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">FixityDirection -&gt; IO FixityDirection
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><span class="hs-identifier hs-var">return</span></span><span> </span><span class="annot"><span class="annottext">FixityDirection
+</span><a href="Language.Haskell.Syntax.Basic.html#InfixL"><span class="hs-identifier hs-var">InfixL</span></a></span><span>
+</span><span id="line-55"></span><span>              </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">1</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">FixityDirection -&gt; IO FixityDirection
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><span class="hs-identifier hs-var">return</span></span><span> </span><span class="annot"><span class="annottext">FixityDirection
+</span><a href="Language.Haskell.Syntax.Basic.html#InfixR"><span class="hs-identifier hs-var">InfixR</span></a></span><span>
+</span><span id="line-56"></span><span>              </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">FixityDirection -&gt; IO FixityDirection
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><span class="hs-identifier hs-var">return</span></span><span> </span><span class="annot"><span class="annottext">FixityDirection
+</span><a href="Language.Haskell.Syntax.Basic.html#InfixN"><span class="hs-identifier hs-var">InfixN</span></a></span><span>
+</span><span id="line-57"></span></pre></body></html>

@@ -1,0 +1,174 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span id="local-6989586621679729695"><span id="local-6989586621679729696"></span></span><span class="hs-pragma">{-# LANGUAGE Trustworthy       #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE CPP               #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE NoImplicitPrelude #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE StandaloneDeriving #-}</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-comment">-----------------------------------------------------------------------------</span><span>
+</span><span id="line-7"></span><span class="hs-comment">-- |</span><span>
+</span><span id="line-8"></span><span class="hs-comment">-- Module      :  GHC.Internal.IO.SubSystem</span><span>
+</span><span id="line-9"></span><span class="hs-comment">-- Copyright   :  (c) The University of Glasgow, 2017</span><span>
+</span><span id="line-10"></span><span class="hs-comment">-- License     :  see libraries/base/LICENSE</span><span>
+</span><span id="line-11"></span><span class="hs-comment">--</span><span>
+</span><span id="line-12"></span><span class="hs-comment">-- Maintainer  :  libraries@haskell.org</span><span>
+</span><span id="line-13"></span><span class="hs-comment">-- Stability   :  internal</span><span>
+</span><span id="line-14"></span><span class="hs-comment">-- Portability :  non-portable</span><span>
+</span><span id="line-15"></span><span class="hs-comment">--</span><span>
+</span><span id="line-16"></span><span class="hs-comment">-- The 'IoSubSystem' control interface.  These methods can be used to disambiguate</span><span>
+</span><span id="line-17"></span><span class="hs-comment">-- between the two operations.</span><span>
+</span><span id="line-18"></span><span class="hs-comment">--</span><span>
+</span><span id="line-19"></span><span class="hs-comment">-- /The API of this module is unstable and not meant to be consumed by the general public./</span><span>
+</span><span id="line-20"></span><span class="hs-comment">-- If you absolutely must depend on it, make sure to use a tight upper</span><span>
+</span><span id="line-21"></span><span class="hs-comment">-- bound, e.g., @base &lt; 4.X@ rather than @base &lt; 5@, because the interface can</span><span>
+</span><span id="line-22"></span><span class="hs-comment">-- change rapidly without much warning.</span><span>
+</span><span id="line-23"></span><span class="hs-comment">--</span><span>
+</span><span id="line-24"></span><span class="hs-comment">-----------------------------------------------------------------------------</span><span>
+</span><span id="line-25"></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="GHC.Internal.IO.SubSystem.html"><span class="hs-identifier">GHC.Internal.IO.SubSystem</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-27"></span><span>  </span><span class="annot"><a href="GHC.Internal.IO.SubSystem.html#withIoSubSystem"><span class="hs-identifier">withIoSubSystem</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-28"></span><span>  </span><span class="annot"><a href="GHC.Internal.IO.SubSystem.html#withIoSubSystem%27"><span class="hs-identifier">withIoSubSystem'</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-29"></span><span>  </span><span class="annot"><a href="GHC.Internal.IO.SubSystem.html#whenIoSubSystem"><span class="hs-identifier">whenIoSubSystem</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-30"></span><span>  </span><span class="annot"><a href="GHC.Internal.IO.SubSystem.html#ioSubSystem"><span class="hs-identifier">ioSubSystem</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-31"></span><span>  </span><span class="annot"><a href="GHC.Internal.IO.SubSystem.html#IoSubSystem"><span class="hs-identifier">IoSubSystem</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-32"></span><span>  </span><span class="annot"><a href="GHC.Internal.IO.SubSystem.html#conditional"><span class="hs-identifier">conditional</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-33"></span><span>  </span><span class="annot"><a href="GHC.Internal.IO.SubSystem.html#%3C%21%3E"><span class="hs-operator">(&lt;!&gt;)</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-34"></span><span>  </span><span class="annot"><a href="GHC.Internal.IO.SubSystem.html#isWindowsNativeIO"><span class="hs-identifier">isWindowsNativeIO</span></a></span><span>
+</span><span id="line-35"></span><span> </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Internal.Base.html"><span class="hs-identifier">GHC.Internal.Base</span></a></span><span>
+</span><span id="line-38"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Internal.Show.html"><span class="hs-identifier">GHC.Internal.Show</span></a></span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Internal.Enum.html"><span class="hs-identifier">GHC.Internal.Enum</span></a></span><span class="hs-cpp">
+
+#if defined(mingw32_HOST_OS)
+</span><span class="hs-keyword">import</span><span> </span><span class="hs-identifier">GHC.Internal.IO.Unsafe</span><span>
+</span><span id="line-43"></span><span class="hs-keyword">import</span><span> </span><span class="hs-identifier">GHC.Internal.Foreign.Ptr</span><span>
+</span><span id="line-44"></span><span class="hs-keyword">import</span><span> </span><span class="hs-identifier">GHC.Internal.Foreign.Storable</span><span>
+</span><span id="line-45"></span><span class="hs-keyword">import</span><span> </span><span class="hs-identifier">GHC.Internal.Foreign.C.Types</span><span>
+</span><span id="line-46"></span><span class="hs-keyword">import</span><span> </span><span class="hs-identifier">GHC.Internal.Foreign.Marshal.Utils</span><span class="hs-cpp">
+#endif
+</span><span>
+</span><span id="line-49"></span><span class="hs-keyword">infixl</span><span> </span><span class="hs-number">7</span><span> </span><span class="annot"><a href="GHC.Internal.IO.SubSystem.html#%3C%21%3E"><span class="hs-operator hs-type">&lt;!&gt;</span></a></span><span>
+</span><span id="line-50"></span><span>
+</span><span id="line-51"></span><span class="hs-comment">-- | The I/O SubSystem to use in the program.</span><span>
+</span><span id="line-52"></span><span class="hs-comment">--</span><span>
+</span><span id="line-53"></span><span class="hs-comment">-- @since base-4.9.0.0</span><span>
+</span><span id="line-54"></span><span class="hs-keyword">data</span><span> </span><span id="IoSubSystem"><span class="annot"><a href="GHC.Internal.IO.SubSystem.html#IoSubSystem"><span class="hs-identifier hs-var">IoSubSystem</span></a></span></span><span>
+</span><span id="line-55"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="IoPOSIX"><span class="annot"><a href="GHC.Internal.IO.SubSystem.html#IoPOSIX"><span class="hs-identifier hs-var">IoPOSIX</span></a></span></span><span>   </span><span class="annot"><span class="hs-comment">-- ^ Use a POSIX I/O Sub-System</span></span><span>
+</span><span id="line-56"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="IoNative"><span class="annot"><a href="GHC.Internal.IO.SubSystem.html#IoNative"><span class="hs-identifier hs-var">IoNative</span></a></span></span><span>  </span><span class="hs-comment">-- ^ Use platform native Sub-System. For unix OSes this is the</span><span>
+</span><span id="line-57"></span><span>              </span><span class="hs-comment">--   same as IoPOSIX, but on Windows this means use the Windows</span><span>
+</span><span id="line-58"></span><span>              </span><span class="hs-comment">--   native APIs for I/O, including IOCP and RIO.</span><span>
+</span><span id="line-59"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679729711"><span id="local-6989586621679729716"><span class="annot"><span class="annottext">IoSubSystem -&gt; IoSubSystem -&gt; Bool
+(IoSubSystem -&gt; IoSubSystem -&gt; Bool)
+-&gt; (IoSubSystem -&gt; IoSubSystem -&gt; Bool) -&gt; Eq IoSubSystem
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: IoSubSystem -&gt; IoSubSystem -&gt; Bool
+== :: IoSubSystem -&gt; IoSubSystem -&gt; Bool
+$c/= :: IoSubSystem -&gt; IoSubSystem -&gt; Bool
+/= :: IoSubSystem -&gt; IoSubSystem -&gt; Bool
+</span><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-60"></span><span>
+</span><span id="line-61"></span><span class="hs-comment">-- N.B. These are currently unused by GHC but is needed for stability of @base@.</span><span>
+</span><span id="line-62"></span><span id="local-6989586621679729720"><span id="local-6989586621679729727"><span id="local-6989586621679729732"><span id="local-6989586621679729738"><span id="local-6989586621679729741"><span id="local-6989586621679729746"><span id="local-6989586621679729753"><span id="local-6989586621679729757"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="GHC.Internal.Enum.html#Enum"><span class="hs-identifier hs-type">Enum</span></a></span><span> </span><span class="annot"><a href="GHC.Internal.IO.SubSystem.html#IoSubSystem"><span class="hs-identifier hs-type">IoSubSystem</span></a></span></span></span></span></span></span></span></span></span><span>
+</span><span id="line-63"></span><span id="local-6989586621679729765"><span id="local-6989586621679729767"><span id="local-6989586621679729771"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="GHC.Internal.Show.html#Show"><span class="hs-identifier hs-type">Show</span></a></span><span> </span><span class="annot"><a href="GHC.Internal.IO.SubSystem.html#IoSubSystem"><span class="hs-identifier hs-type">IoSubSystem</span></a></span></span></span></span><span>
+</span><span id="line-64"></span><span>
+</span><span id="line-65"></span><span class="hs-comment">-- | Conditionally execute an action depending on the configured I/O subsystem.</span><span>
+</span><span id="line-66"></span><span class="hs-comment">-- On POSIX systems always execute the first action.</span><span>
+</span><span id="line-67"></span><span class="hs-comment">-- On Windows execute the second action if WINIO as active, otherwise fall back to</span><span>
+</span><span id="line-68"></span><span class="hs-comment">-- the first action.</span><span>
+</span><span id="line-69"></span><span id="local-6989586621679729687"><span class="annot"><a href="GHC.Internal.IO.SubSystem.html#conditional"><span class="hs-identifier hs-type">conditional</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679729687"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679729687"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679729687"><span class="hs-identifier hs-type">a</span></a></span></span><span class="hs-cpp">
+#if defined(mingw32_HOST_OS)
+</span><span class="hs-identifier">conditional</span><span> </span><span class="hs-identifier">posix</span><span> </span><span class="hs-identifier">windows</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-72"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="hs-identifier">ioSubSystem</span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-73"></span><span>    </span><span class="hs-identifier">IoPOSIX</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-identifier">posix</span><span>
+</span><span id="line-74"></span><span>    </span><span class="hs-identifier">IoNative</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-identifier">windows</span><span class="hs-cpp">
+#else
+</span><span id="conditional"><span class="annot"><span class="annottext">conditional :: forall a. a -&gt; a -&gt; a
+</span><a href="GHC.Internal.IO.SubSystem.html#conditional"><span class="hs-identifier hs-var hs-var">conditional</span></a></span></span><span> </span><span id="local-6989586621679729775"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679729775"><span class="hs-identifier hs-var">posix</span></a></span></span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-identifier">_</span></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679729775"><span class="hs-identifier hs-var">posix</span></a></span><span class="hs-cpp">
+#endif
+</span><span>
+</span><span id="line-79"></span><span class="hs-comment">-- | Infix version of `conditional`.</span><span>
+</span><span id="line-80"></span><span class="hs-comment">-- posix &lt;!&gt; windows == conditional posix windows</span><span>
+</span><span id="line-81"></span><span id="local-6989586621679729776"><span class="annot"><a href="GHC.Internal.IO.SubSystem.html#%3C%21%3E"><span class="hs-operator hs-type">(&lt;!&gt;)</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679729776"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679729776"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679729776"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-82"></span><span id="%3C%21%3E"><span class="annot"><span class="annottext">&lt;!&gt; :: forall a. a -&gt; a -&gt; a
+</span><a href="GHC.Internal.IO.SubSystem.html#%3C%21%3E"><span class="hs-operator hs-var hs-var">(&lt;!&gt;)</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; a -&gt; a
+forall a. a -&gt; a -&gt; a
+</span><a href="GHC.Internal.IO.SubSystem.html#conditional"><span class="hs-identifier hs-var">conditional</span></a></span><span>
+</span><span id="line-83"></span><span>
+</span><span id="line-84"></span><span class="annot"><a href="GHC.Internal.IO.SubSystem.html#isWindowsNativeIO"><span class="hs-identifier hs-type">isWindowsNativeIO</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span>
+</span><span id="line-85"></span><span id="isWindowsNativeIO"><span class="annot"><span class="annottext">isWindowsNativeIO :: Bool
+</span><a href="GHC.Internal.IO.SubSystem.html#isWindowsNativeIO"><span class="hs-identifier hs-var hs-var">isWindowsNativeIO</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+forall a. a -&gt; a -&gt; a
+</span><a href="GHC.Internal.IO.SubSystem.html#%3C%21%3E"><span class="hs-operator hs-var">&lt;!&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span>
+</span><span id="line-86"></span><span>
+</span><span id="line-87"></span><span class="hs-comment">-- | The 'IoSubSystem' in use.</span><span>
+</span><span id="line-88"></span><span class="hs-comment">--</span><span>
+</span><span id="line-89"></span><span class="hs-comment">-- This is needed to optimize support for different IO Managers on Windows.</span><span>
+</span><span id="line-90"></span><span class="hs-comment">-- GHC supports both the new WinIO manager as well as the old MIO (threaded),</span><span>
+</span><span id="line-91"></span><span class="hs-comment">-- and ancient win32-legacy (non-threaded) ones. The WinIO manager uses native</span><span>
+</span><span id="line-92"></span><span class="hs-comment">-- Win32 HANDLEs, whereas the other two use posix style FDs (via translation</span><span>
+</span><span id="line-93"></span><span class="hs-comment">-- layers).</span><span>
+</span><span id="line-94"></span><span class="hs-comment">--</span><span>
+</span><span id="line-95"></span><span class="hs-comment">-- In many places in the I\/O base library code, for correctness or performance</span><span>
+</span><span id="line-96"></span><span class="hs-comment">-- on Windows, we have to take different code paths depending on which style of</span><span>
+</span><span id="line-97"></span><span class="hs-comment">-- IO manager is in use. The IO manager is set on RTS startup (and the default</span><span>
+</span><span id="line-98"></span><span class="hs-comment">-- choice can be overridden using RTS flags). On Windows this value is obtained</span><span>
+</span><span id="line-99"></span><span class="hs-comment">-- by reading a global variable that is set by the RTS IOManager on startup.</span><span>
+</span><span id="line-100"></span><span class="hs-comment">--</span><span>
+</span><span id="line-101"></span><span class="hs-comment">-- On non-Windows systems this value is always 'IoPOSIX'.</span><span>
+</span><span id="line-102"></span><span class="hs-comment">--</span><span>
+</span><span id="line-103"></span><span class="annot"><a href="GHC.Internal.IO.SubSystem.html#ioSubSystem"><span class="hs-identifier hs-type">ioSubSystem</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Internal.IO.SubSystem.html#IoSubSystem"><span class="hs-identifier hs-type">IoSubSystem</span></a></span><span class="hs-cpp">
+#if defined(mingw32_HOST_OS)
+</span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="hs-pragma">ioSubSystem</span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-106"></span><span class="hs-identifier">ioSubSystem</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-107"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="hs-identifier">toBool</span><span> </span><span class="hs-identifier">ioManagerIsWin32NativeCBool</span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-108"></span><span>    </span><span class="hs-identifier">False</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-identifier">IoPOSIX</span><span>
+</span><span id="line-109"></span><span>    </span><span class="hs-identifier">True</span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-identifier">IoNative</span><span>
+</span><span id="line-110"></span><span>
+</span><span id="line-111"></span><span class="hs-pragma">{-# NOINLINE</span><span> </span><span class="hs-pragma">ioManagerIsWin32NativeCBool</span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-112"></span><span class="hs-identifier">ioManagerIsWin32NativeCBool</span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-identifier">CBool</span><span>
+</span><span id="line-113"></span><span class="hs-identifier">ioManagerIsWin32NativeCBool</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-114"></span><span>  </span><span class="hs-identifier">unsafeDupablePerformIO</span><span> </span><span class="hs-operator">$</span><span> </span><span class="hs-identifier">peek</span><span> </span><span class="hs-identifier">ioManagerIsWin32NativePtr</span><span>
+</span><span id="line-115"></span><span>
+</span><span id="line-116"></span><span class="hs-keyword">foreign</span><span> </span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">ccall</span><span> </span><span class="hs-string">&quot;&amp;rts_IOManagerIsWin32Native&quot;</span><span>
+</span><span id="line-117"></span><span>  </span><span class="hs-identifier">ioManagerIsWin32NativePtr</span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-identifier">Ptr</span><span> </span><span class="hs-identifier">CBool</span><span class="hs-cpp">
+#else
+</span><span id="ioSubSystem"><span class="annot"><span class="annottext">ioSubSystem :: IoSubSystem
+</span><a href="GHC.Internal.IO.SubSystem.html#ioSubSystem"><span class="hs-identifier hs-var hs-var">ioSubSystem</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IoSubSystem
+</span><a href="GHC.Internal.IO.SubSystem.html#IoPOSIX"><span class="hs-identifier hs-var">IoPOSIX</span></a></span><span class="hs-cpp">
+#endif
+</span><span>
+</span><span id="line-122"></span><span id="local-6989586621679729690"><span class="annot"><a href="GHC.Internal.IO.SubSystem.html#withIoSubSystem"><span class="hs-identifier hs-type">withIoSubSystem</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Internal.IO.SubSystem.html#IoSubSystem"><span class="hs-identifier hs-type">IoSubSystem</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679729690"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679729690"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-123"></span><span id="withIoSubSystem"><span class="annot"><span class="annottext">withIoSubSystem :: forall a. (IoSubSystem -&gt; IO a) -&gt; IO a
+</span><a href="GHC.Internal.IO.SubSystem.html#withIoSubSystem"><span class="hs-identifier hs-var hs-var">withIoSubSystem</span></a></span></span><span> </span><span id="local-6989586621679729777"><span class="annot"><span class="annottext">IoSubSystem -&gt; IO a
+</span><a href="#local-6989586621679729777"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IoSubSystem -&gt; IO a
+</span><a href="#local-6989586621679729777"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">IoSubSystem
+</span><a href="GHC.Internal.IO.SubSystem.html#ioSubSystem"><span class="hs-identifier hs-var">ioSubSystem</span></a></span><span>
+</span><span id="line-124"></span><span>
+</span><span id="line-125"></span><span id="local-6989586621679729692"><span class="annot"><a href="GHC.Internal.IO.SubSystem.html#withIoSubSystem%27"><span class="hs-identifier hs-type">withIoSubSystem'</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Internal.IO.SubSystem.html#IoSubSystem"><span class="hs-identifier hs-type">IoSubSystem</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679729692"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679729692"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-126"></span><span id="withIoSubSystem%27"><span class="annot"><span class="annottext">withIoSubSystem' :: forall a. (IoSubSystem -&gt; a) -&gt; a
+</span><a href="GHC.Internal.IO.SubSystem.html#withIoSubSystem%27"><span class="hs-identifier hs-var hs-var">withIoSubSystem'</span></a></span></span><span> </span><span id="local-6989586621679729778"><span class="annot"><span class="annottext">IoSubSystem -&gt; a
+</span><a href="#local-6989586621679729778"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IoSubSystem -&gt; a
+</span><a href="#local-6989586621679729778"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">IoSubSystem
+</span><a href="GHC.Internal.IO.SubSystem.html#ioSubSystem"><span class="hs-identifier hs-var">ioSubSystem</span></a></span><span>
+</span><span id="line-127"></span><span>
+</span><span id="line-128"></span><span class="annot"><a href="GHC.Internal.IO.SubSystem.html#whenIoSubSystem"><span class="hs-identifier hs-type">whenIoSubSystem</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Internal.IO.SubSystem.html#IoSubSystem"><span class="hs-identifier hs-type">IoSubSystem</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-129"></span><span id="whenIoSubSystem"><span class="annot"><span class="annottext">whenIoSubSystem :: IoSubSystem -&gt; IO () -&gt; IO ()
+</span><a href="GHC.Internal.IO.SubSystem.html#whenIoSubSystem"><span class="hs-identifier hs-var hs-var">whenIoSubSystem</span></a></span></span><span> </span><span id="local-6989586621679729779"><span class="annot"><span class="annottext">IoSubSystem
+</span><a href="#local-6989586621679729779"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span id="local-6989586621679729780"><span class="annot"><span class="annottext">IO ()
+</span><a href="#local-6989586621679729780"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span> </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679729781"><span class="annot"><span class="annottext">sub :: IoSubSystem
+</span><a href="#local-6989586621679729781"><span class="hs-identifier hs-var hs-var">sub</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IoSubSystem
+</span><a href="GHC.Internal.IO.SubSystem.html#ioSubSystem"><span class="hs-identifier hs-var">ioSubSystem</span></a></span><span>
+</span><span id="line-130"></span><span>                         </span><span class="annot"><span class="annottext">Bool -&gt; IO () -&gt; IO ()
+forall (f :: * -&gt; *). Applicative f =&gt; Bool -&gt; f () -&gt; f ()
+</span><a href="GHC.Internal.Base.html#when"><span class="hs-identifier hs-var">when</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">IoSubSystem
+</span><a href="#local-6989586621679729781"><span class="hs-identifier hs-var">sub</span></a></span><span> </span><span class="annot"><span class="annottext">IoSubSystem -&gt; IoSubSystem -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="../../ghc-prim-0.13.0-inplace/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">IoSubSystem
+</span><a href="#local-6989586621679729779"><span class="hs-identifier hs-var">m</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">IO ()
+</span><a href="#local-6989586621679729780"><span class="hs-identifier hs-var">f</span></a></span><span>
+</span><span id="line-131"></span><span>
+</span><span id="line-132"></span></pre></body></html>

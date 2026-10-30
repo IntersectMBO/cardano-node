@@ -1,0 +1,299 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE MagicHash #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="annot"><span class="hs-comment">{- |
+This module defines the types and functions necessary for an Alex-generated
+lexer.
+
+https://haskell-alex.readthedocs.io/en/latest/api.html#
+-}</span></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="GHC.Parser.Lexer.Interface.html"><span class="hs-identifier">GHC.Parser.Lexer.Interface</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-10"></span><span>  </span><span class="annot"><a href="GHC.Parser.Lexer.Interface.html#AlexInput"><span class="hs-identifier">AlexInput</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-11"></span><span>  </span><span class="annot"><a href="GHC.Parser.Lexer.Interface.html#alexGetByte"><span class="hs-identifier">alexGetByte</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-12"></span><span>  </span><span class="annot"><a href="GHC.Parser.Lexer.Interface.html#alexInputPrevChar"><span class="hs-identifier">alexInputPrevChar</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span>  </span><span class="annot"><span class="hs-comment">-- * Helpers</span></span><span>
+</span><span id="line-15"></span><span>  </span><span class="annot"><a href="GHC.Parser.Lexer.Interface.html#alexGetChar"><span class="hs-identifier">alexGetChar</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-16"></span><span>  </span><span class="annot"><a href="GHC.Parser.Lexer.Interface.html#adjustChar"><span class="hs-identifier">adjustChar</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-17"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Prelude.html"><span class="hs-identifier">GHC.Prelude</span></a></span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.21.2.0-inplace/src/Data.Char.html"><span class="hs-identifier">Data.Char</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">GeneralCategory</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">generalCategory</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">ord</span></span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.21.2.0-inplace/src/Data.Word.html"><span class="hs-identifier">Data.Word</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Word8</span></span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Data.StringBuffer.html"><span class="hs-identifier">GHC.Data.StringBuffer</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Data.StringBuffer.html#StringBuffer"><span class="hs-identifier">StringBuffer</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Data.StringBuffer.html#atEnd"><span class="hs-identifier">atEnd</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Data.StringBuffer.html#nextChar"><span class="hs-identifier">nextChar</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Data.StringBuffer.html#prevChar"><span class="hs-identifier">prevChar</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.21.2.0-inplace/src/GHC.Exts.html"><span class="hs-identifier">GHC.Exts</span></a></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Types.SrcLoc.html"><span class="hs-identifier">GHC.Types.SrcLoc</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Types.SrcLoc.html#PsLoc"><span class="hs-identifier">PsLoc</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Types.SrcLoc.html#advancePsLoc"><span class="hs-identifier">advancePsLoc</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">data</span><span> </span><span id="AlexInput"><span class="annot"><a href="GHC.Parser.Lexer.Interface.html#AlexInput"><span class="hs-identifier hs-var">AlexInput</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="AI"><span class="annot"><a href="GHC.Parser.Lexer.Interface.html#AI"><span class="hs-identifier hs-var">AI</span></a></span></span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="GHC.Types.SrcLoc.html#PsLoc"><span class="hs-identifier hs-type">PsLoc</span></a></span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="GHC.Data.StringBuffer.html#StringBuffer"><span class="hs-identifier hs-type">StringBuffer</span></a></span><span> </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621682482189"><span id="local-6989586621682482197"><span id="local-6989586621682482201"><span class="annot"><span class="annottext">Int -&gt; AlexInput -&gt; ShowS
+[AlexInput] -&gt; ShowS
+AlexInput -&gt; String
+(Int -&gt; AlexInput -&gt; ShowS)
+-&gt; (AlexInput -&gt; String)
+-&gt; ([AlexInput] -&gt; ShowS)
+-&gt; Show AlexInput
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; AlexInput -&gt; ShowS
+showsPrec :: Int -&gt; AlexInput -&gt; ShowS
+$cshow :: AlexInput -&gt; String
+show :: AlexInput -&gt; String
+$cshowList :: [AlexInput] -&gt; ShowS
+showList :: [AlexInput] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span class="hs-comment">-- See Note [Unicode in Alex]</span><span>
+</span><span id="line-30"></span><span class="annot"><a href="GHC.Parser.Lexer.Interface.html#alexGetByte"><span class="hs-identifier hs-type">alexGetByte</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Parser.Lexer.Interface.html#AlexInput"><span class="hs-identifier hs-type">AlexInput</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Word8</span></span><span class="hs-special">,</span><span class="annot"><a href="GHC.Parser.Lexer.Interface.html#AlexInput"><span class="hs-identifier hs-type">AlexInput</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span id="alexGetByte"><span class="annot"><span class="annottext">alexGetByte :: AlexInput -&gt; Maybe (Word8, AlexInput)
+</span><a href="GHC.Parser.Lexer.Interface.html#alexGetByte"><span class="hs-identifier hs-var hs-var">alexGetByte</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Parser.Lexer.Interface.html#AI"><span class="hs-identifier hs-type">AI</span></a></span><span> </span><span id="local-6989586621682482205"><span class="annot"><span class="annottext">PsLoc
+</span><a href="#local-6989586621682482205"><span class="hs-identifier hs-var">loc</span></a></span></span><span> </span><span id="local-6989586621682482206"><span class="annot"><span class="annottext">StringBuffer
+</span><a href="#local-6989586621682482206"><span class="hs-identifier hs-var">s</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">StringBuffer -&gt; Bool
+</span><a href="GHC.Data.StringBuffer.html#atEnd"><span class="hs-identifier hs-var">atEnd</span></a></span><span> </span><span class="annot"><span class="annottext">StringBuffer
+</span><a href="#local-6989586621682482206"><span class="hs-identifier hs-var">s</span></a></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe (Word8, AlexInput)
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span>
+</span><span id="line-33"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">otherwise</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621682482207"><span class="hs-identifier hs-var">byte</span></a></span><span> </span><span class="annot"><span class="annottext">Word8 -&gt; Maybe (Word8, AlexInput) -&gt; Maybe (Word8, AlexInput)
+forall a b. a -&gt; b -&gt; b
+</span><span class="hs-operator hs-var">`seq`</span></span><span> </span><span class="annot"><span class="annottext">PsLoc
+</span><a href="#local-6989586621682482208"><span class="hs-identifier hs-var">loc'</span></a></span><span> </span><span class="annot"><span class="annottext">PsLoc -&gt; Maybe (Word8, AlexInput) -&gt; Maybe (Word8, AlexInput)
+forall a b. a -&gt; b -&gt; b
+</span><span class="hs-operator hs-var">`seq`</span></span><span> </span><span class="annot"><span class="annottext">StringBuffer
+</span><a href="#local-6989586621682482209"><span class="hs-identifier hs-var">s'</span></a></span><span> </span><span class="annot"><span class="annottext">StringBuffer
+-&gt; Maybe (Word8, AlexInput) -&gt; Maybe (Word8, AlexInput)
+forall a b. a -&gt; b -&gt; b
+</span><span class="hs-operator hs-var">`seq`</span></span><span>
+</span><span id="line-34"></span><span>                </span><span class="hs-comment">--trace (show (ord c)) $</span><span>
+</span><span id="line-35"></span><span>                </span><span class="annot"><span class="annottext">(Word8, AlexInput) -&gt; Maybe (Word8, AlexInput)
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621682482207"><span class="hs-identifier hs-var">byte</span></a></span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PsLoc -&gt; StringBuffer -&gt; AlexInput
+</span><a href="GHC.Parser.Lexer.Interface.html#AI"><span class="hs-identifier hs-var">AI</span></a></span><span> </span><span class="annot"><span class="annottext">PsLoc
+</span><a href="#local-6989586621682482208"><span class="hs-identifier hs-var">loc'</span></a></span><span> </span><span class="annot"><span class="annottext">StringBuffer
+</span><a href="#local-6989586621682482209"><span class="hs-identifier hs-var">s'</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span>  </span><span class="hs-keyword">where</span><span> </span><span class="hs-special">(</span><span id="local-6989586621682482210"><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621682482210"><span class="hs-identifier hs-var">c</span></a></span></span><span class="hs-special">,</span><span id="local-6989586621682482209"><span class="annot"><span class="annottext">StringBuffer
+</span><a href="#local-6989586621682482209"><span class="hs-identifier hs-var">s'</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">StringBuffer -&gt; (Char, StringBuffer)
+</span><a href="GHC.Data.StringBuffer.html#nextChar"><span class="hs-identifier hs-var">nextChar</span></a></span><span> </span><span class="annot"><span class="annottext">StringBuffer
+</span><a href="#local-6989586621682482206"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-37"></span><span>        </span><span id="local-6989586621682482208"><span class="annot"><span class="annottext">loc' :: PsLoc
+</span><a href="#local-6989586621682482208"><span class="hs-identifier hs-var hs-var">loc'</span></a></span></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PsLoc -&gt; Char -&gt; PsLoc
+</span><a href="GHC.Types.SrcLoc.html#advancePsLoc"><span class="hs-identifier hs-var">advancePsLoc</span></a></span><span> </span><span class="annot"><span class="annottext">PsLoc
+</span><a href="#local-6989586621682482205"><span class="hs-identifier hs-var">loc</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621682482210"><span class="hs-identifier hs-var">c</span></a></span><span>
+</span><span id="line-38"></span><span>        </span><span id="local-6989586621682482207"><span class="annot"><span class="annottext">byte :: Word8
+</span><a href="#local-6989586621682482207"><span class="hs-identifier hs-var hs-var">byte</span></a></span></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Char -&gt; Word8
+</span><a href="GHC.Parser.Lexer.Interface.html#adjustChar"><span class="hs-identifier hs-var">adjustChar</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621682482210"><span class="hs-identifier hs-var">c</span></a></span><span>
+</span><span id="line-39"></span><span>
+</span><span id="line-40"></span><span class="hs-comment">-- Getting the previous 'Char' isn't enough here - we need to convert it into</span><span>
+</span><span id="line-41"></span><span class="hs-comment">-- the same format that 'alexGetByte' would have produced.</span><span>
+</span><span id="line-42"></span><span class="hs-comment">--</span><span>
+</span><span id="line-43"></span><span class="hs-comment">-- See Note [Unicode in Alex] and #13986.</span><span>
+</span><span id="line-44"></span><span class="annot"><a href="GHC.Parser.Lexer.Interface.html#alexInputPrevChar"><span class="hs-identifier hs-type">alexInputPrevChar</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Parser.Lexer.Interface.html#AlexInput"><span class="hs-identifier hs-type">AlexInput</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Char</span></span><span>
+</span><span id="line-45"></span><span id="alexInputPrevChar"><span class="annot"><span class="annottext">alexInputPrevChar :: AlexInput -&gt; Char
+</span><a href="GHC.Parser.Lexer.Interface.html#alexInputPrevChar"><span class="hs-identifier hs-var hs-var">alexInputPrevChar</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Parser.Lexer.Interface.html#AI"><span class="hs-identifier hs-type">AI</span></a></span><span> </span><span class="annot"><span class="annottext">PsLoc
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621682482211"><span class="annot"><span class="annottext">StringBuffer
+</span><a href="#local-6989586621682482211"><span class="hs-identifier hs-var">buf</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Char
+</span><a href="GHC.Parser.Lexer.Interface.html#unsafeChr"><span class="hs-identifier hs-var">unsafeChr</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word8 -&gt; Int
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">fromIntegral</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Char -&gt; Word8
+</span><a href="GHC.Parser.Lexer.Interface.html#adjustChar"><span class="hs-identifier hs-var">adjustChar</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621682482213"><span class="hs-identifier hs-var">pc</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-46"></span><span>  </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621682482213"><span class="annot"><span class="annottext">pc :: Char
+</span><a href="#local-6989586621682482213"><span class="hs-identifier hs-var hs-var">pc</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">StringBuffer -&gt; Char -&gt; Char
+</span><a href="GHC.Data.StringBuffer.html#prevChar"><span class="hs-identifier hs-var">prevChar</span></a></span><span> </span><span class="annot"><span class="annottext">StringBuffer
+</span><a href="#local-6989586621682482211"><span class="hs-identifier hs-var">buf</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'\n'</span></span><span>
+</span><span id="line-47"></span><span>
+</span><span id="line-48"></span><span class="hs-comment">-- backwards compatibility for Alex 2.x</span><span>
+</span><span id="line-49"></span><span class="annot"><a href="GHC.Parser.Lexer.Interface.html#alexGetChar"><span class="hs-identifier hs-type">alexGetChar</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Parser.Lexer.Interface.html#AlexInput"><span class="hs-identifier hs-type">AlexInput</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Char</span></span><span class="hs-special">,</span><span class="annot"><a href="GHC.Parser.Lexer.Interface.html#AlexInput"><span class="hs-identifier hs-type">AlexInput</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-50"></span><span id="alexGetChar"><span class="annot"><span class="annottext">alexGetChar :: AlexInput -&gt; Maybe (Char, AlexInput)
+</span><a href="GHC.Parser.Lexer.Interface.html#alexGetChar"><span class="hs-identifier hs-var hs-var">alexGetChar</span></a></span></span><span> </span><span id="local-6989586621682482214"><span class="annot"><span class="annottext">AlexInput
+</span><a href="#local-6989586621682482214"><span class="hs-identifier hs-var">inp</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">AlexInput -&gt; Maybe (Word8, AlexInput)
+</span><a href="GHC.Parser.Lexer.Interface.html#alexGetByte"><span class="hs-identifier hs-var">alexGetByte</span></a></span><span> </span><span class="annot"><span class="annottext">AlexInput
+</span><a href="#local-6989586621682482214"><span class="hs-identifier hs-var">inp</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-51"></span><span>                    </span><span class="annot"><span class="annottext">Maybe (Word8, AlexInput)
+</span><span class="hs-identifier hs-var">Nothing</span></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe (Char, AlexInput)
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span>
+</span><span id="line-52"></span><span>                    </span><span class="annot"><span class="hs-identifier hs-type">Just</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621682482215"><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621682482215"><span class="hs-identifier hs-var">b</span></a></span></span><span class="hs-special">,</span><span id="local-6989586621682482216"><span class="annot"><span class="annottext">AlexInput
+</span><a href="#local-6989586621682482216"><span class="hs-identifier hs-var">i</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621682482217"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Maybe (Char, AlexInput) -&gt; Maybe (Char, AlexInput)
+forall a b. a -&gt; b -&gt; b
+</span><span class="hs-operator hs-var">`seq`</span></span><span> </span><span class="annot"><span class="annottext">(Char, AlexInput) -&gt; Maybe (Char, AlexInput)
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621682482217"><span class="hs-identifier hs-var">c</span></a></span><span class="hs-special">,</span><span class="annot"><span class="annottext">AlexInput
+</span><a href="#local-6989586621682482216"><span class="hs-identifier hs-var">i</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-53"></span><span>                       </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621682482217"><span class="annot"><span class="annottext">c :: Char
+</span><a href="#local-6989586621682482217"><span class="hs-identifier hs-var hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Char
+</span><a href="GHC.Parser.Lexer.Interface.html#unsafeChr"><span class="hs-identifier hs-var">unsafeChr</span></a></span><span> </span><span class="annot"><span class="annottext">(Int -&gt; Char) -&gt; Int -&gt; Char
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Word8 -&gt; Int
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">fromIntegral</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621682482215"><span class="hs-identifier hs-var">b</span></a></span><span>
+</span><span id="line-54"></span><span>
+</span><span id="line-55"></span><span class="annot"><a href="GHC.Parser.Lexer.Interface.html#unsafeChr"><span class="hs-identifier hs-type">unsafeChr</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Char</span></span><span>
+</span><span id="line-56"></span><span id="unsafeChr"><span class="annot"><span class="annottext">unsafeChr :: Int -&gt; Char
+</span><a href="GHC.Parser.Lexer.Interface.html#unsafeChr"><span class="hs-identifier hs-var hs-var">unsafeChr</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">I#</span></span><span> </span><span id="local-6989586621682482218"><span class="annot"><span class="annottext">Int#
+</span><a href="#local-6989586621682482218"><span class="hs-identifier hs-var">c</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Char# -&gt; Char
+</span><span class="hs-identifier hs-var">GHC.Exts.C#</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int# -&gt; Char#
+</span><span class="hs-identifier hs-var">GHC.Exts.chr#</span></span><span> </span><span class="annot"><span class="annottext">Int#
+</span><a href="#local-6989586621682482218"><span class="hs-identifier hs-var">c</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-57"></span><span>
+</span><span id="line-58"></span><span class="hs-comment">{-
+Note [Unicode in Alex]
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Although newer versions of Alex support unicode, this grammar is processed with
+the old style '--latin1' behaviour. This means that when implementing the
+functions
+
+    alexGetByte       :: AlexInput -&gt; Maybe (Word8,AlexInput)
+    alexInputPrevChar :: AlexInput -&gt; Char
+
+which Alex uses to take apart our 'AlexInput', we must
+
+  * return a latin1 character in the 'Word8' that 'alexGetByte' expects
+  * return a latin1 character in 'alexInputPrevChar'.
+
+We handle this in 'adjustChar' by squishing entire classes of unicode
+characters into single bytes.
+-}</span><span>
+</span><span id="line-76"></span><span>
+</span><span id="line-77"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="GHC.Parser.Lexer.Interface.html#adjustChar"><span class="hs-pragma hs-type">adjustChar</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-78"></span><span class="annot"><a href="GHC.Parser.Lexer.Interface.html#adjustChar"><span class="hs-identifier hs-type">adjustChar</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Char</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word8</span></span><span>
+</span><span id="line-79"></span><span id="adjustChar"><span class="annot"><span class="annottext">adjustChar :: Char -&gt; Word8
+</span><a href="GHC.Parser.Lexer.Interface.html#adjustChar"><span class="hs-identifier hs-var hs-var">adjustChar</span></a></span></span><span> </span><span id="local-6989586621682482219"><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621682482219"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621682482220"><span class="hs-identifier hs-var">adj_c</span></a></span><span>
+</span><span id="line-80"></span><span>  </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621682482222"><span class="annot"><span class="annottext">non_graphic :: Word8
+</span><a href="#local-6989586621682482222"><span class="hs-identifier hs-var hs-var">non_graphic</span></a></span></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">0x00</span></span><span>
+</span><span id="line-81"></span><span>        </span><span id="local-6989586621682482224"><span class="annot"><span class="annottext">upper :: Word8
+</span><a href="#local-6989586621682482224"><span class="hs-identifier hs-var hs-var">upper</span></a></span></span><span>           </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">0x01</span></span><span>
+</span><span id="line-82"></span><span>        </span><span id="local-6989586621682482226"><span class="annot"><span class="annottext">lower :: Word8
+</span><a href="#local-6989586621682482226"><span class="hs-identifier hs-var hs-var">lower</span></a></span></span><span>           </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">0x02</span></span><span>
+</span><span id="line-83"></span><span>        </span><span id="local-6989586621682482228"><span class="annot"><span class="annottext">digit :: Word8
+</span><a href="#local-6989586621682482228"><span class="hs-identifier hs-var hs-var">digit</span></a></span></span><span>           </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">0x03</span></span><span>
+</span><span id="line-84"></span><span>        </span><span id="local-6989586621682482230"><span class="annot"><span class="annottext">symbol :: Word8
+</span><a href="#local-6989586621682482230"><span class="hs-identifier hs-var hs-var">symbol</span></a></span></span><span>          </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">0x04</span></span><span>
+</span><span id="line-85"></span><span>        </span><span id="local-6989586621682482232"><span class="annot"><span class="annottext">space :: Word8
+</span><a href="#local-6989586621682482232"><span class="hs-identifier hs-var hs-var">space</span></a></span></span><span>           </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">0x05</span></span><span>
+</span><span id="line-86"></span><span>        </span><span id="local-6989586621682482234"><span class="annot"><span class="annottext">other_graphic :: Word8
+</span><a href="#local-6989586621682482234"><span class="hs-identifier hs-var hs-var">other_graphic</span></a></span></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">0x06</span></span><span>
+</span><span id="line-87"></span><span>        </span><span id="local-6989586621682482236"><span class="annot"><span class="annottext">uniidchar :: Word8
+</span><a href="#local-6989586621682482236"><span class="hs-identifier hs-var hs-var">uniidchar</span></a></span></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">0x07</span></span><span>
+</span><span id="line-88"></span><span>
+</span><span id="line-89"></span><span>        </span><span id="local-6989586621682482220"><span class="annot"><span class="annottext">adj_c :: Word8
+</span><a href="#local-6989586621682482220"><span class="hs-identifier hs-var hs-var">adj_c</span></a></span></span><span>
+</span><span id="line-90"></span><span>          </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621682482219"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Char -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&lt;=</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'\x07'</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621682482222"><span class="hs-identifier hs-var">non_graphic</span></a></span><span>
+</span><span id="line-91"></span><span>          </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621682482219"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Char -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&lt;=</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'\x7f'</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Word8
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">fromIntegral</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Char -&gt; Int
+</span><span class="hs-identifier hs-var">ord</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621682482219"><span class="hs-identifier hs-var">c</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-92"></span><span>          </span><span class="hs-comment">-- Alex doesn't handle Unicode, so when Unicode</span><span>
+</span><span id="line-93"></span><span>          </span><span class="hs-comment">-- character is encountered we output these values</span><span>
+</span><span id="line-94"></span><span>          </span><span class="hs-comment">-- with the actual character value hidden in the state.</span><span>
+</span><span id="line-95"></span><span>          </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">otherwise</span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-96"></span><span>                </span><span class="hs-comment">-- NB: The logic behind these definitions is also reflected</span><span>
+</span><span id="line-97"></span><span>                </span><span class="hs-comment">-- in &quot;GHC.Utils.Lexeme&quot;</span><span>
+</span><span id="line-98"></span><span>                </span><span class="hs-comment">-- Any changes here should likely be reflected there.</span><span>
+</span><span id="line-99"></span><span>
+</span><span id="line-100"></span><span>                </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Char -&gt; GeneralCategory
+</span><span class="hs-identifier hs-var">generalCategory</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621682482219"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-101"></span><span>                  </span><span class="annot"><span class="annottext">GeneralCategory
+</span><span class="hs-identifier hs-var">UppercaseLetter</span></span><span>       </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621682482224"><span class="hs-identifier hs-var">upper</span></a></span><span>
+</span><span id="line-102"></span><span>                  </span><span class="annot"><span class="annottext">GeneralCategory
+</span><span class="hs-identifier hs-var">LowercaseLetter</span></span><span>       </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621682482226"><span class="hs-identifier hs-var">lower</span></a></span><span>
+</span><span id="line-103"></span><span>                  </span><span class="annot"><span class="annottext">GeneralCategory
+</span><span class="hs-identifier hs-var">TitlecaseLetter</span></span><span>       </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621682482224"><span class="hs-identifier hs-var">upper</span></a></span><span>
+</span><span id="line-104"></span><span>                  </span><span class="annot"><span class="annottext">GeneralCategory
+</span><span class="hs-identifier hs-var">ModifierLetter</span></span><span>        </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621682482236"><span class="hs-identifier hs-var">uniidchar</span></a></span><span> </span><span class="hs-comment">-- see #10196</span><span>
+</span><span id="line-105"></span><span>                  </span><span class="annot"><span class="annottext">GeneralCategory
+</span><span class="hs-identifier hs-var">OtherLetter</span></span><span>           </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621682482226"><span class="hs-identifier hs-var">lower</span></a></span><span> </span><span class="hs-comment">-- see #1103</span><span>
+</span><span id="line-106"></span><span>                  </span><span class="annot"><span class="annottext">GeneralCategory
+</span><span class="hs-identifier hs-var">NonSpacingMark</span></span><span>        </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621682482236"><span class="hs-identifier hs-var">uniidchar</span></a></span><span> </span><span class="hs-comment">-- see #7650</span><span>
+</span><span id="line-107"></span><span>                  </span><span class="annot"><span class="annottext">GeneralCategory
+</span><span class="hs-identifier hs-var">SpacingCombiningMark</span></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621682482234"><span class="hs-identifier hs-var">other_graphic</span></a></span><span>
+</span><span id="line-108"></span><span>                  </span><span class="annot"><span class="annottext">GeneralCategory
+</span><span class="hs-identifier hs-var">EnclosingMark</span></span><span>         </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621682482234"><span class="hs-identifier hs-var">other_graphic</span></a></span><span>
+</span><span id="line-109"></span><span>                  </span><span class="annot"><span class="annottext">GeneralCategory
+</span><span class="hs-identifier hs-var">DecimalNumber</span></span><span>         </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621682482228"><span class="hs-identifier hs-var">digit</span></a></span><span>
+</span><span id="line-110"></span><span>                  </span><span class="annot"><span class="annottext">GeneralCategory
+</span><span class="hs-identifier hs-var">LetterNumber</span></span><span>          </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621682482228"><span class="hs-identifier hs-var">digit</span></a></span><span>
+</span><span id="line-111"></span><span>                  </span><span class="annot"><span class="annottext">GeneralCategory
+</span><span class="hs-identifier hs-var">OtherNumber</span></span><span>           </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621682482228"><span class="hs-identifier hs-var">digit</span></a></span><span> </span><span class="hs-comment">-- see #4373</span><span>
+</span><span id="line-112"></span><span>                  </span><span class="annot"><span class="annottext">GeneralCategory
+</span><span class="hs-identifier hs-var">ConnectorPunctuation</span></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621682482230"><span class="hs-identifier hs-var">symbol</span></a></span><span>
+</span><span id="line-113"></span><span>                  </span><span class="annot"><span class="annottext">GeneralCategory
+</span><span class="hs-identifier hs-var">DashPunctuation</span></span><span>       </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621682482230"><span class="hs-identifier hs-var">symbol</span></a></span><span>
+</span><span id="line-114"></span><span>                  </span><span class="annot"><span class="annottext">GeneralCategory
+</span><span class="hs-identifier hs-var">OpenPunctuation</span></span><span>       </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621682482234"><span class="hs-identifier hs-var">other_graphic</span></a></span><span>
+</span><span id="line-115"></span><span>                  </span><span class="annot"><span class="annottext">GeneralCategory
+</span><span class="hs-identifier hs-var">ClosePunctuation</span></span><span>      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621682482234"><span class="hs-identifier hs-var">other_graphic</span></a></span><span>
+</span><span id="line-116"></span><span>                  </span><span class="annot"><span class="annottext">GeneralCategory
+</span><span class="hs-identifier hs-var">InitialQuote</span></span><span>          </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621682482234"><span class="hs-identifier hs-var">other_graphic</span></a></span><span>
+</span><span id="line-117"></span><span>                  </span><span class="annot"><span class="annottext">GeneralCategory
+</span><span class="hs-identifier hs-var">FinalQuote</span></span><span>            </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621682482234"><span class="hs-identifier hs-var">other_graphic</span></a></span><span>
+</span><span id="line-118"></span><span>                  </span><span class="annot"><span class="annottext">GeneralCategory
+</span><span class="hs-identifier hs-var">OtherPunctuation</span></span><span>      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621682482230"><span class="hs-identifier hs-var">symbol</span></a></span><span>
+</span><span id="line-119"></span><span>                  </span><span class="annot"><span class="annottext">GeneralCategory
+</span><span class="hs-identifier hs-var">MathSymbol</span></span><span>            </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621682482230"><span class="hs-identifier hs-var">symbol</span></a></span><span>
+</span><span id="line-120"></span><span>                  </span><span class="annot"><span class="annottext">GeneralCategory
+</span><span class="hs-identifier hs-var">CurrencySymbol</span></span><span>        </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621682482230"><span class="hs-identifier hs-var">symbol</span></a></span><span>
+</span><span id="line-121"></span><span>                  </span><span class="annot"><span class="annottext">GeneralCategory
+</span><span class="hs-identifier hs-var">ModifierSymbol</span></span><span>        </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621682482230"><span class="hs-identifier hs-var">symbol</span></a></span><span>
+</span><span id="line-122"></span><span>                  </span><span class="annot"><span class="annottext">GeneralCategory
+</span><span class="hs-identifier hs-var">OtherSymbol</span></span><span>           </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621682482230"><span class="hs-identifier hs-var">symbol</span></a></span><span>
+</span><span id="line-123"></span><span>                  </span><span class="annot"><span class="annottext">GeneralCategory
+</span><span class="hs-identifier hs-var">Space</span></span><span>                 </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621682482232"><span class="hs-identifier hs-var">space</span></a></span><span>
+</span><span id="line-124"></span><span>                  </span><span id="local-6989586621682482261"><span class="annot"><span class="annottext">GeneralCategory
+</span><a href="#local-6989586621682482261"><span class="hs-identifier hs-var">_other</span></a></span></span><span>                </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621682482222"><span class="hs-identifier hs-var">non_graphic</span></a></span><span>
+</span><span id="line-125"></span></pre></body></html>

@@ -1,0 +1,469 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE CPP, ScopedTypeVariables, TypeFamilies #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="GHC.Stg.Utils.html"><span class="hs-identifier">GHC.Stg.Utils</span></a></span><span>
+</span><span id="line-5"></span><span>    </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="GHC.Stg.Utils.html#mkStgAltTypeFromStgAlts"><span class="hs-identifier">mkStgAltTypeFromStgAlts</span></a></span><span>
+</span><span id="line-6"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Stg.Utils.html#bindersOf"><span class="hs-identifier">bindersOf</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Stg.Utils.html#bindersOfX"><span class="hs-identifier">bindersOfX</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Stg.Utils.html#bindersOfTop"><span class="hs-identifier">bindersOfTop</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Stg.Utils.html#bindersOfTopBinds"><span class="hs-identifier">bindersOfTopBinds</span></a></span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Stg.Utils.html#stripStgTicksTop"><span class="hs-identifier">stripStgTicksTop</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Stg.Utils.html#stripStgTicksTopE"><span class="hs-identifier">stripStgTicksTopE</span></a></span><span>
+</span><span id="line-9"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Stg.Utils.html#idArgs"><span class="hs-identifier">idArgs</span></a></span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Stg.Utils.html#mkUnarisedId"><span class="hs-identifier">mkUnarisedId</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Stg.Utils.html#mkUnarisedIds"><span class="hs-identifier">mkUnarisedIds</span></a></span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Stg.Utils.html#allowTopLevelConApp"><span class="hs-identifier">allowTopLevelConApp</span></a></span><span>
+</span><span id="line-14"></span><span>    </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Prelude.html"><span class="hs-identifier">GHC.Prelude</span></a></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Platform.html"><span class="hs-identifier">GHC.Platform</span></a></span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Types.Id.html"><span class="hs-identifier">GHC.Types.Id</span></a></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Core.Type.html"><span class="hs-identifier">GHC.Core.Type</span></a></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Core.TyCon.html"><span class="hs-identifier">GHC.Core.TyCon</span></a></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Core.DataCon.html"><span class="hs-identifier">GHC.Core.DataCon</span></a></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Core.html"><span class="hs-identifier">GHC.Core</span></a></span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="GHC.Core.html#AltCon"><span class="hs-identifier">AltCon</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Types.Tickish.html"><span class="hs-identifier">GHC.Types.Tickish</span></a></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Types.Unique.Supply.html"><span class="hs-identifier">GHC.Types.Unique.Supply</span></a></span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Types.RepType.html"><span class="hs-identifier">GHC.Types.RepType</span></a></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Types.Name.html"><span class="hs-identifier">GHC.Types.Name</span></a></span><span>        </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="GHC.Types.Name.html#isDynLinkName"><span class="hs-identifier">isDynLinkName</span></a></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Unit.Module.html"><span class="hs-identifier">GHC.Unit.Module</span></a></span><span>       </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="GHC.Unit.Types.html#Module"><span class="hs-identifier">Module</span></a></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Stg.Syntax.html"><span class="hs-identifier">GHC.Stg.Syntax</span></a></span><span>
+</span><span id="line-31"></span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Utils.Outputable.html"><span class="hs-identifier">GHC.Utils.Outputable</span></a></span><span>
+</span><span id="line-33"></span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Utils.Panic.html"><span class="hs-identifier">GHC.Utils.Panic</span></a></span><span>
+</span><span id="line-35"></span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Data.FastString.html"><span class="hs-identifier">GHC.Data.FastString</span></a></span><span>
+</span><span id="line-37"></span><span>
+</span><span id="line-38"></span><span id="local-6989586621682629285"><span class="annot"><a href="GHC.Stg.Utils.html#mkUnarisedIds"><span class="hs-identifier hs-type">mkUnarisedIds</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Types.Unique.Supply.html#MonadUnique"><span class="hs-identifier hs-type">MonadUnique</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682629285"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="GHC.Data.FastString.html#FastString"><span class="hs-identifier hs-type">FastString</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="GHC.Types.RepType.html#NvUnaryType"><span class="hs-identifier hs-type">NvUnaryType</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621682629285"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="GHC.Types.Var.html#Id"><span class="hs-identifier hs-type">Id</span></a></span><span class="hs-special">]</span></span><span>
+</span><span id="line-39"></span><span id="mkUnarisedIds"><span class="annot"><span class="annottext">mkUnarisedIds :: forall (m :: * -&gt; *).
+MonadUnique m =&gt;
+FastString -&gt; [NvUnaryType] -&gt; m [Id]
+</span><a href="GHC.Stg.Utils.html#mkUnarisedIds"><span class="hs-identifier hs-var hs-var">mkUnarisedIds</span></a></span></span><span> </span><span id="local-6989586621682629387"><span class="annot"><span class="annottext">FastString
+</span><a href="#local-6989586621682629387"><span class="hs-identifier hs-var">fs</span></a></span></span><span> </span><span id="local-6989586621682629388"><span class="annot"><span class="annottext">[NvUnaryType]
+</span><a href="#local-6989586621682629388"><span class="hs-identifier hs-var">tys</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(NvUnaryType -&gt; m Id) -&gt; [NvUnaryType] -&gt; m [Id]
+forall (t :: * -&gt; *) (m :: * -&gt; *) a b.
+(Traversable t, Monad m) =&gt;
+(a -&gt; m b) -&gt; t a -&gt; m (t b)
+forall (m :: * -&gt; *) a b. Monad m =&gt; (a -&gt; m b) -&gt; [a] -&gt; m [b]
+</span><span class="hs-identifier hs-var">mapM</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FastString -&gt; NvUnaryType -&gt; m Id
+forall (m :: * -&gt; *).
+MonadUnique m =&gt;
+FastString -&gt; NvUnaryType -&gt; m Id
+</span><a href="GHC.Stg.Utils.html#mkUnarisedId"><span class="hs-identifier hs-var">mkUnarisedId</span></a></span><span> </span><span class="annot"><span class="annottext">FastString
+</span><a href="#local-6989586621682629387"><span class="hs-identifier hs-var">fs</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[NvUnaryType]
+</span><a href="#local-6989586621682629388"><span class="hs-identifier hs-var">tys</span></a></span><span>
+</span><span id="line-40"></span><span>
+</span><span id="line-41"></span><span id="local-6989586621682629296"><span class="annot"><a href="GHC.Stg.Utils.html#mkUnarisedId"><span class="hs-identifier hs-type">mkUnarisedId</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Types.Unique.Supply.html#MonadUnique"><span class="hs-identifier hs-type">MonadUnique</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682629296"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="GHC.Data.FastString.html#FastString"><span class="hs-identifier hs-type">FastString</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Types.RepType.html#NvUnaryType"><span class="hs-identifier hs-type">NvUnaryType</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621682629296"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="GHC.Types.Var.html#Id"><span class="hs-identifier hs-type">Id</span></a></span></span><span>
+</span><span id="line-42"></span><span id="mkUnarisedId"><span class="annot"><span class="annottext">mkUnarisedId :: forall (m :: * -&gt; *).
+MonadUnique m =&gt;
+FastString -&gt; NvUnaryType -&gt; m Id
+</span><a href="GHC.Stg.Utils.html#mkUnarisedId"><span class="hs-identifier hs-var hs-var">mkUnarisedId</span></a></span></span><span> </span><span id="local-6989586621682629392"><span class="annot"><span class="annottext">FastString
+</span><a href="#local-6989586621682629392"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span id="local-6989586621682629393"><span class="annot"><span class="annottext">NvUnaryType
+</span><a href="#local-6989586621682629393"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">FastString -&gt; NvUnaryType -&gt; NvUnaryType -&gt; m Id
+forall (m :: * -&gt; *).
+MonadUnique m =&gt;
+FastString -&gt; NvUnaryType -&gt; NvUnaryType -&gt; m Id
+</span><a href="GHC.Types.Id.html#mkSysLocalM"><span class="hs-identifier hs-var">mkSysLocalM</span></a></span><span> </span><span class="annot"><span class="annottext">FastString
+</span><a href="#local-6989586621682629392"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">NvUnaryType
+</span><a href="GHC.Core.Type.html#ManyTy"><span class="hs-identifier hs-var">ManyTy</span></a></span><span> </span><span class="annot"><span class="annottext">NvUnaryType
+</span><a href="#local-6989586621682629393"><span class="hs-identifier hs-var">t</span></a></span><span>
+</span><span id="line-43"></span><span>
+</span><span id="line-44"></span><span class="hs-comment">-- Checks if id is a top level error application.</span><span>
+</span><span id="line-45"></span><span class="hs-comment">-- isErrorAp_maybe :: Id -&gt;</span><span>
+</span><span id="line-46"></span><span>
+</span><span id="line-47"></span><span class="hs-comment">-- | Extract the default case alternative</span><span>
+</span><span id="line-48"></span><span class="hs-comment">-- findDefaultStg :: [Alt b] -&gt; ([Alt b], Maybe (Expr b))</span><span>
+</span><span id="line-49"></span><span id="local-6989586621682629300"><span class="annot"><a href="GHC.Stg.Utils.html#findDefaultStg"><span class="hs-identifier hs-type">findDefaultStg</span></a></span><span>
+</span><span id="line-50"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="GHC.Stg.Syntax.html#GenStgAlt"><span class="hs-identifier hs-type">GenStgAlt</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682629300"><span class="hs-identifier hs-type">p</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-51"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="hs-special">[</span><span class="annot"><a href="GHC.Stg.Syntax.html#GenStgAlt"><span class="hs-identifier hs-type">GenStgAlt</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682629300"><span class="hs-identifier hs-type">p</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Stg.Syntax.html#GenStgExpr"><span class="hs-identifier hs-type">GenStgExpr</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682629300"><span class="hs-identifier hs-type">p</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span></span><span>
+</span><span id="line-52"></span><span id="findDefaultStg"><span class="annot"><span class="annottext">findDefaultStg :: forall (p :: StgPass).
+[GenStgAlt p] -&gt; ([GenStgAlt p], Maybe (GenStgExpr p))
+</span><a href="GHC.Stg.Utils.html#findDefaultStg"><span class="hs-identifier hs-var hs-var">findDefaultStg</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Stg.Syntax.html#GenStgAlt"><span class="hs-identifier hs-type">GenStgAlt</span></a></span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">alt_con :: forall (pass :: StgPass). GenStgAlt pass -&gt; AltCon
+</span><a href="GHC.Stg.Syntax.html#alt_con"><span class="hs-identifier hs-var">alt_con</span></a></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">AltCon
+</span><a href="GHC.Core.html#DEFAULT"><span class="hs-identifier hs-var">DEFAULT</span></a></span><span>
+</span><span id="line-53"></span><span>                         </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">alt_bndrs :: forall (pass :: StgPass). GenStgAlt pass -&gt; [BinderP pass]
+</span><a href="GHC.Stg.Syntax.html#alt_bndrs"><span class="hs-identifier hs-var">alt_bndrs</span></a></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="local-6989586621682629404"><span class="annot"><span class="annottext">[BinderP p]
+</span><a href="#local-6989586621682629404"><span class="hs-identifier hs-var">args</span></a></span></span><span>
+</span><span id="line-54"></span><span>                         </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">alt_rhs :: forall (pass :: StgPass). GenStgAlt pass -&gt; GenStgExpr pass
+</span><a href="GHC.Stg.Syntax.html#alt_rhs"><span class="hs-identifier hs-var">alt_rhs</span></a></span><span>    </span><span class="hs-glyph">=</span><span> </span><span id="local-6989586621682629406"><span class="annot"><span class="annottext">GenStgExpr p
+</span><a href="#local-6989586621682629406"><span class="hs-identifier hs-var">rhs</span></a></span></span><span class="hs-special">}</span><span> </span><span class="annot"><span class="hs-glyph hs-type">:</span></span><span> </span><span id="local-6989586621682629407"><span class="annot"><span class="annottext">[GenStgAlt p]
+</span><a href="#local-6989586621682629407"><span class="hs-identifier hs-var">alts</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+-&gt; ([GenStgAlt p], Maybe (GenStgExpr p))
+-&gt; ([GenStgAlt p], Maybe (GenStgExpr p))
+forall a. HasCallStack =&gt; Bool -&gt; a -&gt; a
+</span><a href="GHC.Utils.Panic.Plain.html#assert"><span class="hs-identifier hs-var">assert</span></a></span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">[BinderP p] -&gt; Bool
+forall a. [a] -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Bool
+</span><span class="hs-identifier hs-var">null</span></span><span> </span><span class="annot"><span class="annottext">[BinderP p]
+</span><a href="#local-6989586621682629404"><span class="hs-identifier hs-var">args</span></a></span><span> </span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[GenStgAlt p]
+</span><a href="#local-6989586621682629407"><span class="hs-identifier hs-var">alts</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">GenStgExpr p -&gt; Maybe (GenStgExpr p)
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="annot"><span class="annottext">GenStgExpr p
+</span><a href="#local-6989586621682629406"><span class="hs-identifier hs-var">rhs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-55"></span><span class="annot"><a href="GHC.Stg.Utils.html#findDefaultStg"><span class="hs-identifier hs-var">findDefaultStg</span></a></span><span> </span><span id="local-6989586621682629410"><span class="annot"><span class="annottext">[GenStgAlt p]
+</span><a href="#local-6989586621682629410"><span class="hs-identifier hs-var">alts</span></a></span></span><span>                                  </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[GenStgAlt p]
+</span><a href="#local-6989586621682629410"><span class="hs-identifier hs-var">alts</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Maybe (GenStgExpr p)
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span class="hs-special">)</span><span>
+</span><span id="line-56"></span><span>
+</span><span id="line-57"></span><span class="annot"><a href="GHC.Stg.Utils.html#mkStgAltTypeFromStgAlts"><span class="hs-identifier hs-type">mkStgAltTypeFromStgAlts</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621682629314"><span class="annot"><a href="#local-6989586621682629314"><span class="hs-identifier hs-type">p</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="GHC.Types.Var.html#Id"><span class="hs-identifier hs-type">Id</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="GHC.Stg.Syntax.html#GenStgAlt"><span class="hs-identifier hs-type">GenStgAlt</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682629314"><span class="hs-identifier hs-type">p</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Stg.Syntax.html#AltType"><span class="hs-identifier hs-type">AltType</span></a></span><span>
+</span><span id="line-58"></span><span id="mkStgAltTypeFromStgAlts"><span class="annot"><span class="annottext">mkStgAltTypeFromStgAlts :: forall (p :: StgPass). Id -&gt; [GenStgAlt p] -&gt; AltType
+</span><a href="GHC.Stg.Utils.html#mkStgAltTypeFromStgAlts"><span class="hs-identifier hs-var hs-var">mkStgAltTypeFromStgAlts</span></a></span></span><span> </span><span id="local-6989586621682629423"><span class="annot"><span class="annottext">Id
+</span><a href="#local-6989586621682629423"><span class="hs-identifier hs-var">bndr</span></a></span></span><span> </span><span id="local-6989586621682629424"><span class="annot"><span class="annottext">[GenStgAlt p]
+</span><a href="#local-6989586621682629424"><span class="hs-identifier hs-var">alts</span></a></span></span><span>
+</span><span id="line-59"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">NvUnaryType -&gt; Bool
+</span><a href="GHC.Core.Type.html#isUnboxedTupleType"><span class="hs-identifier hs-var">isUnboxedTupleType</span></a></span><span> </span><span class="annot"><span class="annottext">NvUnaryType
+</span><a href="#local-6989586621682629426"><span class="hs-identifier hs-var">bndr_ty</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><span class="hs-operator hs-var">||</span></span><span> </span><span class="annot"><span class="annottext">NvUnaryType -&gt; Bool
+</span><a href="GHC.Core.Type.html#isUnboxedSumType"><span class="hs-identifier hs-var">isUnboxedSumType</span></a></span><span> </span><span class="annot"><span class="annottext">NvUnaryType
+</span><a href="#local-6989586621682629426"><span class="hs-identifier hs-var">bndr_ty</span></a></span><span>
+</span><span id="line-60"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; AltType
+</span><a href="GHC.Stg.Syntax.html#MultiValAlt"><span class="hs-identifier hs-var">MultiValAlt</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[PrimRep] -&gt; Int
+forall a. [a] -&gt; Int
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Int
+</span><span class="hs-identifier hs-var">length</span></span><span> </span><span class="annot"><span class="annottext">[PrimRep]
+</span><a href="#local-6989586621682629431"><span class="hs-identifier hs-var">prim_reps</span></a></span><span class="hs-special">)</span><span>  </span><span class="hs-comment">-- always use MultiValAlt for unboxed tuples</span><span>
+</span><span id="line-61"></span><span>
+</span><span id="line-62"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">otherwise</span></span><span>
+</span><span id="line-63"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">[PrimRep]
+</span><a href="#local-6989586621682629431"><span class="hs-identifier hs-var">prim_reps</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-64"></span><span>      </span><span class="hs-special">[</span><span id="local-6989586621682629432"><span class="annot"><span class="annottext">PrimRep
+</span><a href="#local-6989586621682629432"><span class="hs-identifier hs-var">rep</span></a></span></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">PrimRep -&gt; Bool
+</span><a href="GHC.Core.TyCon.html#isGcPtrRep"><span class="hs-identifier hs-var">isGcPtrRep</span></a></span><span> </span><span class="annot"><span class="annottext">PrimRep
+</span><a href="#local-6989586621682629432"><span class="hs-identifier hs-var">rep</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-65"></span><span>        </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">NvUnaryType -&gt; Maybe TyCon
+</span><a href="GHC.Core.Type.html#tyConAppTyCon_maybe"><span class="hs-identifier hs-var">tyConAppTyCon_maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">NvUnaryType -&gt; NvUnaryType
+</span><a href="GHC.Types.RepType.html#unwrapType"><span class="hs-identifier hs-var">unwrapType</span></a></span><span> </span><span class="annot"><span class="annottext">NvUnaryType
+</span><a href="#local-6989586621682629426"><span class="hs-identifier hs-var">bndr_ty</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-66"></span><span>          </span><span class="annot"><span class="hs-identifier hs-type">Just</span></span><span> </span><span id="local-6989586621682629436"><span class="annot"><span class="annottext">TyCon
+</span><a href="#local-6989586621682629436"><span class="hs-identifier hs-var">tc</span></a></span></span><span>
+</span><span id="line-67"></span><span>            </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">TyCon -&gt; Bool
+</span><a href="GHC.Core.TyCon.html#isAbstractTyCon"><span class="hs-identifier hs-var">isAbstractTyCon</span></a></span><span> </span><span class="annot"><span class="annottext">TyCon
+</span><a href="#local-6989586621682629436"><span class="hs-identifier hs-var">tc</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">AltType
+</span><a href="#local-6989586621682629438"><span class="hs-identifier hs-var">look_for_better_tycon</span></a></span><span>
+</span><span id="line-68"></span><span>            </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">TyCon -&gt; Bool
+</span><a href="GHC.Core.TyCon.html#isAlgTyCon"><span class="hs-identifier hs-var">isAlgTyCon</span></a></span><span> </span><span class="annot"><span class="annottext">TyCon
+</span><a href="#local-6989586621682629436"><span class="hs-identifier hs-var">tc</span></a></span><span>      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">TyCon -&gt; AltType
+</span><a href="GHC.Stg.Syntax.html#AlgAlt"><span class="hs-identifier hs-var">AlgAlt</span></a></span><span> </span><span class="annot"><span class="annottext">TyCon
+</span><a href="#local-6989586621682629436"><span class="hs-identifier hs-var">tc</span></a></span><span>
+</span><span id="line-69"></span><span>            </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">otherwise</span></span><span>          </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; SDoc -&gt; AltType -&gt; AltType
+forall a. HasCallStack =&gt; Bool -&gt; SDoc -&gt; a -&gt; a
+</span><a href="GHC.Utils.Panic.html#assertPpr"><span class="hs-identifier hs-var">assertPpr</span></a></span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">TyCon -&gt; Bool
+</span><a href="#local-6989586621682629442"><span class="hs-identifier hs-var">_is_poly_alt_tycon</span></a></span><span> </span><span class="annot"><span class="annottext">TyCon
+</span><a href="#local-6989586621682629436"><span class="hs-identifier hs-var">tc</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TyCon -&gt; SDoc
+forall a. Outputable a =&gt; a -&gt; SDoc
+</span><a href="GHC.Utils.Outputable.html#ppr"><span class="hs-identifier hs-var">ppr</span></a></span><span> </span><span class="annot"><span class="annottext">TyCon
+</span><a href="#local-6989586621682629436"><span class="hs-identifier hs-var">tc</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-70"></span><span>                                    </span><span class="annot"><span class="annottext">AltType
+</span><a href="GHC.Stg.Syntax.html#PolyAlt"><span class="hs-identifier hs-var">PolyAlt</span></a></span><span>
+</span><span id="line-71"></span><span>          </span><span class="annot"><span class="annottext">Maybe TyCon
+</span><span class="hs-identifier hs-var">Nothing</span></span><span>                </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">AltType
+</span><a href="GHC.Stg.Syntax.html#PolyAlt"><span class="hs-identifier hs-var">PolyAlt</span></a></span><span>
+</span><span id="line-72"></span><span>      </span><span class="hs-special">[</span><span id="local-6989586621682629445"><span class="annot"><span class="annottext">PrimRep
+</span><a href="#local-6989586621682629445"><span class="hs-identifier hs-var">non_gcd</span></a></span></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">PrimRep -&gt; AltType
+</span><a href="GHC.Stg.Syntax.html#PrimAlt"><span class="hs-identifier hs-var">PrimAlt</span></a></span><span> </span><span class="annot"><span class="annottext">PrimRep
+</span><a href="#local-6989586621682629445"><span class="hs-identifier hs-var">non_gcd</span></a></span><span>
+</span><span id="line-73"></span><span>      </span><span id="local-6989586621682629447"><span class="annot"><span class="annottext">[PrimRep]
+</span><a href="#local-6989586621682629447"><span class="hs-identifier hs-var">not_unary</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Int -&gt; AltType
+</span><a href="GHC.Stg.Syntax.html#MultiValAlt"><span class="hs-identifier hs-var">MultiValAlt</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[PrimRep] -&gt; Int
+forall a. [a] -&gt; Int
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Int
+</span><span class="hs-identifier hs-var">length</span></span><span> </span><span class="annot"><span class="annottext">[PrimRep]
+</span><a href="#local-6989586621682629447"><span class="hs-identifier hs-var">not_unary</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-74"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-75"></span><span>   </span><span id="local-6989586621682629426"><span class="annot"><span class="annottext">bndr_ty :: NvUnaryType
+</span><a href="#local-6989586621682629426"><span class="hs-identifier hs-var hs-var">bndr_ty</span></a></span></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Id -&gt; NvUnaryType
+</span><a href="GHC.Types.Id.html#idType"><span class="hs-identifier hs-var">idType</span></a></span><span> </span><span class="annot"><span class="annottext">Id
+</span><a href="#local-6989586621682629423"><span class="hs-identifier hs-var">bndr</span></a></span><span>
+</span><span id="line-76"></span><span>   </span><span id="local-6989586621682629431"><span class="annot"><span class="annottext">prim_reps :: [PrimRep]
+</span><a href="#local-6989586621682629431"><span class="hs-identifier hs-var hs-var">prim_reps</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">HasDebugCallStack =&gt; NvUnaryType -&gt; [PrimRep]
+NvUnaryType -&gt; [PrimRep]
+</span><a href="GHC.Types.RepType.html#typePrimRep"><span class="hs-identifier hs-var">typePrimRep</span></a></span><span> </span><span class="annot"><span class="annottext">NvUnaryType
+</span><a href="#local-6989586621682629426"><span class="hs-identifier hs-var">bndr_ty</span></a></span><span>
+</span><span id="line-77"></span><span>
+</span><span id="line-78"></span><span>   </span><span id="local-6989586621682629442"><span class="annot"><span class="annottext">_is_poly_alt_tycon :: TyCon -&gt; Bool
+</span><a href="#local-6989586621682629442"><span class="hs-identifier hs-var hs-var">_is_poly_alt_tycon</span></a></span></span><span> </span><span id="local-6989586621682629450"><span class="annot"><span class="annottext">TyCon
+</span><a href="#local-6989586621682629450"><span class="hs-identifier hs-var">tc</span></a></span></span><span>
+</span><span id="line-79"></span><span>        </span><span class="hs-glyph">=</span><span>  </span><span class="annot"><span class="annottext">TyCon -&gt; Bool
+</span><a href="GHC.Core.TyCon.html#isPrimTyCon"><span class="hs-identifier hs-var">isPrimTyCon</span></a></span><span> </span><span class="annot"><span class="annottext">TyCon
+</span><a href="#local-6989586621682629450"><span class="hs-identifier hs-var">tc</span></a></span><span>   </span><span class="hs-comment">-- &quot;Any&quot; is lifted but primitive</span><span>
+</span><span id="line-80"></span><span>        </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><span class="hs-operator hs-var">||</span></span><span> </span><span class="annot"><span class="annottext">TyCon -&gt; Bool
+</span><a href="GHC.Core.TyCon.html#isFamilyTyCon"><span class="hs-identifier hs-var">isFamilyTyCon</span></a></span><span> </span><span class="annot"><span class="annottext">TyCon
+</span><a href="#local-6989586621682629450"><span class="hs-identifier hs-var">tc</span></a></span><span> </span><span class="hs-comment">-- Type family; e.g. Any, or arising from strict</span><span>
+</span><span id="line-81"></span><span>                            </span><span class="hs-comment">-- function application where argument has a</span><span>
+</span><span id="line-82"></span><span>                            </span><span class="hs-comment">-- type-family type</span><span>
+</span><span id="line-83"></span><span>
+</span><span id="line-84"></span><span>   </span><span class="hs-comment">-- Sometimes, the TyCon is a AbstractTyCon which may not have any</span><span>
+</span><span id="line-85"></span><span>   </span><span class="hs-comment">-- constructors inside it.  Then we may get a better TyCon by</span><span>
+</span><span id="line-86"></span><span>   </span><span class="hs-comment">-- grabbing the one from a constructor alternative</span><span>
+</span><span id="line-87"></span><span>   </span><span class="hs-comment">-- if one exists.</span><span>
+</span><span id="line-88"></span><span>   </span><span id="local-6989586621682629438"><span class="annot"><span class="annottext">look_for_better_tycon :: AltType
+</span><a href="#local-6989586621682629438"><span class="hs-identifier hs-var hs-var">look_for_better_tycon</span></a></span></span><span>
+</span><span id="line-89"></span><span>        </span><span class="hs-glyph">|</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Core.html#DataAlt"><span class="hs-identifier hs-type">DataAlt</span></a></span><span> </span><span id="local-6989586621682629454"><span class="annot"><span class="annottext">DataCon
+</span><a href="#local-6989586621682629454"><span class="hs-identifier hs-var">con</span></a></span></span><span> </span><span class="annot"><span class="hs-glyph hs-type">:</span></span><span> </span><span class="annot"><span class="annottext">[AltCon]
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">GenStgAlt p -&gt; AltCon
+forall (pass :: StgPass). GenStgAlt pass -&gt; AltCon
+</span><a href="GHC.Stg.Syntax.html#alt_con"><span class="hs-identifier hs-var">alt_con</span></a></span><span> </span><span class="annot"><span class="annottext">(GenStgAlt p -&gt; AltCon) -&gt; [GenStgAlt p] -&gt; [AltCon]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">[GenStgAlt p]
+</span><a href="#local-6989586621682629456"><span class="hs-identifier hs-var">data_alts</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-90"></span><span>                </span><span class="annot"><span class="annottext">TyCon -&gt; AltType
+</span><a href="GHC.Stg.Syntax.html#AlgAlt"><span class="hs-identifier hs-var">AlgAlt</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">DataCon -&gt; TyCon
+</span><a href="GHC.Core.DataCon.html#dataConTyCon"><span class="hs-identifier hs-var">dataConTyCon</span></a></span><span> </span><span class="annot"><span class="annottext">DataCon
+</span><a href="#local-6989586621682629454"><span class="hs-identifier hs-var">con</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-91"></span><span>        </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">otherwise</span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-92"></span><span>                </span><span class="annot"><span class="annottext">Bool -&gt; AltType -&gt; AltType
+forall a. HasCallStack =&gt; Bool -&gt; a -&gt; a
+</span><a href="GHC.Utils.Panic.Plain.html#assert"><span class="hs-identifier hs-var">assert</span></a></span><span class="hs-special">(</span><span class="annot"><span class="annottext">[GenStgAlt p] -&gt; Bool
+forall a. [a] -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Bool
+</span><span class="hs-identifier hs-var">null</span></span><span> </span><span class="annot"><span class="annottext">[GenStgAlt p]
+</span><a href="#local-6989586621682629456"><span class="hs-identifier hs-var">data_alts</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-93"></span><span>                </span><span class="annot"><span class="annottext">AltType
+</span><a href="GHC.Stg.Syntax.html#PolyAlt"><span class="hs-identifier hs-var">PolyAlt</span></a></span><span>
+</span><span id="line-94"></span><span>        </span><span class="hs-keyword">where</span><span>
+</span><span id="line-95"></span><span>                </span><span class="hs-special">(</span><span id="local-6989586621682629456"><span class="annot"><span class="annottext">[GenStgAlt p]
+</span><a href="#local-6989586621682629456"><span class="hs-identifier hs-var">data_alts</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621682629458"><span class="annot"><span class="annottext">Maybe (GenStgExpr p)
+</span><a href="#local-6989586621682629458"><span class="hs-identifier hs-var">_deflt</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[GenStgAlt p] -&gt; ([GenStgAlt p], Maybe (GenStgExpr p))
+forall (p :: StgPass).
+[GenStgAlt p] -&gt; ([GenStgAlt p], Maybe (GenStgExpr p))
+</span><a href="GHC.Stg.Utils.html#findDefaultStg"><span class="hs-identifier hs-var">findDefaultStg</span></a></span><span> </span><span class="annot"><span class="annottext">[GenStgAlt p]
+</span><a href="#local-6989586621682629424"><span class="hs-identifier hs-var">alts</span></a></span><span>
+</span><span id="line-96"></span><span>
+</span><span id="line-97"></span><span id="local-6989586621682629328"><span class="annot"><a href="GHC.Stg.Utils.html#bindersOf"><span class="hs-identifier hs-type">bindersOf</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Stg.Syntax.html#BinderP"><span class="hs-identifier hs-type">BinderP</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682629328"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><span class="hs-operator hs-type">~</span></span><span> </span><span class="annot"><a href="GHC.Types.Var.html#Id"><span class="hs-identifier hs-type">Id</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="GHC.Stg.Syntax.html#GenStgBinding"><span class="hs-identifier hs-type">GenStgBinding</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682629328"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="GHC.Types.Var.html#Id"><span class="hs-identifier hs-type">Id</span></a></span><span class="hs-special">]</span></span><span>
+</span><span id="line-98"></span><span id="bindersOf"><span class="annot"><span class="annottext">bindersOf :: forall (a :: StgPass). (BinderP a ~ Id) =&gt; GenStgBinding a -&gt; [Id]
+</span><a href="GHC.Stg.Utils.html#bindersOf"><span class="hs-identifier hs-var hs-var">bindersOf</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Stg.Syntax.html#StgNonRec"><span class="hs-identifier hs-type">StgNonRec</span></a></span><span> </span><span id="local-6989586621682629462"><span class="annot"><span class="annottext">BinderP a
+</span><a href="#local-6989586621682629462"><span class="hs-identifier hs-var">binder</span></a></span></span><span> </span><span class="annot"><span class="annottext">GenStgRhs a
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Id
+BinderP a
+</span><a href="#local-6989586621682629462"><span class="hs-identifier hs-var">binder</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-99"></span><span class="annot"><a href="GHC.Stg.Utils.html#bindersOf"><span class="hs-identifier hs-var">bindersOf</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Stg.Syntax.html#StgRec"><span class="hs-identifier hs-type">StgRec</span></a></span><span> </span><span id="local-6989586621682629464"><span class="annot"><span class="annottext">[(BinderP a, GenStgRhs a)]
+</span><a href="#local-6989586621682629464"><span class="hs-identifier hs-var">pairs</span></a></span></span><span class="hs-special">)</span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Id
+</span><a href="#local-6989586621682629465"><span class="hs-identifier hs-var">binder</span></a></span><span> </span><span class="hs-glyph">|</span><span> </span><span class="hs-special">(</span><span id="local-6989586621682629465"><span class="annot"><span class="annottext">Id
+</span><a href="#local-6989586621682629465"><span class="hs-identifier hs-var">binder</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">GenStgRhs a
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[(Id, GenStgRhs a)]
+[(BinderP a, GenStgRhs a)]
+</span><a href="#local-6989586621682629464"><span class="hs-identifier hs-var">pairs</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-100"></span><span>
+</span><span id="line-101"></span><span id="local-6989586621682629334"><span class="annot"><a href="GHC.Stg.Utils.html#bindersOfX"><span class="hs-identifier hs-type">bindersOfX</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Stg.Syntax.html#GenStgBinding"><span class="hs-identifier hs-type">GenStgBinding</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682629334"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="GHC.Stg.Syntax.html#BinderP"><span class="hs-identifier hs-type">BinderP</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682629334"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span></span><span>
+</span><span id="line-102"></span><span id="bindersOfX"><span class="annot"><span class="annottext">bindersOfX :: forall (a :: StgPass). GenStgBinding a -&gt; [BinderP a]
+</span><a href="GHC.Stg.Utils.html#bindersOfX"><span class="hs-identifier hs-var hs-var">bindersOfX</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Stg.Syntax.html#StgNonRec"><span class="hs-identifier hs-type">StgNonRec</span></a></span><span> </span><span id="local-6989586621682629466"><span class="annot"><span class="annottext">BinderP a
+</span><a href="#local-6989586621682629466"><span class="hs-identifier hs-var">binder</span></a></span></span><span> </span><span class="annot"><span class="annottext">GenStgRhs a
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">BinderP a
+</span><a href="#local-6989586621682629466"><span class="hs-identifier hs-var">binder</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-103"></span><span class="annot"><a href="GHC.Stg.Utils.html#bindersOfX"><span class="hs-identifier hs-var">bindersOfX</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Stg.Syntax.html#StgRec"><span class="hs-identifier hs-type">StgRec</span></a></span><span> </span><span id="local-6989586621682629467"><span class="annot"><span class="annottext">[(BinderP a, GenStgRhs a)]
+</span><a href="#local-6989586621682629467"><span class="hs-identifier hs-var">pairs</span></a></span></span><span class="hs-special">)</span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">BinderP a
+</span><a href="#local-6989586621682629468"><span class="hs-identifier hs-var">binder</span></a></span><span> </span><span class="hs-glyph">|</span><span> </span><span class="hs-special">(</span><span id="local-6989586621682629468"><span class="annot"><span class="annottext">BinderP a
+</span><a href="#local-6989586621682629468"><span class="hs-identifier hs-var">binder</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">GenStgRhs a
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[(BinderP a, GenStgRhs a)]
+</span><a href="#local-6989586621682629467"><span class="hs-identifier hs-var">pairs</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-104"></span><span>
+</span><span id="line-105"></span><span id="local-6989586621682629336"><span class="annot"><a href="GHC.Stg.Utils.html#bindersOfTop"><span class="hs-identifier hs-type">bindersOfTop</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Stg.Syntax.html#BinderP"><span class="hs-identifier hs-type">BinderP</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682629336"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><span class="hs-operator hs-type">~</span></span><span> </span><span class="annot"><a href="GHC.Types.Var.html#Id"><span class="hs-identifier hs-type">Id</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="GHC.Stg.Syntax.html#GenStgTopBinding"><span class="hs-identifier hs-type">GenStgTopBinding</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682629336"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="GHC.Types.Var.html#Id"><span class="hs-identifier hs-type">Id</span></a></span><span class="hs-special">]</span></span><span>
+</span><span id="line-106"></span><span id="bindersOfTop"><span class="annot"><span class="annottext">bindersOfTop :: forall (a :: StgPass).
+(BinderP a ~ Id) =&gt;
+GenStgTopBinding a -&gt; [Id]
+</span><a href="GHC.Stg.Utils.html#bindersOfTop"><span class="hs-identifier hs-var hs-var">bindersOfTop</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Stg.Syntax.html#StgTopLifted"><span class="hs-identifier hs-type">StgTopLifted</span></a></span><span> </span><span id="local-6989586621682629474"><span class="annot"><span class="annottext">GenStgBinding a
+</span><a href="#local-6989586621682629474"><span class="hs-identifier hs-var">bind</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">GenStgBinding a -&gt; [Id]
+forall (a :: StgPass). (BinderP a ~ Id) =&gt; GenStgBinding a -&gt; [Id]
+</span><a href="GHC.Stg.Utils.html#bindersOf"><span class="hs-identifier hs-var">bindersOf</span></a></span><span> </span><span class="annot"><span class="annottext">GenStgBinding a
+</span><a href="#local-6989586621682629474"><span class="hs-identifier hs-var">bind</span></a></span><span>
+</span><span id="line-107"></span><span class="annot"><a href="GHC.Stg.Utils.html#bindersOfTop"><span class="hs-identifier hs-var">bindersOfTop</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Stg.Syntax.html#StgTopStringLit"><span class="hs-identifier hs-type">StgTopStringLit</span></a></span><span> </span><span id="local-6989586621682629476"><span class="annot"><span class="annottext">Id
+</span><a href="#local-6989586621682629476"><span class="hs-identifier hs-var">binder</span></a></span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Id
+</span><a href="#local-6989586621682629476"><span class="hs-identifier hs-var">binder</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-108"></span><span>
+</span><span id="line-109"></span><span class="hs-comment">-- All ids we bind something to on the top level.</span><span>
+</span><span id="line-110"></span><span id="local-6989586621682629340"><span class="annot"><a href="GHC.Stg.Utils.html#bindersOfTopBinds"><span class="hs-identifier hs-type">bindersOfTopBinds</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Stg.Syntax.html#BinderP"><span class="hs-identifier hs-type">BinderP</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682629340"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><span class="hs-operator hs-type">~</span></span><span> </span><span class="annot"><a href="GHC.Types.Var.html#Id"><span class="hs-identifier hs-type">Id</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="GHC.Stg.Syntax.html#GenStgTopBinding"><span class="hs-identifier hs-type">GenStgTopBinding</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682629340"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="GHC.Types.Var.html#Id"><span class="hs-identifier hs-type">Id</span></a></span><span class="hs-special">]</span></span><span>
+</span><span id="line-111"></span><span class="hs-comment">-- bindersOfTopBinds binds = mapUnionVarSet (mkVarSet . bindersOfTop) binds</span><span>
+</span><span id="line-112"></span><span id="bindersOfTopBinds"><span class="annot"><span class="annottext">bindersOfTopBinds :: forall (a :: StgPass).
+(BinderP a ~ Id) =&gt;
+[GenStgTopBinding a] -&gt; [Id]
+</span><a href="GHC.Stg.Utils.html#bindersOfTopBinds"><span class="hs-identifier hs-var hs-var">bindersOfTopBinds</span></a></span></span><span> </span><span id="local-6989586621682629482"><span class="annot"><span class="annottext">[GenStgTopBinding a]
+</span><a href="#local-6989586621682629482"><span class="hs-identifier hs-var">binds</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(GenStgTopBinding a -&gt; [Id] -&gt; [Id])
+-&gt; [Id] -&gt; [GenStgTopBinding a] -&gt; [Id]
+forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; [a] -&gt; b
+forall (t :: * -&gt; *) a b.
+Foldable t =&gt;
+(a -&gt; b -&gt; b) -&gt; b -&gt; t a -&gt; b
+</span><span class="hs-identifier hs-var">foldr</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Id] -&gt; [Id] -&gt; [Id]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><span class="hs-operator hs-var">(++)</span></span><span> </span><span class="annot"><span class="annottext">([Id] -&gt; [Id] -&gt; [Id])
+-&gt; (GenStgTopBinding a -&gt; [Id])
+-&gt; GenStgTopBinding a
+-&gt; [Id]
+-&gt; [Id]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">GenStgTopBinding a -&gt; [Id]
+forall (a :: StgPass).
+(BinderP a ~ Id) =&gt;
+GenStgTopBinding a -&gt; [Id]
+</span><a href="GHC.Stg.Utils.html#bindersOfTop"><span class="hs-identifier hs-var">bindersOfTop</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="annot"><span class="annottext">[GenStgTopBinding a]
+</span><a href="#local-6989586621682629482"><span class="hs-identifier hs-var">binds</span></a></span><span>
+</span><span id="line-113"></span><span>
+</span><span id="line-114"></span><span class="annot"><a href="GHC.Stg.Utils.html#idArgs"><span class="hs-identifier hs-type">idArgs</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="GHC.Stg.Syntax.html#StgArg"><span class="hs-identifier hs-type">StgArg</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="GHC.Types.Var.html#Id"><span class="hs-identifier hs-type">Id</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-115"></span><span id="idArgs"><span class="annot"><span class="annottext">idArgs :: [StgArg] -&gt; [Id]
+</span><a href="GHC.Stg.Utils.html#idArgs"><span class="hs-identifier hs-var hs-var">idArgs</span></a></span></span><span> </span><span id="local-6989586621682629485"><span class="annot"><span class="annottext">[StgArg]
+</span><a href="#local-6989586621682629485"><span class="hs-identifier hs-var">args</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Id
+</span><a href="#local-6989586621682629486"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><a href="GHC.Stg.Syntax.html#StgVarArg"><span class="hs-identifier hs-type">StgVarArg</span></a></span><span> </span><span id="local-6989586621682629486"><span class="annot"><span class="annottext">Id
+</span><a href="#local-6989586621682629486"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[StgArg]
+</span><a href="#local-6989586621682629485"><span class="hs-identifier hs-var">args</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-116"></span><span>
+</span><span id="line-117"></span><span class="annot"><span class="hs-comment">-- | Strip ticks of a given type from an STG expression.</span></span><span>
+</span><span id="line-118"></span><span id="local-6989586621682629350"><span class="annot"><a href="GHC.Stg.Utils.html#stripStgTicksTop"><span class="hs-identifier hs-type">stripStgTicksTop</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Types.Tickish.html#StgTickish"><span class="hs-identifier hs-type">StgTickish</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Stg.Syntax.html#GenStgExpr"><span class="hs-identifier hs-type">GenStgExpr</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682629350"><span class="hs-identifier hs-type">p</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="hs-special">[</span><span class="annot"><a href="GHC.Types.Tickish.html#StgTickish"><span class="hs-identifier hs-type">StgTickish</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Stg.Syntax.html#GenStgExpr"><span class="hs-identifier hs-type">GenStgExpr</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682629350"><span class="hs-identifier hs-type">p</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-119"></span><span id="stripStgTicksTop"><span class="annot"><span class="annottext">stripStgTicksTop :: forall (p :: StgPass).
+(StgTickish -&gt; Bool)
+-&gt; GenStgExpr p -&gt; ([StgTickish], GenStgExpr p)
+</span><a href="GHC.Stg.Utils.html#stripStgTicksTop"><span class="hs-identifier hs-var hs-var">stripStgTicksTop</span></a></span></span><span> </span><span id="local-6989586621682629488"><span class="annot"><span class="annottext">StgTickish -&gt; Bool
+</span><a href="#local-6989586621682629488"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[StgTickish] -&gt; GenStgExpr p -&gt; ([StgTickish], GenStgExpr p)
+</span><a href="#local-6989586621682629489"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-120"></span><span>   </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621682629489"><span class="annot"><span class="annottext">go :: [StgTickish] -&gt; GenStgExpr p -&gt; ([StgTickish], GenStgExpr p)
+</span><a href="#local-6989586621682629489"><span class="hs-identifier hs-var hs-var">go</span></a></span></span><span> </span><span id="local-6989586621682629490"><span class="annot"><span class="annottext">[StgTickish]
+</span><a href="#local-6989586621682629490"><span class="hs-identifier hs-var">ts</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Stg.Syntax.html#StgTick"><span class="hs-identifier hs-type">StgTick</span></a></span><span> </span><span id="local-6989586621682629492"><span class="annot"><span class="annottext">StgTickish
+</span><a href="#local-6989586621682629492"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span id="local-6989586621682629493"><span class="annot"><span class="annottext">GenStgExpr p
+</span><a href="#local-6989586621682629493"><span class="hs-identifier hs-var">e</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">StgTickish -&gt; Bool
+</span><a href="#local-6989586621682629488"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="annot"><span class="annottext">StgTickish
+</span><a href="#local-6989586621682629492"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[StgTickish] -&gt; GenStgExpr p -&gt; ([StgTickish], GenStgExpr p)
+</span><a href="#local-6989586621682629489"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">StgTickish
+</span><a href="#local-6989586621682629492"><span class="hs-identifier hs-var">t</span></a></span><span class="annot"><span class="annottext">StgTickish -&gt; [StgTickish] -&gt; [StgTickish]
+forall a. a -&gt; [a] -&gt; [a]
+</span><span class="hs-glyph hs-var">:</span></span><span class="annot"><span class="annottext">[StgTickish]
+</span><a href="#local-6989586621682629490"><span class="hs-identifier hs-var">ts</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">GenStgExpr p
+</span><a href="#local-6989586621682629493"><span class="hs-identifier hs-var">e</span></a></span><span>
+</span><span id="line-121"></span><span>         </span><span class="hs-comment">-- This special case avoid building a thunk for &quot;reverse ts&quot; when there are no ticks</span><span>
+</span><span id="line-122"></span><span>         </span><span class="annot"><a href="#local-6989586621682629489"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span id="local-6989586621682629494"><span class="annot"><span class="annottext">GenStgExpr p
+</span><a href="#local-6989586621682629494"><span class="hs-identifier hs-var">other</span></a></span></span><span>               </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">GenStgExpr p
+</span><a href="#local-6989586621682629494"><span class="hs-identifier hs-var">other</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-123"></span><span>         </span><span class="annot"><a href="#local-6989586621682629489"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span id="local-6989586621682629495"><span class="annot"><span class="annottext">[StgTickish]
+</span><a href="#local-6989586621682629495"><span class="hs-identifier hs-var">ts</span></a></span></span><span> </span><span id="local-6989586621682629496"><span class="annot"><span class="annottext">GenStgExpr p
+</span><a href="#local-6989586621682629496"><span class="hs-identifier hs-var">other</span></a></span></span><span>               </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[StgTickish] -&gt; [StgTickish]
+forall a. [a] -&gt; [a]
+</span><span class="hs-identifier hs-var">reverse</span></span><span> </span><span class="annot"><span class="annottext">[StgTickish]
+</span><a href="#local-6989586621682629495"><span class="hs-identifier hs-var">ts</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">GenStgExpr p
+</span><a href="#local-6989586621682629496"><span class="hs-identifier hs-var">other</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-124"></span><span>
+</span><span id="line-125"></span><span class="annot"><span class="hs-comment">-- | Strip ticks of a given type from an STG expression returning only the expression.</span></span><span>
+</span><span id="line-126"></span><span id="local-6989586621682629353"><span class="annot"><a href="GHC.Stg.Utils.html#stripStgTicksTopE"><span class="hs-identifier hs-type">stripStgTicksTopE</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Types.Tickish.html#StgTickish"><span class="hs-identifier hs-type">StgTickish</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Stg.Syntax.html#GenStgExpr"><span class="hs-identifier hs-type">GenStgExpr</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682629353"><span class="hs-identifier hs-type">p</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Stg.Syntax.html#GenStgExpr"><span class="hs-identifier hs-type">GenStgExpr</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682629353"><span class="hs-identifier hs-type">p</span></a></span></span><span>
+</span><span id="line-127"></span><span id="stripStgTicksTopE"><span class="annot"><span class="annottext">stripStgTicksTopE :: forall (p :: StgPass).
+(StgTickish -&gt; Bool) -&gt; GenStgExpr p -&gt; GenStgExpr p
+</span><a href="GHC.Stg.Utils.html#stripStgTicksTopE"><span class="hs-identifier hs-var hs-var">stripStgTicksTopE</span></a></span></span><span> </span><span id="local-6989586621682629498"><span class="annot"><span class="annottext">StgTickish -&gt; Bool
+</span><a href="#local-6989586621682629498"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">GenStgExpr p -&gt; GenStgExpr p
+</span><a href="#local-6989586621682629499"><span class="hs-identifier hs-var">go</span></a></span><span>
+</span><span id="line-128"></span><span>   </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621682629499"><span class="annot"><span class="annottext">go :: GenStgExpr p -&gt; GenStgExpr p
+</span><a href="#local-6989586621682629499"><span class="hs-identifier hs-var hs-var">go</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Stg.Syntax.html#StgTick"><span class="hs-identifier hs-type">StgTick</span></a></span><span> </span><span id="local-6989586621682629500"><span class="annot"><span class="annottext">StgTickish
+</span><a href="#local-6989586621682629500"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span id="local-6989586621682629501"><span class="annot"><span class="annottext">GenStgExpr p
+</span><a href="#local-6989586621682629501"><span class="hs-identifier hs-var">e</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">StgTickish -&gt; Bool
+</span><a href="#local-6989586621682629498"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="annot"><span class="annottext">StgTickish
+</span><a href="#local-6989586621682629500"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">GenStgExpr p -&gt; GenStgExpr p
+</span><a href="#local-6989586621682629499"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">GenStgExpr p
+</span><a href="#local-6989586621682629501"><span class="hs-identifier hs-var">e</span></a></span><span>
+</span><span id="line-129"></span><span>         </span><span class="annot"><a href="#local-6989586621682629499"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span id="local-6989586621682629502"><span class="annot"><span class="annottext">GenStgExpr p
+</span><a href="#local-6989586621682629502"><span class="hs-identifier hs-var">other</span></a></span></span><span>               </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">GenStgExpr p
+</span><a href="#local-6989586621682629502"><span class="hs-identifier hs-var">other</span></a></span><span>
+</span><span id="line-130"></span><span>
+</span><span id="line-131"></span><span class="annot"><span class="hs-comment">-- | Do we allow the given top-level (static) ConApp?</span></span><span>
+</span><span id="line-132"></span><span class="annot"><a href="GHC.Stg.Utils.html#allowTopLevelConApp"><span class="hs-identifier hs-type">allowTopLevelConApp</span></a></span><span>
+</span><span id="line-133"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Platform.html#Platform"><span class="hs-identifier hs-type">Platform</span></a></span><span>
+</span><span id="line-134"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span>          </span><span class="hs-comment">-- is Opt_ExternalDynamicRefs enabled?</span><span>
+</span><span id="line-135"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Unit.Types.html#Module"><span class="hs-identifier hs-type">Module</span></a></span><span>
+</span><span id="line-136"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Core.DataCon.html#DataCon"><span class="hs-identifier hs-type">DataCon</span></a></span><span>
+</span><span id="line-137"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="GHC.Stg.Syntax.html#StgArg"><span class="hs-identifier hs-type">StgArg</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-138"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span>
+</span><span id="line-139"></span><span id="allowTopLevelConApp"><span class="annot"><span class="annottext">allowTopLevelConApp :: Platform -&gt; Bool -&gt; Module -&gt; DataCon -&gt; [StgArg] -&gt; Bool
+</span><a href="GHC.Stg.Utils.html#allowTopLevelConApp"><span class="hs-identifier hs-var hs-var">allowTopLevelConApp</span></a></span></span><span> </span><span id="local-6989586621682629503"><span class="annot"><span class="annottext">Platform
+</span><a href="#local-6989586621682629503"><span class="hs-identifier hs-var">platform</span></a></span></span><span> </span><span id="local-6989586621682629504"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621682629504"><span class="hs-identifier hs-var">ext_dyn_refs</span></a></span></span><span> </span><span id="local-6989586621682629505"><span class="annot"><span class="annottext">Module
+</span><a href="#local-6989586621682629505"><span class="hs-identifier hs-var">this_mod</span></a></span></span><span> </span><span id="local-6989586621682629506"><span class="annot"><span class="annottext">DataCon
+</span><a href="#local-6989586621682629506"><span class="hs-identifier hs-var">con</span></a></span></span><span> </span><span id="local-6989586621682629507"><span class="annot"><span class="annottext">[StgArg]
+</span><a href="#local-6989586621682629507"><span class="hs-identifier hs-var">args</span></a></span></span><span>
+</span><span id="line-140"></span><span>  </span><span class="hs-comment">-- we're not using dynamic linking</span><span>
+</span><span id="line-141"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool
+</span><span class="hs-identifier hs-var">not</span></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621682629504"><span class="hs-identifier hs-var">ext_dyn_refs</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span>
+</span><span id="line-142"></span><span>  </span><span class="hs-comment">-- if the target OS is Windows, we only allow top-level ConApps if they don't</span><span>
+</span><span id="line-143"></span><span>  </span><span class="hs-comment">-- reference external names (Windows DLLs have a problem with static cross-DLL</span><span>
+</span><span id="line-144"></span><span>  </span><span class="hs-comment">-- refs)</span><span>
+</span><span id="line-145"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Platform -&gt; OS
+</span><a href="GHC.Platform.html#platformOS"><span class="hs-identifier hs-var">platformOS</span></a></span><span> </span><span class="annot"><span class="annottext">Platform
+</span><a href="#local-6989586621682629503"><span class="hs-identifier hs-var">platform</span></a></span><span> </span><span class="annot"><span class="annottext">OS -&gt; OS -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">OS
+</span><span class="hs-identifier hs-var">OSMinGW32</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool
+</span><span class="hs-identifier hs-var">not</span></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621682629511"><span class="hs-identifier hs-var">is_external_con_app</span></a></span><span>
+</span><span id="line-146"></span><span>  </span><span class="hs-comment">-- otherwise, allowed</span><span>
+</span><span id="line-147"></span><span>  </span><span class="hs-comment">-- Sylvain: shouldn't this be False when (ext_dyn_refs &amp;&amp; is_external_con_app)?</span><span>
+</span><span id="line-148"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">otherwise</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span>
+</span><span id="line-149"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-150"></span><span>    </span><span id="local-6989586621682629511"><span class="annot"><span class="annottext">is_external_con_app :: Bool
+</span><a href="#local-6989586621682629511"><span class="hs-identifier hs-var hs-var">is_external_con_app</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Platform -&gt; Module -&gt; Name -&gt; Bool
+</span><a href="GHC.Types.Name.html#isDynLinkName"><span class="hs-identifier hs-var">isDynLinkName</span></a></span><span> </span><span class="annot"><span class="annottext">Platform
+</span><a href="#local-6989586621682629503"><span class="hs-identifier hs-var">platform</span></a></span><span> </span><span class="annot"><span class="annottext">Module
+</span><a href="#local-6989586621682629505"><span class="hs-identifier hs-var">this_mod</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">DataCon -&gt; Name
+</span><a href="GHC.Core.DataCon.html#dataConName"><span class="hs-identifier hs-var">dataConName</span></a></span><span> </span><span class="annot"><span class="annottext">DataCon
+</span><a href="#local-6989586621682629506"><span class="hs-identifier hs-var">con</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><span class="hs-operator hs-var">||</span></span><span> </span><span class="annot"><span class="annottext">(StgArg -&gt; Bool) -&gt; [StgArg] -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; (a -&gt; Bool) -&gt; t a -&gt; Bool
+</span><span class="hs-identifier hs-var">any</span></span><span> </span><span class="annot"><span class="annottext">StgArg -&gt; Bool
+</span><a href="#local-6989586621682629514"><span class="hs-identifier hs-var">is_dll_arg</span></a></span><span> </span><span class="annot"><span class="annottext">[StgArg]
+</span><a href="#local-6989586621682629507"><span class="hs-identifier hs-var">args</span></a></span><span>
+</span><span id="line-151"></span><span>
+</span><span id="line-152"></span><span>    </span><span class="hs-comment">-- NB: typePrimRep1 is legit because any free variables won't have</span><span>
+</span><span id="line-153"></span><span>    </span><span class="hs-comment">-- unlifted type (there are no unlifted things at top level)</span><span>
+</span><span id="line-154"></span><span>    </span><span class="annot"><a href="#local-6989586621682629514"><span class="hs-identifier hs-type">is_dll_arg</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Stg.Syntax.html#StgArg"><span class="hs-identifier hs-type">StgArg</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span>
+</span><span id="line-155"></span><span>    </span><span id="local-6989586621682629514"><span class="annot"><span class="annottext">is_dll_arg :: StgArg -&gt; Bool
+</span><a href="#local-6989586621682629514"><span class="hs-identifier hs-var hs-var">is_dll_arg</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Stg.Syntax.html#StgVarArg"><span class="hs-identifier hs-type">StgVarArg</span></a></span><span> </span><span id="local-6989586621682629515"><span class="annot"><span class="annottext">Id
+</span><a href="#local-6989586621682629515"><span class="hs-identifier hs-var">v</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>  </span><span class="annot"><span class="annottext">PrimOrVoidRep -&gt; Bool
+</span><a href="GHC.Stg.Utils.html#isAddrRep"><span class="hs-identifier hs-var">isAddrRep</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">HasDebugCallStack =&gt; NvUnaryType -&gt; PrimOrVoidRep
+NvUnaryType -&gt; PrimOrVoidRep
+</span><a href="GHC.Types.RepType.html#typePrimRep1"><span class="hs-identifier hs-var">typePrimRep1</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Id -&gt; NvUnaryType
+</span><a href="GHC.Types.Id.html#idType"><span class="hs-identifier hs-var">idType</span></a></span><span> </span><span class="annot"><span class="annottext">Id
+</span><a href="#local-6989586621682629515"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-156"></span><span>                             </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><span class="hs-operator hs-var">&amp;&amp;</span></span><span> </span><span class="annot"><span class="annottext">Platform -&gt; Module -&gt; Name -&gt; Bool
+</span><a href="GHC.Types.Name.html#isDynLinkName"><span class="hs-identifier hs-var">isDynLinkName</span></a></span><span> </span><span class="annot"><span class="annottext">Platform
+</span><a href="#local-6989586621682629503"><span class="hs-identifier hs-var">platform</span></a></span><span> </span><span class="annot"><span class="annottext">Module
+</span><a href="#local-6989586621682629505"><span class="hs-identifier hs-var">this_mod</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Id -&gt; Name
+</span><a href="GHC.Types.Id.html#idName"><span class="hs-identifier hs-var">idName</span></a></span><span> </span><span class="annot"><span class="annottext">Id
+</span><a href="#local-6989586621682629515"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-157"></span><span>    </span><span class="annot"><a href="#local-6989586621682629514"><span class="hs-identifier hs-var">is_dll_arg</span></a></span><span> </span><span class="annot"><span class="annottext">StgArg
+</span><span class="hs-identifier">_</span></span><span>             </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span>
+</span><span id="line-158"></span><span>
+</span><span id="line-159"></span><span class="hs-comment">-- True of machine addresses; these are the things that don't work across DLLs.</span><span>
+</span><span id="line-160"></span><span class="hs-comment">-- The key point here is that VoidRep comes out False, so that a top level</span><span>
+</span><span id="line-161"></span><span class="hs-comment">-- nullary GADT constructor is True for allowTopLevelConApp</span><span>
+</span><span id="line-162"></span><span class="hs-comment">--</span><span>
+</span><span id="line-163"></span><span class="hs-comment">--    data T a where</span><span>
+</span><span id="line-164"></span><span class="hs-comment">--      T1 :: T Int</span><span>
+</span><span id="line-165"></span><span class="hs-comment">--</span><span>
+</span><span id="line-166"></span><span class="hs-comment">-- gives</span><span>
+</span><span id="line-167"></span><span class="hs-comment">--</span><span>
+</span><span id="line-168"></span><span class="hs-comment">--    T1 :: forall a. (a~Int) -&gt; T a</span><span>
+</span><span id="line-169"></span><span class="hs-comment">--</span><span>
+</span><span id="line-170"></span><span class="hs-comment">-- and hence the top-level binding</span><span>
+</span><span id="line-171"></span><span class="hs-comment">--</span><span>
+</span><span id="line-172"></span><span class="hs-comment">--    $WT1 :: T Int</span><span>
+</span><span id="line-173"></span><span class="hs-comment">--    $WT1 = T1 Int (Coercion (Refl Int))</span><span>
+</span><span id="line-174"></span><span class="hs-comment">--</span><span>
+</span><span id="line-175"></span><span class="hs-comment">-- The coercion argument here gets VoidRep</span><span>
+</span><span id="line-176"></span><span class="annot"><a href="GHC.Stg.Utils.html#isAddrRep"><span class="hs-identifier hs-type">isAddrRep</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Core.TyCon.html#PrimOrVoidRep"><span class="hs-identifier hs-type">PrimOrVoidRep</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span>
+</span><span id="line-177"></span><span id="isAddrRep"><span class="annot"><span class="annottext">isAddrRep :: PrimOrVoidRep -&gt; Bool
+</span><a href="GHC.Stg.Utils.html#isAddrRep"><span class="hs-identifier hs-var hs-var">isAddrRep</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Core.TyCon.html#NVRep"><span class="hs-identifier hs-type">NVRep</span></a></span><span> </span><span class="annot"><span class="annottext">PrimRep
+</span><a href="GHC.Core.TyCon.html#AddrRep"><span class="hs-identifier hs-var">AddrRep</span></a></span><span class="hs-special">)</span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span>
+</span><span id="line-178"></span><span class="annot"><a href="GHC.Stg.Utils.html#isAddrRep"><span class="hs-identifier hs-var">isAddrRep</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Core.TyCon.html#NVRep"><span class="hs-identifier hs-type">NVRep</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Core.TyCon.html#BoxedRep"><span class="hs-identifier hs-type">BoxedRep</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Levity
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span> </span><span class="hs-comment">-- FIXME: not true for JavaScript</span><span>
+</span><span id="line-179"></span><span class="annot"><a href="GHC.Stg.Utils.html#isAddrRep"><span class="hs-identifier hs-var">isAddrRep</span></a></span><span> </span><span class="annot"><span class="annottext">PrimOrVoidRep
+</span><span class="hs-identifier">_</span></span><span>                    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span>
+</span><span id="line-180"></span><span>
+</span><span id="line-181"></span></pre></body></html>

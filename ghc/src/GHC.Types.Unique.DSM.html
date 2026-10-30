@@ -1,0 +1,631 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE UnboxedTuples, PatternSynonyms, DerivingVia #-}</span><span>
+</span><span id="line-2"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="GHC.Types.Unique.DSM.html"><span class="hs-identifier">GHC.Types.Unique.DSM</span></a></span><span>
+</span><span id="line-3"></span><span>  </span><span class="hs-special">(</span><span>
+</span><span id="line-4"></span><span>  </span><span class="annot"><span class="hs-comment">-- * Threading a deterministic supply</span></span><span>
+</span><span id="line-5"></span><span>    </span><span class="annot"><a href="GHC.Types.Unique.DSM.html#DUniqSupply"><span class="hs-identifier">DUniqSupply</span></a></span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Types.Unique.DSM.html#UniqDSM"><span class="hs-identifier">UniqDSM</span></a></span><span class="hs-special">(</span><span class="annot"><a href="GHC.Types.Unique.DSM.html#UDSM"><span class="hs-identifier">UDSM</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Types.Unique.DSM.html#DUniqResult"><span class="hs-identifier">DUniqResult</span></a></span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="hs-keyword">pattern</span><span> </span><span class="annot"><a href="GHC.Types.Unique.DSM.html#DUniqResult"><span class="hs-identifier">DUniqResult</span></a></span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span>  </span><span class="annot"><span class="hs-comment">-- ** UniqDSM and DUniqSupply operations</span></span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Types.Unique.DSM.html#getUniqueDSM"><span class="hs-identifier">getUniqueDSM</span></a></span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Types.Unique.DSM.html#runUniqueDSM"><span class="hs-identifier">runUniqueDSM</span></a></span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Types.Unique.DSM.html#takeUniqueFromDSupply"><span class="hs-identifier">takeUniqueFromDSupply</span></a></span><span>
+</span><span id="line-14"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Types.Unique.DSM.html#initDUniqSupply"><span class="hs-identifier">initDUniqSupply</span></a></span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span>  </span><span class="annot"><span class="hs-comment">-- ** Tag operations</span></span><span>
+</span><span id="line-17"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Types.Unique.DSM.html#newTagDUniqSupply"><span class="hs-identifier">newTagDUniqSupply</span></a></span><span>
+</span><span id="line-18"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Types.Unique.DSM.html#getTagDUniqSupply"><span class="hs-identifier">getTagDUniqSupply</span></a></span><span>
+</span><span id="line-19"></span><span>
+</span><span id="line-20"></span><span>  </span><span class="annot"><span class="hs-comment">-- * A transfomer threading a deterministic supply</span></span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Types.Unique.DSM.html#UniqDSMT"><span class="hs-identifier">UniqDSMT</span></a></span><span class="hs-special">(</span><span class="annot"><a href="GHC.Types.Unique.DSM.html#UDSMT"><span class="hs-identifier">UDSMT</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span>  </span><span class="annot"><span class="hs-comment">-- ** UniqDSMT operations</span></span><span>
+</span><span id="line-24"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Types.Unique.DSM.html#runUDSMT"><span class="hs-identifier">runUDSMT</span></a></span><span>
+</span><span id="line-25"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Types.Unique.DSM.html#withDUS"><span class="hs-identifier">withDUS</span></a></span><span>
+</span><span id="line-26"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Types.Unique.DSM.html#hoistUDSMT"><span class="hs-identifier">hoistUDSMT</span></a></span><span>
+</span><span id="line-27"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Types.Unique.DSM.html#liftUDSMT"><span class="hs-identifier">liftUDSMT</span></a></span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span>  </span><span class="annot"><span class="hs-comment">-- ** Tags</span></span><span>
+</span><span id="line-30"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Types.Unique.DSM.html#setTagUDSMT"><span class="hs-identifier">setTagUDSMT</span></a></span><span>
+</span><span id="line-31"></span><span>
+</span><span id="line-32"></span><span>  </span><span class="annot"><span class="hs-comment">-- * Monad class for deterministic supply threading</span></span><span>
+</span><span id="line-33"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Types.Unique.DSM.html#MonadGetUnique"><span class="hs-identifier">MonadGetUnique</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Types.Unique.DSM.html#MonadUniqDSM"><span class="hs-identifier">MonadUniqDSM</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span>
+</span><span id="line-36"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.21.2.0-inplace/src/GHC.Exts.html"><span class="hs-identifier">GHC.Exts</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">oneShot</span></span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Prelude.html"><span class="hs-identifier">GHC.Prelude</span></a></span><span>
+</span><span id="line-41"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.21.2.0-inplace/src/GHC.Word.html"><span class="hs-identifier">GHC.Word</span></a></span><span>
+</span><span id="line-42"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.21.2.0-inplace/src/Control.Monad.Fix.html"><span class="hs-identifier">Control.Monad.Fix</span></a></span><span>
+</span><span id="line-43"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Types.Unique.html"><span class="hs-identifier">GHC.Types.Unique</span></a></span><span>
+</span><span id="line-44"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="GHC.Utils.Monad.State.Strict.html"><span class="hs-identifier">GHC.Utils.Monad.State.Strict</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Strict</span></span><span>
+</span><span id="line-45"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="GHC.Types.Unique.Supply.html"><span class="hs-identifier">GHC.Types.Unique.Supply</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">USM</span></span><span>
+</span><span id="line-46"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.21.2.0-inplace/src/Control.Monad.IO.Class.html"><span class="hs-identifier">Control.Monad.IO.Class</span></a></span><span>
+</span><span id="line-47"></span><span>
+</span><span id="line-48"></span><span class="hs-comment">{-
+Note [Deterministic Uniques in the CG]
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+GHC produces fully deterministic object code. To achieve this, there is a key
+pass (detRenameCmmGroup) which renames all non-deterministic uniques in
+the Cmm code right after StgToCmm. See Note [Object determinism] for the big
+picture and some details.
+
+The code generation pipeline that processes this renamed, deterministic, Cmm,
+however, may still need to generate new uniques. If we were to resort to the
+non-deterministic unique supply used in the rest of the compiler, our renaming
+efforts would be for naught.
+
+Therefore, after having renamed Cmm deterministically, we must ensure that all
+uniques created by the code generation pipeline use a deterministic source of uniques.
+Most often, this means don't use `UniqSM` in the Cmm passes, use `UniqDSM`:
+
+`UniqDSM` is a pure state monad with an incrementing counter from which we
+source new uniques. Unlike `UniqSM`, there's no way to `split` the supply, but
+it turns out this was rarely really needed for code generation and migrating
+from UniqSM to UniqDSM was easy.
+
+Secondly, the `DUniqSupply` used to run a `UniqDSM` must be threaded through
+all passes to guarantee uniques in different passes are unique amongst them
+altogether.
+Specifically, the same `DUniqSupply` must be threaded through the CG Streaming
+pipeline, starting with Driver.Main calling `StgToCmm.codeGen`, `cmmPipeline`,
+`cmmToRawCmm`, and `codeOutput` in sequence.
+
+To thread resources through the `Stream` abstraction, we use the `UniqDSMT`
+transformer on top of `IO` as the Monad underlying the Stream. `UniqDSMT` will
+thread the `DUniqSupply` through every pass applied to the `Stream`, for every
+element. We use @type CgStream = Stream (UniqDSMT IO)@ for the Stream used in
+code generation which that carries through the deterministic unique supply.
+
+Unlike non-deterministic unique supplies which can be split into supplies using
+different tags, or where a new supply with a new tag can be brought from the
+void, a `DUniqSupply` needs to be sampled iteratively. To use a different tag
+during a specific pass (to more easily identify uniques created in it), the tag
+should be manually set and then reset on the unique supply. There's also the
+auxiliary `setTagUDSMT` which sets the tag for all uniques supplied in the given
+action, and resets it implicitly.
+
+See also Note [Object determinism] in GHC.StgToCmm
+-}</span><span>
+</span><span id="line-93"></span><span>
+</span><span id="line-94"></span><span class="hs-comment">-- See Note [Deterministic Uniques in the CG]</span><span>
+</span><span id="line-95"></span><span class="hs-keyword">newtype</span><span> </span><span id="DUniqSupply"><span class="annot"><a href="GHC.Types.Unique.DSM.html#DUniqSupply"><span class="hs-identifier hs-var">DUniqSupply</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="DUS"><span class="annot"><a href="GHC.Types.Unique.DSM.html#DUS"><span class="hs-identifier hs-var">DUS</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word64</span></span><span> </span><span class="hs-comment">-- supply uniques iteratively</span><span>
+</span><span id="line-96"></span><span class="hs-keyword">type</span><span> </span><span id="DUniqResult"><span class="annot"><a href="GHC.Types.Unique.DSM.html#DUniqResult"><span class="hs-identifier hs-var">DUniqResult</span></a></span></span><span> </span><span id="local-6989586621682489153"><span class="annot"><a href="#local-6989586621682489153"><span class="hs-identifier hs-type">result</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(#</span><span> </span><span class="annot"><a href="#local-6989586621682489153"><span class="hs-identifier hs-type">result</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Types.Unique.DSM.html#DUniqSupply"><span class="hs-identifier hs-type">DUniqSupply</span></a></span><span> </span><span class="hs-special">#)</span><span>
+</span><span id="line-97"></span><span>
+</span><span id="line-98"></span><span class="hs-keyword">pattern</span><span> </span><span class="annot"><a href="GHC.Types.Unique.DSM.html#DUniqResult"><span class="hs-identifier hs-type">DUniqResult</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621682488998"><span class="annot"><a href="#local-6989586621682488998"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Types.Unique.DSM.html#DUniqSupply"><span class="hs-identifier hs-type">DUniqSupply</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(#</span><span> </span><span class="annot"><a href="#local-6989586621682488998"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Types.Unique.DSM.html#DUniqSupply"><span class="hs-identifier hs-type">DUniqSupply</span></a></span><span> </span><span class="hs-special">#)</span></span><span>
+</span><span id="line-99"></span><span class="hs-keyword">pattern</span><span> </span><span id="DUniqResult"><span id="%24mDUniqResult"><span id="%24bDUniqResult"><span class="annot"><span class="annottext">$mDUniqResult :: forall {r} {a}.
+(# a, DUniqSupply #)
+-&gt; (a -&gt; DUniqSupply -&gt; r) -&gt; ((# #) -&gt; r) -&gt; r
+$bDUniqResult :: forall a. a -&gt; DUniqSupply -&gt; (# a, DUniqSupply #)
+</span><a href="GHC.Types.Unique.DSM.html#DUniqResult"><span class="hs-identifier hs-var hs-var hs-var">DUniqResult</span></a></span></span></span></span><span> </span><span class="annot"><a href="#local-6989586621682489156"><span class="hs-identifier hs-type">x</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682489157"><span class="hs-identifier hs-type">y</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(#</span><span> </span><span id="local-6989586621682489156"><span class="annot"><a href="#local-6989586621682489156"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621682489157"><span class="annot"><a href="#local-6989586621682489157"><span class="hs-identifier hs-var">y</span></a></span></span><span> </span><span class="hs-special">#)</span><span>
+</span><span id="line-100"></span><span class="hs-pragma">{-# COMPLETE</span><span> </span><span class="annot"><a href="GHC.Types.Unique.DSM.html#DUniqResult"><span class="hs-pragma hs-type">DUniqResult</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-101"></span><span>
+</span><span id="line-102"></span><span class="hs-comment">-- | A monad which just gives the ability to obtain 'Unique's deterministically.</span><span>
+</span><span id="line-103"></span><span class="hs-comment">-- There's no splitting.</span><span>
+</span><span id="line-104"></span><span class="hs-keyword">newtype</span><span> </span><span id="UniqDSM"><span class="annot"><a href="GHC.Types.Unique.DSM.html#UniqDSM"><span class="hs-identifier hs-var">UniqDSM</span></a></span></span><span> </span><span id="local-6989586621682489002"><span class="annot"><a href="#local-6989586621682489002"><span class="hs-identifier hs-type">result</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="UDSM%27"><span class="annot"><a href="GHC.Types.Unique.DSM.html#UDSM%27"><span class="hs-identifier hs-var">UDSM'</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="unUDSM"><span class="annot"><span class="annottext">forall result. UniqDSM result -&gt; DUniqSupply -&gt; DUniqResult result
+</span><a href="GHC.Types.Unique.DSM.html#unUDSM"><span class="hs-identifier hs-var hs-var">unUDSM</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Types.Unique.DSM.html#DUniqSupply"><span class="hs-identifier hs-type">DUniqSupply</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Types.Unique.DSM.html#DUniqResult"><span class="hs-identifier hs-type">DUniqResult</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682489002"><span class="hs-identifier hs-type">result</span></a></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-105"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621682489161"><span id="local-6989586621682489166"><span class="annot"><span class="annottext">(forall a b. (a -&gt; b) -&gt; UniqDSM a -&gt; UniqDSM b)
+-&gt; (forall a b. a -&gt; UniqDSM b -&gt; UniqDSM a) -&gt; Functor UniqDSM
+forall a b. a -&gt; UniqDSM b -&gt; UniqDSM a
+forall a b. (a -&gt; b) -&gt; UniqDSM a -&gt; UniqDSM b
+forall (f :: * -&gt; *).
+(forall a b. (a -&gt; b) -&gt; f a -&gt; f b)
+-&gt; (forall a b. a -&gt; f b -&gt; f a) -&gt; Functor f
+$cfmap :: forall a b. (a -&gt; b) -&gt; UniqDSM a -&gt; UniqDSM b
+fmap :: forall a b. (a -&gt; b) -&gt; UniqDSM a -&gt; UniqDSM b
+$c&lt;$ :: forall a b. a -&gt; UniqDSM b -&gt; UniqDSM a
+&lt;$ :: forall a b. a -&gt; UniqDSM b -&gt; UniqDSM a
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Functor</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621682489175"><span id="local-6989586621682489180"><span id="local-6989586621682489184"><span id="local-6989586621682489188"><span id="local-6989586621682489192"><span class="annot"><span class="annottext">Functor UniqDSM
+Functor UniqDSM =&gt;
+(forall a. a -&gt; UniqDSM a)
+-&gt; (forall a b. UniqDSM (a -&gt; b) -&gt; UniqDSM a -&gt; UniqDSM b)
+-&gt; (forall a b c.
+    (a -&gt; b -&gt; c) -&gt; UniqDSM a -&gt; UniqDSM b -&gt; UniqDSM c)
+-&gt; (forall a b. UniqDSM a -&gt; UniqDSM b -&gt; UniqDSM b)
+-&gt; (forall a b. UniqDSM a -&gt; UniqDSM b -&gt; UniqDSM a)
+-&gt; Applicative UniqDSM
+forall a. a -&gt; UniqDSM a
+forall a b. UniqDSM a -&gt; UniqDSM b -&gt; UniqDSM a
+forall a b. UniqDSM a -&gt; UniqDSM b -&gt; UniqDSM b
+forall a b. UniqDSM (a -&gt; b) -&gt; UniqDSM a -&gt; UniqDSM b
+forall a b c. (a -&gt; b -&gt; c) -&gt; UniqDSM a -&gt; UniqDSM b -&gt; UniqDSM c
+forall (f :: * -&gt; *).
+Functor f =&gt;
+(forall a. a -&gt; f a)
+-&gt; (forall a b. f (a -&gt; b) -&gt; f a -&gt; f b)
+-&gt; (forall a b c. (a -&gt; b -&gt; c) -&gt; f a -&gt; f b -&gt; f c)
+-&gt; (forall a b. f a -&gt; f b -&gt; f b)
+-&gt; (forall a b. f a -&gt; f b -&gt; f a)
+-&gt; Applicative f
+$cpure :: forall a. a -&gt; UniqDSM a
+pure :: forall a. a -&gt; UniqDSM a
+$c&lt;*&gt; :: forall a b. UniqDSM (a -&gt; b) -&gt; UniqDSM a -&gt; UniqDSM b
+&lt;*&gt; :: forall a b. UniqDSM (a -&gt; b) -&gt; UniqDSM a -&gt; UniqDSM b
+$cliftA2 :: forall a b c. (a -&gt; b -&gt; c) -&gt; UniqDSM a -&gt; UniqDSM b -&gt; UniqDSM c
+liftA2 :: forall a b c. (a -&gt; b -&gt; c) -&gt; UniqDSM a -&gt; UniqDSM b -&gt; UniqDSM c
+$c*&gt; :: forall a b. UniqDSM a -&gt; UniqDSM b -&gt; UniqDSM b
+*&gt; :: forall a b. UniqDSM a -&gt; UniqDSM b -&gt; UniqDSM b
+$c&lt;* :: forall a b. UniqDSM a -&gt; UniqDSM b -&gt; UniqDSM a
+&lt;* :: forall a b. UniqDSM a -&gt; UniqDSM b -&gt; UniqDSM a
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Applicative</span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621682489202"><span id="local-6989586621682489207"><span id="local-6989586621682489211"><span class="annot"><span class="annottext">Applicative UniqDSM
+Applicative UniqDSM =&gt;
+(forall a b. UniqDSM a -&gt; (a -&gt; UniqDSM b) -&gt; UniqDSM b)
+-&gt; (forall a b. UniqDSM a -&gt; UniqDSM b -&gt; UniqDSM b)
+-&gt; (forall a. a -&gt; UniqDSM a)
+-&gt; Monad UniqDSM
+forall a. a -&gt; UniqDSM a
+forall a b. UniqDSM a -&gt; UniqDSM b -&gt; UniqDSM b
+forall a b. UniqDSM a -&gt; (a -&gt; UniqDSM b) -&gt; UniqDSM b
+forall (m :: * -&gt; *).
+Applicative m =&gt;
+(forall a b. m a -&gt; (a -&gt; m b) -&gt; m b)
+-&gt; (forall a b. m a -&gt; m b -&gt; m b)
+-&gt; (forall a. a -&gt; m a)
+-&gt; Monad m
+$c&gt;&gt;= :: forall a b. UniqDSM a -&gt; (a -&gt; UniqDSM b) -&gt; UniqDSM b
+&gt;&gt;= :: forall a b. UniqDSM a -&gt; (a -&gt; UniqDSM b) -&gt; UniqDSM b
+$c&gt;&gt; :: forall a b. UniqDSM a -&gt; UniqDSM b -&gt; UniqDSM b
+&gt;&gt; :: forall a b. UniqDSM a -&gt; UniqDSM b -&gt; UniqDSM b
+$creturn :: forall a. a -&gt; UniqDSM a
+return :: forall a. a -&gt; UniqDSM a
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Monad</span></span></span></span></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">via</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Utils.Monad.State.Strict.html#State"><span class="hs-identifier hs-type">Strict.State</span></a></span><span> </span><span class="annot"><a href="GHC.Types.Unique.DSM.html#DUniqSupply"><span class="hs-identifier hs-type">DUniqSupply</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-106"></span><span>
+</span><span id="line-107"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadFix</span></span><span> </span><span class="annot"><a href="GHC.Types.Unique.DSM.html#UniqDSM"><span class="hs-identifier hs-type">UniqDSM</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-108"></span><span>  </span><span id="local-6989586621682489221"><span class="annot"><span class="annottext">mfix :: forall a. (a -&gt; UniqDSM a) -&gt; UniqDSM a
+</span><span class="hs-identifier hs-var hs-var hs-var">mfix</span></span></span><span> </span><span id="local-6989586621682489222"><span class="annot"><span class="annottext">a -&gt; UniqDSM a
+</span><a href="#local-6989586621682489222"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(DUniqSupply -&gt; DUniqResult a) -&gt; UniqDSM a
+forall a. (DUniqSupply -&gt; DUniqResult a) -&gt; UniqDSM a
+</span><a href="GHC.Types.Unique.DSM.html#UDSM"><span class="hs-identifier hs-var">UDSM</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621682489223"><span class="annot"><span class="annottext">DUniqSupply
+</span><a href="#local-6989586621682489223"><span class="hs-identifier hs-var">us0</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">let</span><span> </span><span class="hs-special">(</span><span id="local-6989586621682489224"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621682489224"><span class="hs-identifier hs-var">r</span></a></span></span><span class="hs-special">,</span><span id="local-6989586621682489225"><span class="annot"><span class="annottext">DUniqSupply
+</span><a href="#local-6989586621682489225"><span class="hs-identifier hs-var">us1</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DUniqSupply -&gt; UniqDSM a -&gt; (a, DUniqSupply)
+forall a. DUniqSupply -&gt; UniqDSM a -&gt; (a, DUniqSupply)
+</span><a href="GHC.Types.Unique.DSM.html#runUniqueDSM"><span class="hs-identifier hs-var">runUniqueDSM</span></a></span><span> </span><span class="annot"><span class="annottext">DUniqSupply
+</span><a href="#local-6989586621682489223"><span class="hs-identifier hs-var">us0</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; UniqDSM a
+</span><a href="#local-6989586621682489222"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621682489224"><span class="hs-identifier hs-var">r</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">a -&gt; DUniqSupply -&gt; DUniqResult a
+forall a. a -&gt; DUniqSupply -&gt; (# a, DUniqSupply #)
+</span><a href="GHC.Types.Unique.DSM.html#DUniqResult"><span class="hs-identifier hs-var">DUniqResult</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621682489224"><span class="hs-identifier hs-var">r</span></a></span><span> </span><span class="annot"><span class="annottext">DUniqSupply
+</span><a href="#local-6989586621682489225"><span class="hs-identifier hs-var">us1</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-109"></span><span>
+</span><span id="line-110"></span><span class="hs-comment">-- See Note [The one-shot state monad trick] in GHC.Utils.Monad</span><span>
+</span><span id="line-111"></span><span class="hs-keyword">pattern</span><span> </span><span class="annot"><a href="GHC.Types.Unique.DSM.html#UDSM"><span class="hs-identifier hs-type">UDSM</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621682489057"><span class="hs-special">(</span><span class="annot"><a href="GHC.Types.Unique.DSM.html#DUniqSupply"><span class="hs-identifier hs-type">DUniqSupply</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Types.Unique.DSM.html#DUniqResult"><span class="hs-identifier hs-type">DUniqResult</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682489057"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Types.Unique.DSM.html#UniqDSM"><span class="hs-identifier hs-type">UniqDSM</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682489057"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-112"></span><span class="hs-keyword">pattern</span><span> </span><span id="UDSM"><span id="%24mUDSM"><span id="%24bUDSM"><span class="annot"><span class="annottext">$mUDSM :: forall {r} {a}.
+UniqDSM a
+-&gt; ((DUniqSupply -&gt; DUniqResult a) -&gt; r) -&gt; ((# #) -&gt; r) -&gt; r
+$bUDSM :: forall a. (DUniqSupply -&gt; DUniqResult a) -&gt; UniqDSM a
+</span><a href="GHC.Types.Unique.DSM.html#UDSM"><span class="hs-identifier hs-var hs-var hs-var">UDSM</span></a></span></span></span></span><span> </span><span class="annot"><a href="#local-6989586621682489228"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><a href="GHC.Types.Unique.DSM.html#UDSM%27"><span class="hs-identifier hs-type">UDSM'</span></a></span><span> </span><span id="local-6989586621682489228"><span class="annot"><a href="#local-6989586621682489228"><span class="hs-identifier hs-var">m</span></a></span></span><span>
+</span><span id="line-113"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-114"></span><span>    </span><span class="annot"><a href="GHC.Types.Unique.DSM.html#UDSM"><span class="hs-identifier hs-var">UDSM</span></a></span><span> </span><span id="local-6989586621682489229"><span class="annot"><span class="annottext">DUniqSupply -&gt; DUniqResult a
+</span><a href="#local-6989586621682489229"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(DUniqSupply -&gt; DUniqResult a) -&gt; UniqDSM a
+forall a. (DUniqSupply -&gt; DUniqResult a) -&gt; UniqDSM a
+</span><a href="GHC.Types.Unique.DSM.html#UDSM%27"><span class="hs-identifier hs-var">UDSM'</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(DUniqSupply -&gt; DUniqResult a) -&gt; DUniqSupply -&gt; DUniqResult a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">oneShot</span></span><span> </span><span class="annot"><span class="annottext">((DUniqSupply -&gt; DUniqResult a) -&gt; DUniqSupply -&gt; DUniqResult a)
+-&gt; (DUniqSupply -&gt; DUniqResult a) -&gt; DUniqSupply -&gt; DUniqResult a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621682489230"><span class="annot"><span class="annottext">DUniqSupply
+</span><a href="#local-6989586621682489230"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">DUniqSupply -&gt; DUniqResult a
+</span><a href="#local-6989586621682489229"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="annot"><span class="annottext">DUniqSupply
+</span><a href="#local-6989586621682489230"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-115"></span><span class="hs-pragma">{-# COMPLETE</span><span> </span><span class="annot"><a href="GHC.Types.Unique.DSM.html#UDSM"><span class="hs-pragma hs-type">UDSM</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-116"></span><span>
+</span><span id="line-117"></span><span class="annot"><a href="GHC.Types.Unique.DSM.html#getUniqueDSM"><span class="hs-identifier hs-type">getUniqueDSM</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Types.Unique.DSM.html#UniqDSM"><span class="hs-identifier hs-type">UniqDSM</span></a></span><span> </span><span class="annot"><a href="GHC.Types.Unique.html#Unique"><span class="hs-identifier hs-type">Unique</span></a></span><span>
+</span><span id="line-118"></span><span id="getUniqueDSM"><span class="annot"><span class="annottext">getUniqueDSM :: UniqDSM Unique
+</span><a href="GHC.Types.Unique.DSM.html#getUniqueDSM"><span class="hs-identifier hs-var hs-var">getUniqueDSM</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(DUniqSupply -&gt; DUniqResult Unique) -&gt; UniqDSM Unique
+forall a. (DUniqSupply -&gt; DUniqResult a) -&gt; UniqDSM a
+</span><a href="GHC.Types.Unique.DSM.html#UDSM"><span class="hs-identifier hs-var">UDSM</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="annot"><a href="GHC.Types.Unique.DSM.html#DUS"><span class="hs-identifier hs-type">DUS</span></a></span><span> </span><span id="local-6989586621682489231"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621682489231"><span class="hs-identifier hs-var">us0</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Unique -&gt; DUniqSupply -&gt; DUniqResult Unique
+forall a. a -&gt; DUniqSupply -&gt; (# a, DUniqSupply #)
+</span><a href="GHC.Types.Unique.DSM.html#DUniqResult"><span class="hs-identifier hs-var">DUniqResult</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64 -&gt; Unique
+</span><a href="GHC.Types.Unique.html#mkUniqueGrimily"><span class="hs-identifier hs-var">mkUniqueGrimily</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621682489231"><span class="hs-identifier hs-var">us0</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64 -&gt; DUniqSupply
+</span><a href="GHC.Types.Unique.DSM.html#DUS"><span class="hs-identifier hs-var">DUS</span></a></span><span> </span><span class="annot"><span class="annottext">(Word64 -&gt; DUniqSupply) -&gt; Word64 -&gt; DUniqSupply
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621682489231"><span class="hs-identifier hs-var">us0</span></a></span><span class="annot"><span class="annottext">Word64 -&gt; Word64 -&gt; Word64
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">+</span></span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-119"></span><span>
+</span><span id="line-120"></span><span class="annot"><a href="GHC.Types.Unique.DSM.html#takeUniqueFromDSupply"><span class="hs-identifier hs-type">takeUniqueFromDSupply</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Types.Unique.DSM.html#DUniqSupply"><span class="hs-identifier hs-type">DUniqSupply</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Types.Unique.html#Unique"><span class="hs-identifier hs-type">Unique</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Types.Unique.DSM.html#DUniqSupply"><span class="hs-identifier hs-type">DUniqSupply</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-121"></span><span id="takeUniqueFromDSupply"><span class="annot"><span class="annottext">takeUniqueFromDSupply :: DUniqSupply -&gt; (Unique, DUniqSupply)
+</span><a href="GHC.Types.Unique.DSM.html#takeUniqueFromDSupply"><span class="hs-identifier hs-var hs-var">takeUniqueFromDSupply</span></a></span></span><span> </span><span id="local-6989586621682489234"><span class="annot"><span class="annottext">DUniqSupply
+</span><a href="#local-6989586621682489234"><span class="hs-identifier hs-var">d</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-122"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">UniqDSM Unique -&gt; DUniqSupply -&gt; DUniqResult Unique
+forall result. UniqDSM result -&gt; DUniqSupply -&gt; DUniqResult result
+</span><a href="GHC.Types.Unique.DSM.html#unUDSM"><span class="hs-identifier hs-var">unUDSM</span></a></span><span> </span><span class="annot"><span class="annottext">UniqDSM Unique
+</span><a href="GHC.Types.Unique.DSM.html#getUniqueDSM"><span class="hs-identifier hs-var">getUniqueDSM</span></a></span><span> </span><span class="annot"><span class="annottext">DUniqSupply
+</span><a href="#local-6989586621682489234"><span class="hs-identifier hs-var">d</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-123"></span><span>    </span><span class="annot"><a href="GHC.Types.Unique.DSM.html#DUniqResult"><span class="hs-identifier hs-type">DUniqResult</span></a></span><span> </span><span id="local-6989586621682489235"><span class="annot"><span class="annottext">Unique
+</span><a href="#local-6989586621682489235"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621682489236"><span class="annot"><span class="annottext">DUniqSupply
+</span><a href="#local-6989586621682489236"><span class="hs-identifier hs-var">y</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Unique
+</span><a href="#local-6989586621682489235"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">DUniqSupply
+</span><a href="#local-6989586621682489236"><span class="hs-identifier hs-var">y</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-124"></span><span>
+</span><span id="line-125"></span><span class="annot"><span class="hs-comment">-- | Initialize a deterministic unique supply with the given Tag and initial unique.</span></span><span>
+</span><span id="line-126"></span><span class="annot"><a href="GHC.Types.Unique.DSM.html#initDUniqSupply"><span class="hs-identifier hs-type">initDUniqSupply</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Char</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word64</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Types.Unique.DSM.html#DUniqSupply"><span class="hs-identifier hs-type">DUniqSupply</span></a></span><span>
+</span><span id="line-127"></span><span id="initDUniqSupply"><span class="annot"><span class="annottext">initDUniqSupply :: Char -&gt; Word64 -&gt; DUniqSupply
+</span><a href="GHC.Types.Unique.DSM.html#initDUniqSupply"><span class="hs-identifier hs-var hs-var">initDUniqSupply</span></a></span></span><span> </span><span id="local-6989586621682489237"><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621682489237"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span id="local-6989586621682489238"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621682489238"><span class="hs-identifier hs-var">firstUniq</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-128"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621682489239"><span class="annot"><span class="annottext">tag :: Word64
+</span><a href="#local-6989586621682489239"><span class="hs-identifier hs-var hs-var">tag</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Char -&gt; Word64
+</span><a href="GHC.Types.Unique.html#mkTag"><span class="hs-identifier hs-var">mkTag</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621682489237"><span class="hs-identifier hs-var">c</span></a></span><span>
+</span><span id="line-129"></span><span>  </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; DUniqSupply
+</span><a href="GHC.Types.Unique.DSM.html#DUS"><span class="hs-identifier hs-var">DUS</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621682489239"><span class="hs-identifier hs-var">tag</span></a></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Word64 -&gt; Word64
+forall a. Bits a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">.|.</span></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621682489238"><span class="hs-identifier hs-var">firstUniq</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-130"></span><span>
+</span><span id="line-131"></span><span id="local-6989586621682489058"><span class="annot"><a href="GHC.Types.Unique.DSM.html#runUniqueDSM"><span class="hs-identifier hs-type">runUniqueDSM</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Types.Unique.DSM.html#DUniqSupply"><span class="hs-identifier hs-type">DUniqSupply</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Types.Unique.DSM.html#UniqDSM"><span class="hs-identifier hs-type">UniqDSM</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682489058"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621682489058"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Types.Unique.DSM.html#DUniqSupply"><span class="hs-identifier hs-type">DUniqSupply</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-132"></span><span id="runUniqueDSM"><span class="annot"><span class="annottext">runUniqueDSM :: forall a. DUniqSupply -&gt; UniqDSM a -&gt; (a, DUniqSupply)
+</span><a href="GHC.Types.Unique.DSM.html#runUniqueDSM"><span class="hs-identifier hs-var hs-var">runUniqueDSM</span></a></span></span><span> </span><span id="local-6989586621682489242"><span class="annot"><span class="annottext">DUniqSupply
+</span><a href="#local-6989586621682489242"><span class="hs-identifier hs-var">ds</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Types.Unique.DSM.html#UDSM"><span class="hs-identifier hs-type">UDSM</span></a></span><span> </span><span id="local-6989586621682489243"><span class="annot"><span class="annottext">DUniqSupply -&gt; DUniqResult a
+</span><a href="#local-6989586621682489243"><span class="hs-identifier hs-var">f</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-133"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">DUniqSupply -&gt; DUniqResult a
+</span><a href="#local-6989586621682489243"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">DUniqSupply
+</span><a href="#local-6989586621682489242"><span class="hs-identifier hs-var">ds</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-134"></span><span>    </span><span class="annot"><a href="GHC.Types.Unique.DSM.html#DUniqResult"><span class="hs-identifier hs-type">DUniqResult</span></a></span><span> </span><span id="local-6989586621682489244"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621682489244"><span class="hs-identifier hs-var">uq</span></a></span></span><span> </span><span id="local-6989586621682489245"><span class="annot"><span class="annottext">DUniqSupply
+</span><a href="#local-6989586621682489245"><span class="hs-identifier hs-var">us</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621682489244"><span class="hs-identifier hs-var">uq</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">DUniqSupply
+</span><a href="#local-6989586621682489245"><span class="hs-identifier hs-var">us</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-135"></span><span>
+</span><span id="line-136"></span><span class="annot"><span class="hs-comment">-- | Set the tag of uniques generated from this deterministic unique supply</span></span><span>
+</span><span id="line-137"></span><span class="annot"><a href="GHC.Types.Unique.DSM.html#newTagDUniqSupply"><span class="hs-identifier hs-type">newTagDUniqSupply</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Char</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Types.Unique.DSM.html#DUniqSupply"><span class="hs-identifier hs-type">DUniqSupply</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Types.Unique.DSM.html#DUniqSupply"><span class="hs-identifier hs-type">DUniqSupply</span></a></span><span>
+</span><span id="line-138"></span><span id="newTagDUniqSupply"><span class="annot"><span class="annottext">newTagDUniqSupply :: Char -&gt; DUniqSupply -&gt; DUniqSupply
+</span><a href="GHC.Types.Unique.DSM.html#newTagDUniqSupply"><span class="hs-identifier hs-var hs-var">newTagDUniqSupply</span></a></span></span><span> </span><span id="local-6989586621682489246"><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621682489246"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Types.Unique.DSM.html#DUS"><span class="hs-identifier hs-type">DUS</span></a></span><span> </span><span id="local-6989586621682489247"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621682489247"><span class="hs-identifier hs-var">w</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; DUniqSupply
+</span><a href="GHC.Types.Unique.DSM.html#DUS"><span class="hs-identifier hs-var">DUS</span></a></span><span> </span><span class="annot"><span class="annottext">(Word64 -&gt; DUniqSupply) -&gt; Word64 -&gt; DUniqSupply
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Unique -&gt; Word64
+</span><a href="GHC.Types.Unique.html#getKey"><span class="hs-identifier hs-var">getKey</span></a></span><span> </span><span class="annot"><span class="annottext">(Unique -&gt; Word64) -&gt; Unique -&gt; Word64
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Unique -&gt; Char -&gt; Unique
+</span><a href="GHC.Types.Unique.html#newTagUnique"><span class="hs-identifier hs-var">newTagUnique</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64 -&gt; Unique
+</span><a href="GHC.Types.Unique.html#mkUniqueGrimily"><span class="hs-identifier hs-var">mkUniqueGrimily</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621682489247"><span class="hs-identifier hs-var">w</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621682489246"><span class="hs-identifier hs-var">c</span></a></span><span>
+</span><span id="line-139"></span><span>
+</span><span id="line-140"></span><span class="annot"><span class="hs-comment">-- | Get the tag uniques generated from this deterministic unique supply would have</span></span><span>
+</span><span id="line-141"></span><span class="annot"><a href="GHC.Types.Unique.DSM.html#getTagDUniqSupply"><span class="hs-identifier hs-type">getTagDUniqSupply</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Types.Unique.DSM.html#DUniqSupply"><span class="hs-identifier hs-type">DUniqSupply</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Char</span></span><span>
+</span><span id="line-142"></span><span id="getTagDUniqSupply"><span class="annot"><span class="annottext">getTagDUniqSupply :: DUniqSupply -&gt; Char
+</span><a href="GHC.Types.Unique.DSM.html#getTagDUniqSupply"><span class="hs-identifier hs-var hs-var">getTagDUniqSupply</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Types.Unique.DSM.html#DUS"><span class="hs-identifier hs-type">DUS</span></a></span><span> </span><span id="local-6989586621682489250"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621682489250"><span class="hs-identifier hs-var">w</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Char, Word64) -&gt; Char
+forall a b. (a, b) -&gt; a
+</span><span class="hs-identifier hs-var">fst</span></span><span> </span><span class="annot"><span class="annottext">((Char, Word64) -&gt; Char) -&gt; (Char, Word64) -&gt; Char
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Unique -&gt; (Char, Word64)
+</span><a href="GHC.Types.Unique.html#unpkUnique"><span class="hs-identifier hs-var">unpkUnique</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64 -&gt; Unique
+</span><a href="GHC.Types.Unique.html#mkUniqueGrimily"><span class="hs-identifier hs-var">mkUniqueGrimily</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621682489250"><span class="hs-identifier hs-var">w</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-143"></span><span>
+</span><span id="line-144"></span><span class="hs-comment">-- | Get a unique from a monad that can access a unique supply.</span><span>
+</span><span id="line-145"></span><span class="hs-comment">--</span><span>
+</span><span id="line-146"></span><span class="hs-comment">-- Crucially, because 'MonadGetUnique' doesn't allow you to get the</span><span>
+</span><span id="line-147"></span><span class="hs-comment">-- 'UniqSupply' (unlike 'MonadUnique'), an instance such as 'UniqDSM' can use a</span><span>
+</span><span id="line-148"></span><span class="hs-comment">-- deterministic unique supply to return deterministic uniques without allowing</span><span>
+</span><span id="line-149"></span><span class="hs-comment">-- for the 'UniqSupply' to be shared.</span><span>
+</span><span id="line-150"></span><span class="hs-keyword">class</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Monad</span></span><span> </span><span class="annot"><a href="#local-6989586621682489070"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span id="MonadGetUnique"><span class="annot"><a href="GHC.Types.Unique.DSM.html#MonadGetUnique"><span class="hs-identifier hs-var">MonadGetUnique</span></a></span></span><span> </span><span id="local-6989586621682489070"><span class="annot"><a href="#local-6989586621682489070"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-151"></span><span>  </span><span id="getUniqueM"><span class="annot"><a href="GHC.Types.Unique.DSM.html#getUniqueM"><span class="hs-identifier hs-type">getUniqueM</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621682489070"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="GHC.Types.Unique.html#Unique"><span class="hs-identifier hs-type">Unique</span></a></span><span>
+</span><span id="line-152"></span><span>
+</span><span id="line-153"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="GHC.Types.Unique.DSM.html#MonadGetUnique"><span class="hs-identifier hs-type">MonadGetUnique</span></a></span><span> </span><span class="annot"><a href="GHC.Types.Unique.DSM.html#UniqDSM"><span class="hs-identifier hs-type">UniqDSM</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-154"></span><span>  </span><span id="local-6989586621682489260"><span class="annot"><span class="annottext">getUniqueM :: UniqDSM Unique
+</span><a href="GHC.Types.Unique.DSM.html#getUniqueM"><span class="hs-identifier hs-var hs-var hs-var">getUniqueM</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">UniqDSM Unique
+</span><a href="GHC.Types.Unique.DSM.html#getUniqueDSM"><span class="hs-identifier hs-var">getUniqueDSM</span></a></span><span>
+</span><span id="line-155"></span><span>
+</span><span id="line-156"></span><span class="hs-comment">-- non deterministic instance</span><span>
+</span><span id="line-157"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="GHC.Types.Unique.DSM.html#MonadGetUnique"><span class="hs-identifier hs-type">MonadGetUnique</span></a></span><span> </span><span class="annot"><a href="GHC.Types.Unique.Supply.html#UniqSM"><span class="hs-identifier hs-type">USM.UniqSM</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-158"></span><span>  </span><span id="local-6989586621682489268"><span class="annot"><span class="annottext">getUniqueM :: UniqSM Unique
+</span><a href="GHC.Types.Unique.DSM.html#getUniqueM"><span class="hs-identifier hs-var hs-var hs-var">getUniqueM</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">UniqSM Unique
+forall (m :: * -&gt; *). MonadUnique m =&gt; m Unique
+</span><a href="GHC.Types.Unique.Supply.html#getUniqueM"><span class="hs-identifier hs-var">USM.getUniqueM</span></a></span><span>
+</span><span id="line-159"></span><span>
+</span><span id="line-160"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-161"></span><span class="hs-comment">-- UniqDSMT</span><span>
+</span><span id="line-162"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-163"></span><span>
+</span><span id="line-164"></span><span class="hs-comment">-- | Transformer version of 'UniqDSM' to use when threading a deterministic</span><span>
+</span><span id="line-165"></span><span class="hs-comment">-- uniq supply over a Monad. Specifically, it is used in the `Stream` of Cmm</span><span>
+</span><span id="line-166"></span><span class="hs-comment">-- decls.</span><span>
+</span><span id="line-167"></span><span class="hs-keyword">newtype</span><span> </span><span id="UniqDSMT"><span class="annot"><a href="GHC.Types.Unique.DSM.html#UniqDSMT"><span class="hs-identifier hs-var">UniqDSMT</span></a></span></span><span> </span><span id="local-6989586621682489270"><span class="annot"><a href="#local-6989586621682489270"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span id="local-6989586621682489271"><span class="annot"><a href="#local-6989586621682489271"><span class="hs-identifier hs-type">result</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="UDSMT%27"><span class="annot"><a href="GHC.Types.Unique.DSM.html#UDSMT%27"><span class="hs-identifier hs-var">UDSMT'</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Types.Unique.DSM.html#DUniqSupply"><span class="hs-identifier hs-type">DUniqSupply</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621682489270"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621682489271"><span class="hs-identifier hs-type">result</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Types.Unique.DSM.html#DUniqSupply"><span class="hs-identifier hs-type">DUniqSupply</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-168"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621682489275"><span id="local-6989586621682489278"><span class="annot"><span class="annottext">(forall a b. (a -&gt; b) -&gt; UniqDSMT m a -&gt; UniqDSMT m b)
+-&gt; (forall a b. a -&gt; UniqDSMT m b -&gt; UniqDSMT m a)
+-&gt; Functor (UniqDSMT m)
+forall a b. a -&gt; UniqDSMT m b -&gt; UniqDSMT m a
+forall a b. (a -&gt; b) -&gt; UniqDSMT m a -&gt; UniqDSMT m b
+forall (m :: * -&gt; *) a b.
+Functor m =&gt;
+a -&gt; UniqDSMT m b -&gt; UniqDSMT m a
+forall (m :: * -&gt; *) a b.
+Functor m =&gt;
+(a -&gt; b) -&gt; UniqDSMT m a -&gt; UniqDSMT m b
+forall (f :: * -&gt; *).
+(forall a b. (a -&gt; b) -&gt; f a -&gt; f b)
+-&gt; (forall a b. a -&gt; f b -&gt; f a) -&gt; Functor f
+$cfmap :: forall (m :: * -&gt; *) a b.
+Functor m =&gt;
+(a -&gt; b) -&gt; UniqDSMT m a -&gt; UniqDSMT m b
+fmap :: forall a b. (a -&gt; b) -&gt; UniqDSMT m a -&gt; UniqDSMT m b
+$c&lt;$ :: forall (m :: * -&gt; *) a b.
+Functor m =&gt;
+a -&gt; UniqDSMT m b -&gt; UniqDSMT m a
+&lt;$ :: forall a b. a -&gt; UniqDSMT m b -&gt; UniqDSMT m a
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Functor</span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-169"></span><span>
+</span><span id="line-170"></span><span class="hs-comment">-- Similar to GHC.Utils.Monad.State.Strict, using Note [The one-shot state monad trick]</span><span>
+</span><span id="line-171"></span><span class="hs-comment">-- Using the one-shot trick is necessary for performance.</span><span>
+</span><span id="line-172"></span><span class="hs-comment">-- Using transfomer's strict `StateT` regressed some performance tests in 1-2%.</span><span>
+</span><span id="line-173"></span><span class="hs-comment">-- The one-shot trick here fixes those regressions.</span><span>
+</span><span id="line-174"></span><span>
+</span><span id="line-175"></span><span class="hs-keyword">pattern</span><span> </span><span class="annot"><a href="GHC.Types.Unique.DSM.html#UDSMT"><span class="hs-identifier hs-type">UDSMT</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621682489079"><span id="local-6989586621682489080"><span class="hs-special">(</span><span class="annot"><a href="GHC.Types.Unique.DSM.html#DUniqSupply"><span class="hs-identifier hs-type">DUniqSupply</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621682489079"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621682489080"><span class="hs-identifier hs-type">result</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Types.Unique.DSM.html#DUniqSupply"><span class="hs-identifier hs-type">DUniqSupply</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Types.Unique.DSM.html#UniqDSMT"><span class="hs-identifier hs-type">UniqDSMT</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682489079"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682489080"><span class="hs-identifier hs-type">result</span></a></span></span></span><span>
+</span><span id="line-176"></span><span class="hs-keyword">pattern</span><span> </span><span id="UDSMT"><span id="%24mUDSMT"><span id="%24bUDSMT"><span class="annot"><span class="annottext">$mUDSMT :: forall {r} {m :: * -&gt; *} {result}.
+UniqDSMT m result
+-&gt; ((DUniqSupply -&gt; m (result, DUniqSupply)) -&gt; r)
+-&gt; ((# #) -&gt; r)
+-&gt; r
+$bUDSMT :: forall (m :: * -&gt; *) result.
+(DUniqSupply -&gt; m (result, DUniqSupply)) -&gt; UniqDSMT m result
+</span><a href="GHC.Types.Unique.DSM.html#UDSMT"><span class="hs-identifier hs-var hs-var hs-var">UDSMT</span></a></span></span></span></span><span> </span><span class="annot"><a href="#local-6989586621682489283"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><a href="GHC.Types.Unique.DSM.html#UDSMT%27"><span class="hs-identifier hs-type">UDSMT'</span></a></span><span> </span><span id="local-6989586621682489283"><span class="annot"><a href="#local-6989586621682489283"><span class="hs-identifier hs-var">m</span></a></span></span><span>
+</span><span id="line-177"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-178"></span><span>    </span><span class="annot"><a href="GHC.Types.Unique.DSM.html#UDSMT"><span class="hs-identifier hs-var">UDSMT</span></a></span><span> </span><span id="local-6989586621682489284"><span class="annot"><span class="annottext">DUniqSupply -&gt; m (result, DUniqSupply)
+</span><a href="#local-6989586621682489284"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(DUniqSupply -&gt; m (result, DUniqSupply)) -&gt; UniqDSMT m result
+forall (m :: * -&gt; *) result.
+(DUniqSupply -&gt; m (result, DUniqSupply)) -&gt; UniqDSMT m result
+</span><a href="GHC.Types.Unique.DSM.html#UDSMT%27"><span class="hs-identifier hs-var">UDSMT'</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(DUniqSupply -&gt; m (result, DUniqSupply))
+-&gt; DUniqSupply -&gt; m (result, DUniqSupply)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">oneShot</span></span><span> </span><span class="annot"><span class="annottext">((DUniqSupply -&gt; m (result, DUniqSupply))
+ -&gt; DUniqSupply -&gt; m (result, DUniqSupply))
+-&gt; (DUniqSupply -&gt; m (result, DUniqSupply))
+-&gt; DUniqSupply
+-&gt; m (result, DUniqSupply)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621682489285"><span class="annot"><span class="annottext">DUniqSupply
+</span><a href="#local-6989586621682489285"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">DUniqSupply -&gt; m (result, DUniqSupply)
+</span><a href="#local-6989586621682489284"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="annot"><span class="annottext">DUniqSupply
+</span><a href="#local-6989586621682489285"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-179"></span><span class="hs-pragma">{-# COMPLETE</span><span> </span><span class="annot"><a href="GHC.Types.Unique.DSM.html#UDSMT"><span class="hs-pragma hs-type">UDSMT</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-180"></span><span>
+</span><span id="line-181"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621682489085"><span id="local-6989586621682489293"><span id="local-6989586621682489297"><span id="local-6989586621682489300"><span class="annot"><span class="hs-identifier hs-type">Monad</span></span><span> </span><span class="annot"><a href="#local-6989586621682489085"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Applicative</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Types.Unique.DSM.html#UniqDSMT"><span class="hs-identifier hs-type">UniqDSMT</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682489085"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-182"></span><span>  </span><span id="local-6989586621682489306"><span class="annot"><span class="annottext">pure :: forall a. a -&gt; UniqDSMT m a
+</span><span class="hs-identifier hs-var hs-var hs-var">pure</span></span></span><span> </span><span id="local-6989586621682489307"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621682489307"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(DUniqSupply -&gt; m (a, DUniqSupply)) -&gt; UniqDSMT m a
+forall (m :: * -&gt; *) result.
+(DUniqSupply -&gt; m (result, DUniqSupply)) -&gt; UniqDSMT m result
+</span><a href="GHC.Types.Unique.DSM.html#UDSMT"><span class="hs-identifier hs-var">UDSMT</span></a></span><span> </span><span class="annot"><span class="annottext">((DUniqSupply -&gt; m (a, DUniqSupply)) -&gt; UniqDSMT m a)
+-&gt; (DUniqSupply -&gt; m (a, DUniqSupply)) -&gt; UniqDSMT m a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621682489308"><span class="annot"><span class="annottext">DUniqSupply
+</span><a href="#local-6989586621682489308"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(a, DUniqSupply) -&gt; m (a, DUniqSupply)
+forall a. a -&gt; m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621682489307"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">DUniqSupply
+</span><a href="#local-6989586621682489308"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-183"></span><span>  </span><span class="annot"><a href="GHC.Types.Unique.DSM.html#UDSMT"><span class="hs-identifier hs-type">UDSMT</span></a></span><span> </span><span id="local-6989586621682489312"><span class="annot"><span class="annottext">DUniqSupply -&gt; m (a -&gt; b, DUniqSupply)
+</span><a href="#local-6989586621682489312"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621682489313"><span class="annot"><span class="annottext">&lt;*&gt; :: forall a b. UniqDSMT m (a -&gt; b) -&gt; UniqDSMT m a -&gt; UniqDSMT m b
+</span><span class="hs-operator hs-var hs-var hs-var">&lt;*&gt;</span></span></span><span> </span><span class="annot"><a href="GHC.Types.Unique.DSM.html#UDSMT"><span class="hs-identifier hs-type">UDSMT</span></a></span><span> </span><span id="local-6989586621682489314"><span class="annot"><span class="annottext">DUniqSupply -&gt; m (a, DUniqSupply)
+</span><a href="#local-6989586621682489314"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(DUniqSupply -&gt; m (b, DUniqSupply)) -&gt; UniqDSMT m b
+forall (m :: * -&gt; *) result.
+(DUniqSupply -&gt; m (result, DUniqSupply)) -&gt; UniqDSMT m result
+</span><a href="GHC.Types.Unique.DSM.html#UDSMT"><span class="hs-identifier hs-var">UDSMT</span></a></span><span> </span><span class="annot"><span class="annottext">((DUniqSupply -&gt; m (b, DUniqSupply)) -&gt; UniqDSMT m b)
+-&gt; (DUniqSupply -&gt; m (b, DUniqSupply)) -&gt; UniqDSMT m b
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621682489315"><span class="annot"><span class="annottext">DUniqSupply
+</span><a href="#local-6989586621682489315"><span class="hs-identifier hs-var">s0</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-184"></span><span>    </span><span class="hs-special">(</span><span id="local-6989586621682489316"><span class="annot"><a href="#local-6989586621682489316"><span class="hs-identifier hs-var">f'</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621682489317"><span class="annot"><a href="#local-6989586621682489317"><span class="hs-identifier hs-var">s1</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">DUniqSupply -&gt; m (a -&gt; b, DUniqSupply)
+</span><a href="#local-6989586621682489312"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">DUniqSupply
+</span><a href="#local-6989586621682489315"><span class="hs-identifier hs-var">s0</span></a></span><span>
+</span><span id="line-185"></span><span>    </span><span class="hs-special">(</span><span id="local-6989586621682489318"><span class="annot"><a href="#local-6989586621682489318"><span class="hs-identifier hs-var">x'</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621682489319"><span class="annot"><a href="#local-6989586621682489319"><span class="hs-identifier hs-var">s2</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><a href="#local-6989586621682489314"><span class="hs-identifier hs-type">x</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682489317"><span class="hs-identifier hs-type">s1</span></a></span><span>
+</span><span id="line-186"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">pure</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621682489316"><span class="hs-identifier hs-type">f'</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682489318"><span class="hs-identifier hs-type">x'</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621682489319"><span class="hs-identifier hs-type">s2</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-187"></span><span>
+</span><span id="line-188"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621682489090"><span id="local-6989586621682489325"><span id="local-6989586621682489329"><span class="annot"><span class="hs-identifier hs-type">Monad</span></span><span> </span><span class="annot"><a href="#local-6989586621682489090"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Monad</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Types.Unique.DSM.html#UniqDSMT"><span class="hs-identifier hs-type">UniqDSMT</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682489090"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-189"></span><span>  </span><span class="annot"><a href="GHC.Types.Unique.DSM.html#UDSMT"><span class="hs-identifier hs-type">UDSMT</span></a></span><span> </span><span id="local-6989586621682489332"><span class="annot"><span class="annottext">DUniqSupply -&gt; m (a, DUniqSupply)
+</span><a href="#local-6989586621682489332"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621682489333"><span class="annot"><span class="annottext">&gt;&gt;= :: forall a b. UniqDSMT m a -&gt; (a -&gt; UniqDSMT m b) -&gt; UniqDSMT m b
+</span><span class="hs-operator hs-var hs-var hs-var">&gt;&gt;=</span></span></span><span> </span><span id="local-6989586621682489334"><span class="annot"><span class="annottext">a -&gt; UniqDSMT m b
+</span><a href="#local-6989586621682489334"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(DUniqSupply -&gt; m (b, DUniqSupply)) -&gt; UniqDSMT m b
+forall (m :: * -&gt; *) result.
+(DUniqSupply -&gt; m (result, DUniqSupply)) -&gt; UniqDSMT m result
+</span><a href="GHC.Types.Unique.DSM.html#UDSMT"><span class="hs-identifier hs-var">UDSMT</span></a></span><span> </span><span class="annot"><span class="annottext">((DUniqSupply -&gt; m (b, DUniqSupply)) -&gt; UniqDSMT m b)
+-&gt; (DUniqSupply -&gt; m (b, DUniqSupply)) -&gt; UniqDSMT m b
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621682489335"><span class="annot"><span class="annottext">DUniqSupply
+</span><a href="#local-6989586621682489335"><span class="hs-identifier hs-var">s0</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-190"></span><span>    </span><span class="hs-special">(</span><span id="local-6989586621682489336"><span class="annot"><a href="#local-6989586621682489336"><span class="hs-identifier hs-var">x'</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621682489337"><span class="annot"><a href="#local-6989586621682489337"><span class="hs-identifier hs-var">s1</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">DUniqSupply -&gt; m (a, DUniqSupply)
+</span><a href="#local-6989586621682489332"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">DUniqSupply
+</span><a href="#local-6989586621682489335"><span class="hs-identifier hs-var">s0</span></a></span><span>
+</span><span id="line-191"></span><span>    </span><span class="hs-keyword">case</span><span> </span><span class="annot"><a href="#local-6989586621682489334"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682489336"><span class="hs-identifier hs-type">x'</span></a></span><span> </span><span class="hs-keyword">of</span><span> </span><span class="annot"><a href="GHC.Types.Unique.DSM.html#UDSMT"><span class="hs-identifier hs-type">UDSMT</span></a></span><span> </span><span id="local-6989586621682489338"><span class="annot"><span class="annottext">DUniqSupply -&gt; m (b, DUniqSupply)
+</span><a href="#local-6989586621682489338"><span class="hs-identifier hs-var">y</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">DUniqSupply -&gt; m (b, DUniqSupply)
+</span><a href="#local-6989586621682489338"><span class="hs-identifier hs-var">y</span></a></span><span> </span><span class="annot"><span class="annottext">DUniqSupply
+</span><a href="#local-6989586621682489337"><span class="hs-identifier hs-var">s1</span></a></span><span>
+</span><span id="line-192"></span><span>
+</span><span id="line-193"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621682489097"><span class="annot"><span class="hs-identifier hs-type">MonadIO</span></span><span> </span><span class="annot"><a href="#local-6989586621682489097"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadIO</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Types.Unique.DSM.html#UniqDSMT"><span class="hs-identifier hs-type">UniqDSMT</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682489097"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-194"></span><span>  </span><span id="local-6989586621682489351"><span class="annot"><span class="annottext">liftIO :: forall a. IO a -&gt; UniqDSMT m a
+</span><a href="#local-6989586621682489351"><span class="hs-identifier hs-var hs-var hs-var">liftIO</span></a></span></span><span> </span><span id="local-6989586621682489353"><span class="annot"><span class="annottext">IO a
+</span><a href="#local-6989586621682489353"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(DUniqSupply -&gt; m (a, DUniqSupply)) -&gt; UniqDSMT m a
+forall (m :: * -&gt; *) result.
+(DUniqSupply -&gt; m (result, DUniqSupply)) -&gt; UniqDSMT m result
+</span><a href="GHC.Types.Unique.DSM.html#UDSMT"><span class="hs-identifier hs-var">UDSMT</span></a></span><span> </span><span class="annot"><span class="annottext">((DUniqSupply -&gt; m (a, DUniqSupply)) -&gt; UniqDSMT m a)
+-&gt; (DUniqSupply -&gt; m (a, DUniqSupply)) -&gt; UniqDSMT m a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621682489354"><span class="annot"><span class="annottext">DUniqSupply
+</span><a href="#local-6989586621682489354"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="hs-special">,</span><span class="annot"><span class="annottext">DUniqSupply
+</span><a href="#local-6989586621682489354"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(a -&gt; (a, DUniqSupply)) -&gt; m a -&gt; m (a, DUniqSupply)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">IO a -&gt; m a
+forall a. IO a -&gt; m a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><span class="hs-identifier hs-var">liftIO</span></span><span> </span><span class="annot"><span class="annottext">IO a
+</span><a href="#local-6989586621682489353"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-195"></span><span>
+</span><span id="line-196"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621682489103"><span class="annot"><span class="hs-identifier hs-type">Monad</span></span><span> </span><span class="annot"><a href="#local-6989586621682489103"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="GHC.Types.Unique.DSM.html#MonadGetUnique"><span class="hs-identifier hs-type">MonadGetUnique</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Types.Unique.DSM.html#UniqDSMT"><span class="hs-identifier hs-type">UniqDSMT</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682489103"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-197"></span><span>  </span><span id="local-6989586621682489362"><span class="annot"><span class="annottext">getUniqueM :: UniqDSMT m Unique
+</span><a href="GHC.Types.Unique.DSM.html#getUniqueM"><span class="hs-identifier hs-var hs-var hs-var">getUniqueM</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(DUniqSupply -&gt; m (Unique, DUniqSupply)) -&gt; UniqDSMT m Unique
+forall (m :: * -&gt; *) result.
+(DUniqSupply -&gt; m (result, DUniqSupply)) -&gt; UniqDSMT m result
+</span><a href="GHC.Types.Unique.DSM.html#UDSMT"><span class="hs-identifier hs-var">UDSMT</span></a></span><span> </span><span class="annot"><span class="annottext">((DUniqSupply -&gt; m (Unique, DUniqSupply)) -&gt; UniqDSMT m Unique)
+-&gt; (DUniqSupply -&gt; m (Unique, DUniqSupply)) -&gt; UniqDSMT m Unique
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621682489363"><span class="annot"><span class="annottext">DUniqSupply
+</span><a href="#local-6989586621682489363"><span class="hs-identifier hs-var">us</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-198"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span class="hs-special">(</span><span id="local-6989586621682489364"><span class="annot"><span class="annottext">Unique
+</span><a href="#local-6989586621682489364"><span class="hs-identifier hs-var">u</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621682489365"><span class="annot"><span class="annottext">DUniqSupply
+</span><a href="#local-6989586621682489365"><span class="hs-identifier hs-var">us'</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DUniqSupply -&gt; (Unique, DUniqSupply)
+</span><a href="GHC.Types.Unique.DSM.html#takeUniqueFromDSupply"><span class="hs-identifier hs-var">takeUniqueFromDSupply</span></a></span><span> </span><span class="annot"><span class="annottext">DUniqSupply
+</span><a href="#local-6989586621682489363"><span class="hs-identifier hs-var">us</span></a></span><span>
+</span><span id="line-199"></span><span>    </span><span class="annot"><span class="annottext">(Unique, DUniqSupply) -&gt; m (Unique, DUniqSupply)
+forall a. a -&gt; m a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><span class="hs-identifier hs-var">return</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Unique
+</span><a href="#local-6989586621682489364"><span class="hs-identifier hs-var">u</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">DUniqSupply
+</span><a href="#local-6989586621682489365"><span class="hs-identifier hs-var">us'</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-200"></span><span>
+</span><span id="line-201"></span><span class="hs-comment">-- | Set the tag of the running @UniqDSMT@ supply to the given tag and run an action with it.</span><span>
+</span><span id="line-202"></span><span class="hs-comment">-- All uniques produced in the given action will use this tag, until the tag is changed</span><span>
+</span><span id="line-203"></span><span class="hs-comment">-- again.</span><span>
+</span><span id="line-204"></span><span id="local-6989586621682489104"><span id="local-6989586621682489105"><span class="annot"><a href="GHC.Types.Unique.DSM.html#setTagUDSMT"><span class="hs-identifier hs-type">setTagUDSMT</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Monad</span></span><span> </span><span class="annot"><a href="#local-6989586621682489104"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Char</span></span><span> </span><span class="annot"><span class="hs-comment">{-^ Tag -}</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Types.Unique.DSM.html#UniqDSMT"><span class="hs-identifier hs-type">UniqDSMT</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682489104"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682489105"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Types.Unique.DSM.html#UniqDSMT"><span class="hs-identifier hs-type">UniqDSMT</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682489104"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682489105"><span class="hs-identifier hs-type">a</span></a></span></span></span><span>
+</span><span id="line-205"></span><span id="setTagUDSMT"><span class="annot"><span class="annottext">setTagUDSMT :: forall (m :: * -&gt; *) a.
+Monad m =&gt;
+Char -&gt; UniqDSMT m a -&gt; UniqDSMT m a
+</span><a href="GHC.Types.Unique.DSM.html#setTagUDSMT"><span class="hs-identifier hs-var hs-var">setTagUDSMT</span></a></span></span><span> </span><span id="local-6989586621682489369"><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621682489369"><span class="hs-identifier hs-var">tag</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Types.Unique.DSM.html#UDSMT"><span class="hs-identifier hs-type">UDSMT</span></a></span><span> </span><span id="local-6989586621682489370"><span class="annot"><span class="annottext">DUniqSupply -&gt; m (a, DUniqSupply)
+</span><a href="#local-6989586621682489370"><span class="hs-identifier hs-var">act</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(DUniqSupply -&gt; m (a, DUniqSupply)) -&gt; UniqDSMT m a
+forall (m :: * -&gt; *) result.
+(DUniqSupply -&gt; m (result, DUniqSupply)) -&gt; UniqDSMT m result
+</span><a href="GHC.Types.Unique.DSM.html#UDSMT"><span class="hs-identifier hs-var">UDSMT</span></a></span><span> </span><span class="annot"><span class="annottext">((DUniqSupply -&gt; m (a, DUniqSupply)) -&gt; UniqDSMT m a)
+-&gt; (DUniqSupply -&gt; m (a, DUniqSupply)) -&gt; UniqDSMT m a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621682489371"><span class="annot"><span class="annottext">DUniqSupply
+</span><a href="#local-6989586621682489371"><span class="hs-identifier hs-var">us</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-206"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621682489372"><span class="annot"><span class="annottext">origtag :: Char
+</span><a href="#local-6989586621682489372"><span class="hs-identifier hs-var hs-var hs-var">origtag</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DUniqSupply -&gt; Char
+</span><a href="GHC.Types.Unique.DSM.html#getTagDUniqSupply"><span class="hs-identifier hs-var">getTagDUniqSupply</span></a></span><span> </span><span class="annot"><span class="annottext">DUniqSupply
+</span><a href="#local-6989586621682489371"><span class="hs-identifier hs-var">us</span></a></span><span>
+</span><span id="line-207"></span><span>      </span><span id="local-6989586621682489373"><span class="annot"><span class="annottext">new_us :: DUniqSupply
+</span><a href="#local-6989586621682489373"><span class="hs-identifier hs-var hs-var hs-var">new_us</span></a></span></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Char -&gt; DUniqSupply -&gt; DUniqSupply
+</span><a href="GHC.Types.Unique.DSM.html#newTagDUniqSupply"><span class="hs-identifier hs-var">newTagDUniqSupply</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621682489369"><span class="hs-identifier hs-var">tag</span></a></span><span> </span><span class="annot"><span class="annottext">DUniqSupply
+</span><a href="#local-6989586621682489371"><span class="hs-identifier hs-var">us</span></a></span><span>
+</span><span id="line-208"></span><span>  </span><span class="hs-special">(</span><span id="local-6989586621682489374"><span class="annot"><a href="#local-6989586621682489374"><span class="hs-identifier hs-var">a</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621682489375"><span class="annot"><a href="#local-6989586621682489375"><span class="hs-identifier hs-var">us'</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">DUniqSupply -&gt; m (a, DUniqSupply)
+</span><a href="#local-6989586621682489370"><span class="hs-identifier hs-var">act</span></a></span><span> </span><span class="annot"><span class="annottext">DUniqSupply
+</span><a href="#local-6989586621682489373"><span class="hs-identifier hs-var">new_us</span></a></span><span>
+</span><span id="line-209"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621682489376"><span class="annot"><a href="#local-6989586621682489376"><span class="hs-identifier hs-var hs-var">us'_origtag</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Char -&gt; DUniqSupply -&gt; DUniqSupply
+</span><a href="GHC.Types.Unique.DSM.html#newTagDUniqSupply"><span class="hs-identifier hs-var">newTagDUniqSupply</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621682489372"><span class="hs-identifier hs-var">origtag</span></a></span><span> </span><span class="annot"><span class="annottext">DUniqSupply
+</span><a href="#local-6989586621682489375"><span class="hs-identifier hs-var">us'</span></a></span><span>
+</span><span id="line-210"></span><span>      </span><span class="hs-comment">-- restore original tag</span><span>
+</span><span id="line-211"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">return</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621682489374"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621682489376"><span class="hs-identifier hs-type">us'_origtag</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-212"></span><span>
+</span><span id="line-213"></span><span class="annot"><span class="hs-comment">-- | Like 'runUniqueDSM' but for 'UniqDSMT'</span></span><span>
+</span><span id="line-214"></span><span id="local-6989586621682489108"><span id="local-6989586621682489109"><span class="annot"><a href="GHC.Types.Unique.DSM.html#runUDSMT"><span class="hs-identifier hs-type">runUDSMT</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Types.Unique.DSM.html#DUniqSupply"><span class="hs-identifier hs-type">DUniqSupply</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Types.Unique.DSM.html#UniqDSMT"><span class="hs-identifier hs-type">UniqDSMT</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682489108"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682489109"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621682489108"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621682489109"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Types.Unique.DSM.html#DUniqSupply"><span class="hs-identifier hs-type">DUniqSupply</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-215"></span><span id="runUDSMT"><span class="annot"><span class="annottext">runUDSMT :: forall (m :: * -&gt; *) a.
+DUniqSupply -&gt; UniqDSMT m a -&gt; m (a, DUniqSupply)
+</span><a href="GHC.Types.Unique.DSM.html#runUDSMT"><span class="hs-identifier hs-var hs-var">runUDSMT</span></a></span></span><span> </span><span id="local-6989586621682489377"><span class="annot"><span class="annottext">DUniqSupply
+</span><a href="#local-6989586621682489377"><span class="hs-identifier hs-var">dus</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Types.Unique.DSM.html#UDSMT"><span class="hs-identifier hs-type">UDSMT</span></a></span><span> </span><span id="local-6989586621682489378"><span class="annot"><span class="annottext">DUniqSupply -&gt; m (a, DUniqSupply)
+</span><a href="#local-6989586621682489378"><span class="hs-identifier hs-var">st</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DUniqSupply -&gt; m (a, DUniqSupply)
+</span><a href="#local-6989586621682489378"><span class="hs-identifier hs-var">st</span></a></span><span> </span><span class="annot"><span class="annottext">DUniqSupply
+</span><a href="#local-6989586621682489377"><span class="hs-identifier hs-var">dus</span></a></span><span>
+</span><span id="line-216"></span><span>
+</span><span id="line-217"></span><span class="hs-comment">-- | Lift an IO action that depends on, and threads through, a unique supply</span><span>
+</span><span id="line-218"></span><span class="hs-comment">-- into UniqDSMT IO.</span><span>
+</span><span id="line-219"></span><span id="local-6989586621682489112"><span class="annot"><a href="GHC.Types.Unique.DSM.html#withDUS"><span class="hs-identifier hs-type">withDUS</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Types.Unique.DSM.html#DUniqSupply"><span class="hs-identifier hs-type">DUniqSupply</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621682489112"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Types.Unique.DSM.html#DUniqSupply"><span class="hs-identifier hs-type">DUniqSupply</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Types.Unique.DSM.html#UniqDSMT"><span class="hs-identifier hs-type">UniqDSMT</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="annot"><a href="#local-6989586621682489112"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-220"></span><span id="withDUS"><span class="annot"><span class="annottext">withDUS :: forall a. (DUniqSupply -&gt; IO (a, DUniqSupply)) -&gt; UniqDSMT IO a
+</span><a href="GHC.Types.Unique.DSM.html#withDUS"><span class="hs-identifier hs-var hs-var">withDUS</span></a></span></span><span> </span><span id="local-6989586621682489384"><span class="annot"><span class="annottext">DUniqSupply -&gt; IO (a, DUniqSupply)
+</span><a href="#local-6989586621682489384"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(DUniqSupply -&gt; IO (a, DUniqSupply)) -&gt; UniqDSMT IO a
+forall (m :: * -&gt; *) result.
+(DUniqSupply -&gt; m (result, DUniqSupply)) -&gt; UniqDSMT m result
+</span><a href="GHC.Types.Unique.DSM.html#UDSMT"><span class="hs-identifier hs-var">UDSMT</span></a></span><span> </span><span class="annot"><span class="annottext">((DUniqSupply -&gt; IO (a, DUniqSupply)) -&gt; UniqDSMT IO a)
+-&gt; (DUniqSupply -&gt; IO (a, DUniqSupply)) -&gt; UniqDSMT IO a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621682489385"><span class="annot"><span class="annottext">DUniqSupply
+</span><a href="#local-6989586621682489385"><span class="hs-identifier hs-var">us</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-221"></span><span>  </span><span class="hs-special">(</span><span id="local-6989586621682489386"><span class="annot"><a href="#local-6989586621682489386"><span class="hs-identifier hs-var">a</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621682489387"><span class="annot"><a href="#local-6989586621682489387"><span class="hs-identifier hs-var">us'</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO (a, DUniqSupply) -&gt; IO (a, DUniqSupply)
+forall a. IO a -&gt; IO a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><span class="hs-identifier hs-var">liftIO</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">DUniqSupply -&gt; IO (a, DUniqSupply)
+</span><a href="#local-6989586621682489384"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">DUniqSupply
+</span><a href="#local-6989586621682489385"><span class="hs-identifier hs-var">us</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-222"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">return</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621682489386"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621682489387"><span class="hs-identifier hs-type">us'</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-223"></span><span>
+</span><span id="line-224"></span><span class="hs-comment">-- | Change the monad underyling an applied @UniqDSMT@, i.e. transform a</span><span>
+</span><span id="line-225"></span><span class="hs-comment">-- @UniqDSMT m@ into a @UniqDSMT n@ given @m ~&gt; n@.</span><span>
+</span><span id="line-226"></span><span id="local-6989586621682489114"><span id="local-6989586621682489116"><span id="local-6989586621682489117"><span class="annot"><a href="GHC.Types.Unique.DSM.html#hoistUDSMT"><span class="hs-identifier hs-type">hoistUDSMT</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621682489115"><span class="annot"><a href="#local-6989586621682489115"><span class="hs-identifier hs-type">x</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="#local-6989586621682489114"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682489115"><span class="hs-identifier hs-type">x</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621682489116"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682489115"><span class="hs-identifier hs-type">x</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Types.Unique.DSM.html#UniqDSMT"><span class="hs-identifier hs-type">UniqDSMT</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682489114"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682489117"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Types.Unique.DSM.html#UniqDSMT"><span class="hs-identifier hs-type">UniqDSMT</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682489116"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682489117"><span class="hs-identifier hs-type">a</span></a></span></span></span></span><span>
+</span><span id="line-227"></span><span id="hoistUDSMT"><span class="annot"><span class="annottext">hoistUDSMT :: forall (m :: * -&gt; *) (n :: * -&gt; *) a.
+(forall x. m x -&gt; n x) -&gt; UniqDSMT m a -&gt; UniqDSMT n a
+</span><a href="GHC.Types.Unique.DSM.html#hoistUDSMT"><span class="hs-identifier hs-var hs-var">hoistUDSMT</span></a></span></span><span> </span><span id="local-6989586621682489388"><span class="annot"><span class="annottext">forall x. m x -&gt; n x
+</span><a href="#local-6989586621682489388"><span class="hs-identifier hs-var">nt</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Types.Unique.DSM.html#UDSMT"><span class="hs-identifier hs-type">UDSMT</span></a></span><span> </span><span id="local-6989586621682489389"><span class="annot"><span class="annottext">DUniqSupply -&gt; m (a, DUniqSupply)
+</span><a href="#local-6989586621682489389"><span class="hs-identifier hs-var">m</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(DUniqSupply -&gt; n (a, DUniqSupply)) -&gt; UniqDSMT n a
+forall (m :: * -&gt; *) result.
+(DUniqSupply -&gt; m (result, DUniqSupply)) -&gt; UniqDSMT m result
+</span><a href="GHC.Types.Unique.DSM.html#UDSMT"><span class="hs-identifier hs-var">UDSMT</span></a></span><span> </span><span class="annot"><span class="annottext">((DUniqSupply -&gt; n (a, DUniqSupply)) -&gt; UniqDSMT n a)
+-&gt; (DUniqSupply -&gt; n (a, DUniqSupply)) -&gt; UniqDSMT n a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621682489390"><span class="annot"><span class="annottext">DUniqSupply
+</span><a href="#local-6989586621682489390"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">m (a, DUniqSupply) -&gt; n (a, DUniqSupply)
+forall x. m x -&gt; n x
+</span><a href="#local-6989586621682489388"><span class="hs-identifier hs-var">nt</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">DUniqSupply -&gt; m (a, DUniqSupply)
+</span><a href="#local-6989586621682489389"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="annot"><span class="annottext">DUniqSupply
+</span><a href="#local-6989586621682489390"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-228"></span><span>
+</span><span id="line-229"></span><span class="annot"><span class="hs-comment">-- | Lift a monadic action @m a@ into an @UniqDSMT m a@</span></span><span>
+</span><span id="line-230"></span><span id="local-6989586621682489121"><span id="local-6989586621682489122"><span class="annot"><a href="GHC.Types.Unique.DSM.html#liftUDSMT"><span class="hs-identifier hs-type">liftUDSMT</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Functor</span></span><span> </span><span class="annot"><a href="#local-6989586621682489121"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621682489121"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682489122"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Types.Unique.DSM.html#UniqDSMT"><span class="hs-identifier hs-type">UniqDSMT</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682489121"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682489122"><span class="hs-identifier hs-type">a</span></a></span></span></span><span>
+</span><span id="line-231"></span><span id="liftUDSMT"><span class="annot"><span class="annottext">liftUDSMT :: forall (m :: * -&gt; *) a. Functor m =&gt; m a -&gt; UniqDSMT m a
+</span><a href="GHC.Types.Unique.DSM.html#liftUDSMT"><span class="hs-identifier hs-var hs-var">liftUDSMT</span></a></span></span><span> </span><span id="local-6989586621682489393"><span class="annot"><span class="annottext">m a
+</span><a href="#local-6989586621682489393"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(DUniqSupply -&gt; m (a, DUniqSupply)) -&gt; UniqDSMT m a
+forall (m :: * -&gt; *) result.
+(DUniqSupply -&gt; m (result, DUniqSupply)) -&gt; UniqDSMT m result
+</span><a href="GHC.Types.Unique.DSM.html#UDSMT"><span class="hs-identifier hs-var">UDSMT</span></a></span><span> </span><span class="annot"><span class="annottext">((DUniqSupply -&gt; m (a, DUniqSupply)) -&gt; UniqDSMT m a)
+-&gt; (DUniqSupply -&gt; m (a, DUniqSupply)) -&gt; UniqDSMT m a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621682489394"><span class="annot"><span class="annottext">DUniqSupply
+</span><a href="#local-6989586621682489394"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="hs-special">,</span><span class="annot"><span class="annottext">DUniqSupply
+</span><a href="#local-6989586621682489394"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(a -&gt; (a, DUniqSupply)) -&gt; m a -&gt; m (a, DUniqSupply)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">m a
+</span><a href="#local-6989586621682489393"><span class="hs-identifier hs-var">m</span></a></span><span>
+</span><span id="line-232"></span><span>
+</span><span id="line-233"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-234"></span><span class="hs-comment">-- MonadUniqDSM</span><span>
+</span><span id="line-235"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-236"></span><span>
+</span><span id="line-237"></span><span class="hs-keyword">class</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Monad</span></span><span> </span><span class="annot"><a href="#local-6989586621682489125"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span id="MonadUniqDSM"><span class="annot"><a href="GHC.Types.Unique.DSM.html#MonadUniqDSM"><span class="hs-identifier hs-var">MonadUniqDSM</span></a></span></span><span> </span><span id="local-6989586621682489125"><span class="annot"><a href="#local-6989586621682489125"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-238"></span><span>  </span><span class="hs-comment">-- | Lift a pure 'UniqDSM' action into a 'MonadUniqDSM' such as 'UniqDSMT'</span><span>
+</span><span id="line-239"></span><span>  </span><span id="liftUniqDSM"><span class="annot"><a href="GHC.Types.Unique.DSM.html#liftUniqDSM"><span class="hs-identifier hs-type">liftUniqDSM</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621682489127"><span class="annot"><a href="GHC.Types.Unique.DSM.html#UniqDSM"><span class="hs-identifier hs-type">UniqDSM</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682489127"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621682489125"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682489127"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-240"></span><span>
+</span><span id="line-241"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="GHC.Types.Unique.DSM.html#MonadUniqDSM"><span class="hs-identifier hs-type">MonadUniqDSM</span></a></span><span> </span><span class="annot"><a href="GHC.Types.Unique.DSM.html#UniqDSM"><span class="hs-identifier hs-type">UniqDSM</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-242"></span><span>  </span><span id="local-6989586621682489402"><span class="annot"><span class="annottext">liftUniqDSM :: forall a. UniqDSM a -&gt; UniqDSM a
+</span><a href="GHC.Types.Unique.DSM.html#liftUniqDSM"><span class="hs-identifier hs-var hs-var hs-var">liftUniqDSM</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">UniqDSM a -&gt; UniqDSM a
+forall a. a -&gt; a
+</span><span class="hs-identifier hs-var">id</span></span><span>
+</span><span id="line-243"></span><span>
+</span><span id="line-244"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621682489131"><span class="annot"><span class="hs-identifier hs-type">Monad</span></span><span> </span><span class="annot"><a href="#local-6989586621682489131"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="GHC.Types.Unique.DSM.html#MonadUniqDSM"><span class="hs-identifier hs-type">MonadUniqDSM</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Types.Unique.DSM.html#UniqDSMT"><span class="hs-identifier hs-type">UniqDSMT</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682489131"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-245"></span><span>  </span><span id="local-6989586621682489411"><span class="annot"><span class="annottext">liftUniqDSM :: forall a. UniqDSM a -&gt; UniqDSMT m a
+</span><a href="GHC.Types.Unique.DSM.html#liftUniqDSM"><span class="hs-identifier hs-var hs-var hs-var">liftUniqDSM</span></a></span></span><span> </span><span id="local-6989586621682489412"><span class="annot"><span class="annottext">UniqDSM a
+</span><a href="#local-6989586621682489412"><span class="hs-identifier hs-var">act</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(DUniqSupply -&gt; m (a, DUniqSupply)) -&gt; UniqDSMT m a
+forall (m :: * -&gt; *) result.
+(DUniqSupply -&gt; m (result, DUniqSupply)) -&gt; UniqDSMT m result
+</span><a href="GHC.Types.Unique.DSM.html#UDSMT"><span class="hs-identifier hs-var">UDSMT</span></a></span><span> </span><span class="annot"><span class="annottext">((DUniqSupply -&gt; m (a, DUniqSupply)) -&gt; UniqDSMT m a)
+-&gt; (DUniqSupply -&gt; m (a, DUniqSupply)) -&gt; UniqDSMT m a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621682489413"><span class="annot"><span class="annottext">DUniqSupply
+</span><a href="#local-6989586621682489413"><span class="hs-identifier hs-var">us</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(a, DUniqSupply) -&gt; m (a, DUniqSupply)
+forall a. a -&gt; m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">((a, DUniqSupply) -&gt; m (a, DUniqSupply))
+-&gt; (a, DUniqSupply) -&gt; m (a, DUniqSupply)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">DUniqSupply -&gt; UniqDSM a -&gt; (a, DUniqSupply)
+forall a. DUniqSupply -&gt; UniqDSM a -&gt; (a, DUniqSupply)
+</span><a href="GHC.Types.Unique.DSM.html#runUniqueDSM"><span class="hs-identifier hs-var">runUniqueDSM</span></a></span><span> </span><span class="annot"><span class="annottext">DUniqSupply
+</span><a href="#local-6989586621682489413"><span class="hs-identifier hs-var">us</span></a></span><span> </span><span class="annot"><span class="annottext">UniqDSM a
+</span><a href="#local-6989586621682489412"><span class="hs-identifier hs-var">act</span></a></span><span>
+</span><span id="line-246"></span></pre></body></html>
