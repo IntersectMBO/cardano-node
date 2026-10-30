@@ -1,0 +1,5 @@
+pr: 6767
+kind:
+  - compatible
+description: |
+  Bumped `cardano-api` to 11.12 and `cardano-cli` to 11.7.

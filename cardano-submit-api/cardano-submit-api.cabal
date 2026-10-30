@@ -39,9 +39,9 @@ library
                       , aeson
                       , async
                       , bytestring
-                      , cardano-api ^>= 11.11
+                      , cardano-api ^>= 11.12
                       , cardano-binary
-                      , cardano-cli ^>= 11.6
+                      , cardano-cli ^>= 11.7
                       , cardano-crypto-class ^>=2.6
                       , containers
                       , ekg-core

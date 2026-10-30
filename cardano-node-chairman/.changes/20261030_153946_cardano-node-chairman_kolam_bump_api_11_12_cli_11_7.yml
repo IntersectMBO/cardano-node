@@ -1,0 +1,5 @@
+pr: 6767
+kind:
+  - compatible
+description: |
+  Bumped the `cardano-cli` build tool used by the tests to 11.7.
