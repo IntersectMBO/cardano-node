@@ -3,6 +3,7 @@
     "ByronGenesisFile": "byron-genesis.json",
     "ConwayGenesisFile": "conway-genesis.json",
     "DijkstraGenesisFile": "dijkstra-genesis.json",
+    "ExperimentalHardForksEnabled": true,
     "ExperimentalProtocolsEnabled": true,
     "LastKnownBlockVersion-Alt": 0,
     "LastKnownBlockVersion-Major": 9,
