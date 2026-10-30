@@ -124,13 +124,77 @@ jobs:
     - name: Build all
       run: cabal build all --enable-tests
 
+    # A normal run takes about 10 minutes. If the tests still run after 30 minutes,
+    # print what the test processes are doing and stop them, so that a hang (the
+    # chairman test sometimes hangs on macOS) fails early and shows where it is
+    # stuck. timeout-minutes is a backstop in case this guard gets stuck too.
     - name: Run tests
+      timeout-minutes: 45
       env:
         TMPDIR: ${{ runner.temp }}
         TMP: ${{ runner.temp }}
         KEEP_WORKSPACE: 1
       run: |
-        cabal test cardano-testnet cardano-node cardano-node-chairman cardano-submit-api
+        tests=(cardano-testnet cardano-node cardano-node-chairman cardano-submit-api)
+        if [ "$RUNNER_OS" = Windows ]; then
+          cabal test "${tests[@]}"
+          exit
+        fi
+
+        cabal test "${tests[@]}" &
+        tests_pid=$!
+        limit_seconds=$((30 * 60))
+        waited=0
+        while kill -0 "$tests_pid" 2>/dev/null && [ "$waited" -lt "$limit_seconds" ]; do
+          sleep 5
+          waited=$((waited + 5))
+        done
+        if ! kill -0 "$tests_pid" 2>/dev/null; then
+          wait "$tests_pid"
+          exit
+        fi
+
+        descendants() {
+          local child
+          for child in $(ps -A -o pid=,ppid= | awk -v parent="$1" '$2 == parent { print $1 }'); do
+            descendants "$child"
+            echo "$child"
+          done
+        }
+
+        dump_diagnostics() {
+          echo "::group::What the hung tests are doing"
+          date -u
+          uptime
+          if [ "$RUNNER_OS" = macOS ]; then vm_stat; else free -m; fi
+          df -h "$RUNNER_TEMP"
+          # shellcheck disable=SC2009
+          ps -A -o pid,ppid,pgid,stat,etime,pcpu,rss,args | grep -E 'PID|cabal|cardano|chairman|kes-agent'
+          for pid in $(pgrep -f 'chairman-tests|cardano-node-chairman|cardano-testnet-test|cardano-node-test|cardano-config-compare-test|cardano-testnet-golden'); do
+            echo "=== $(ps -o args= -p "$pid") (pid $pid)"
+            sudo lsof -p "$pid"
+            if [ "$RUNNER_OS" = macOS ]; then
+              sudo sample "$pid" 3 -file "$RUNNER_TEMP/sample-$pid.txt" > /dev/null
+              cat "$RUNNER_TEMP/sample-$pid.txt"
+            else
+              for thread in /proc/"$pid"/task/*; do
+                echo "--- thread ${thread##*/} $(cat "$thread/comm")"
+                sudo cat "$thread/stack"
+              done
+            fi
+          done
+          for workspace in "$RUNNER_TEMP"/cardano-chairman-*-test-*; do
+            echo "=== $workspace"
+            tail -n 3 "$workspace/logs/chairman.stdout.log" "$workspace/logs/chairman.stderr.log"
+          done
+          echo "::endgroup::"
+        }
+
+        dump_diagnostics || true
+        # shellcheck disable=SC2046
+        kill -KILL $(descendants "$tests_pid") "$tests_pid" 2>/dev/null || true
+        echo "::error::The tests were still running after 30 minutes and were stopped; see the output above."
+        exit 1
 
     - name: Validate produced manifest and status output against schemas
       if: matrix.validate-manifest
