@@ -75,6 +75,8 @@ module Cardano.Benchmarking.Profile.Primitives (
   -- Node
   -- LSMT True or False.
   , lsmt
+  -- Override of workbench's default SnapshotInterval and SlotOffset
+  , snapshotInterval
   -- Node's tracer flag.
   , traceForwardingOn, traceForwardingOff
   -- Node's --shutdown-on-*-sync.
@@ -189,6 +191,8 @@ empty = Types.Profile {
     , Types.heap_limit = Nothing
     , Types.shutdown_on_slot_synced = Nothing
     , Types.shutdown_on_block_synced = Nothing
+    , Types.snapshot_interval_override = Nothing
+    , Types.slot_offset_override = Nothing
   }
   , Types.generator = Types.Generator {
       Types.tps = 0
@@ -616,6 +620,15 @@ lsmt = node (\n -> n {Types.utxo_lsmt = True})
 ssdDirectory :: String -> Types.Profile -> Types.Profile
 ssdDirectory str = node (\n -> n {Types.ssd_directory = Just str})
 
+snapshotInterval :: Integer -> Integer -> Types.Profile -> Types.Profile
+snapshotInterval i o = node
+  (\n ->
+    if isJust (Types.snapshot_interval_override n)
+    then error "snapshotInterval override already set (not Nothing)."
+    else n { Types.snapshot_interval_override = Just i
+           , Types.slot_offset_override       = Just o
+           }
+  )
 
 -- Tracer.
 ----------

@@ -100,6 +100,20 @@ with pkgs.lib; let
     then "${profile.node.ssd_directory}/node-${toString i}"
     else null;
 
+  ## Wall clock seconds between two ledger snapshots: 4230 by default, unless
+  ## the profile sets .node.snapshot_interval_override (also in seconds).
+  snapshotIntervalSeconds =
+    if profile.node.snapshot_interval_override or null != null
+    then profile.node.snapshot_interval_override
+    else 4230;
+
+  ## First slot of the ledger snapshot schedule: 1000 by default, unless the
+  ## profile sets .node.slot_offset_override (also in slots).
+  snapshotSlotOffset =
+    if profile.node.slot_offset_override or null != null
+    then profile.node.slot_offset_override
+    else 1000;
+
   ##
   ## nodeServiceConfig :: NodeSpec -> ServiceConfig
   ##
@@ -177,6 +191,13 @@ with pkgs.lib; let
                 ConwayGenesisFile = "../genesis/genesis.conway.json";
                 DijkstraGenesisFile = "../genesis/genesis.dijkstra.json";
 
+                ## Deprecated top level option, in seconds: the only one node
+                ## 11.0.X and earlier read from this config (they ignore the
+                ## LedgerDB.Snapshots section below). Later nodes accept it
+                ## with a deprecation warning, the LedgerDB.Snapshots value
+                ## taking precedence.
+                SnapshotInterval = snapshotIntervalSeconds;
+
                 ## The Snapshots section applies regardless of backend choice
                 ## The Backend key, when absent, defaults to "V2InMemory".
                 LedgerDB =
@@ -196,7 +217,7 @@ with pkgs.lib; let
                       ## artifacts when slot_duration is fractional.
                       SnapshotInterval =
                         builtins.floor
-                          (4230 / profile.genesis.slot_duration + 0.5)
+                          (snapshotIntervalSeconds / profile.genesis.slot_duration + 0.5)
                       ;
                       ## First point of the schedule: later points follow every
                       ## SnapshotInterval slots after it.
@@ -208,10 +229,12 @@ with pkgs.lib; let
                       ## for the first block to appear.
                       ##
                       ## Deliberately set at 1000 based on pre 11.1.0 "value"
-                      ## runs.
+                      ## runs; profiles with short durations can lower it via
+                      ## .node.slot_offset_override.
                       ## Never leave it unset, the default is Mithril's 388800,
-                      ## unreachable on most clusters.
-                      SlotOffset = 1000;
+                      ## unreachable on most cluster runs.
+                      ## Node 11.0.X and earlier ignore it.
+                      SlotOffset = snapshotSlotOffset;
                       ## Disable the minimum wall clock period between two
                       ## written snapshots, the policy replaced by this section
                       ## had no such check.
