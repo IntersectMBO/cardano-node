@@ -150,7 +150,7 @@ library
                       , network-mux
                       , network-uri
                       , optparse-applicative
-                      , ouroboros-consensus:{ouroboros-consensus, cardano, diffusion} ^>= 5.2
+                      , ouroboros-consensus:{ouroboros-consensus, cardano, diffusion} ^>= 5.3
                       , ouroboros-network:{api, framework, ouroboros-network, protocols, tracing} >= 1.3
                       , plutus-ledger-api
                       , plutus-tx

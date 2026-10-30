@@ -165,7 +165,7 @@ library
                       , network-mux >= 0.8
                       , nothunks
                       , optparse-applicative
-                      , ouroboros-consensus:{ouroboros-consensus, lsm, cardano, diffusion, protocol, tracing} ^>= 5.2
+                      , ouroboros-consensus:{ouroboros-consensus, lsm, cardano, diffusion, protocol, tracing} ^>= 5.3
                       , ouroboros-network:{api, ouroboros-network, orphan-instances, framework, protocols, tracing} ^>= 2.0
                       , cardano-diffusion:{api, cardano-diffusion, tracing, orphan-instances} ^>=1.3
                       , prettyprinter
