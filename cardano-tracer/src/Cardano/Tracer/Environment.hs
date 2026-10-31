@@ -5,6 +5,7 @@ module Cardano.Tracer.Environment
 import           Cardano.Logging.Types
 import           Cardano.Timeseries.Component (TimeseriesHandle)
 import           Cardano.Tracer.Configuration
+import           Cardano.Tracer.Handlers.Alarms.Registry (AlarmRegistry)
 import           Cardano.Tracer.MetaTrace
 import           Cardano.Tracer.Types
 
@@ -29,4 +30,5 @@ data TracerEnv = TracerEnv
   , teStateDir              :: !(Maybe FilePath)
   , teMetricsHelp           :: ![(Text, Builder)]
   , teTimeseriesHandle      :: !(Maybe TimeseriesHandle)
+  , teAlarmRegistry         :: !(Maybe AlarmRegistry)
   }

@@ -15,6 +15,7 @@ license-files:          LICENSE
 build-type:             Simple
 extra-doc-files:        README.md
                         CHANGELOG.md
+data-files:             test/alarms-smoke.sh
 
 flag systemd
   description:          Enable systemd support.
@@ -30,6 +31,7 @@ common project-config
                       , GeneralizedNewtypeDeriving
                       , ImportQualifiedPost
                       , InstanceSigs
+                      , NumericUnderscores
                       , ScopedTypeVariables
                       , StandaloneKindSignatures
                       , TypeApplications
@@ -60,6 +62,15 @@ library
                         Cardano.Tracer.Acceptors.Run
                         Cardano.Tracer.Acceptors.Server
                         Cardano.Tracer.Acceptors.Utils
+
+                        Cardano.Tracer.Handlers.Alarms.Auth
+                        Cardano.Tracer.Handlers.Alarms.Consumers
+                        Cardano.Tracer.Handlers.Alarms.Registry
+                        Cardano.Tracer.Handlers.Alarms.Server
+                        Cardano.Tracer.Handlers.Alarms.Store
+                        Cardano.Tracer.Handlers.Alarms.TimeseriesRules
+                        Cardano.Tracer.Handlers.Alarms.TraceRules
+                        Cardano.Tracer.Handlers.Alarms.Types
 
                         Cardano.Tracer.Handlers.Logs.File
                         Cardano.Tracer.Handlers.Logs.Journal
@@ -122,6 +133,8 @@ library
                       , ekg-wai
                       , extra
                       , filepath
+                      , http-client
+                      , http-client-tls
                       , http-types
                       , mime-mail
                       , network
@@ -278,7 +291,9 @@ test-suite cardano-tracer-test
 
   main-is:              cardano-tracer-test.hs
 
-  other-modules:        Cardano.Tracer.Test.Forwarder
+  other-modules:        Cardano.Tracer.Test.Alarms.Tests
+                        Cardano.Tracer.Test.Alarms.TimeseriesTests
+                        Cardano.Tracer.Test.Forwarder
                         Cardano.Tracer.Test.DataPoint.Tests
                         Cardano.Tracer.Test.Logs.Tests
                         Cardano.Tracer.Test.Restart.Tests
@@ -288,6 +303,7 @@ test-suite cardano-tracer-test
   build-depends:        aeson
                       , async
                       , bytestring
+                      , cardano-timeseries-io
                       , cardano-tracer
                       , cborg
                       , containers
@@ -378,6 +394,23 @@ test-suite cardano-tracer-test-ext
   ghc-options:          -threaded
                         -rtsopts
                         -with-rtsopts=-N
+
+test-suite cardano-tracer-alarms-smoke
+  import:               project-config
+  type:                 exitcode-stdio-1.0
+  hs-source-dirs:       test
+  main-is:              alarms-smoke.hs
+
+  other-modules:        Paths_cardano_tracer
+  autogen-modules:      Paths_cardano_tracer
+
+  build-tool-depends:   cardano-tracer:cardano-tracer
+
+  if os(windows)
+    buildable:          False
+
+  build-depends:        base
+                      , process
 
 benchmark cardano-tracer-bench
   import:               project-config
