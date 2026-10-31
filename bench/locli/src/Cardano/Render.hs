@@ -338,11 +338,48 @@ modeFilename orig@(TextOutputFile f) name = \case
   AsPretty  -> orig
   AsTypst   -> orig
 
+-- | Column headers, and the per-field projections that fill them, of the
+--   report-style (one row per metric) renderings.
+aspectColHeadersAndProjections :: forall p a v. (KnownCDF p, Divisible v)
+                               => CDF2Aspect -> ([Text], Field DSelect p a -> CDF p v -> [Double])
+aspectColHeadersAndProjections = \case
+  OfOverallDataset ->
+    (,)
+    ["average", "CoV", "min", "max", "stddev", "range", "precision", "size"]
+    \Field{..} c@CDF{cdfRange=Interval cdfMin cdfMax, ..} ->
+      let avg = cdfAverageVal c & toDouble in
+      [ avg
+      , cdfStddev / avg
+      , fromRational . toRational $ cdfMin
+      , fromRational . toRational $ cdfMax
+      , cdfStddev
+      , fromRational . toRational $ cdfMax - cdfMin
+      , fromIntegral $ fromEnum fPrecision
+      , fromIntegral cdfSize
+      ]
+  OfInterCDF ->
+    (,)
+    ["average", "CoV", "min", "max", "stddev", "range", "precision", "size"]
+    (\Field{..} ->
+     cdfArity
+      (error "Cannot do inter-CDF statistics on plain CDFs")
+      (\CDF{cdfAverage=cdfAvg@CDF{cdfRange=Interval minAvg maxAvg,..}} ->
+          let avg = cdfAverageVal cdfAvg & toDouble in
+          [ avg
+          , cdfStddev / avg
+          , toDouble minAvg
+          , toDouble maxAvg
+          , cdfStddev
+          , toDouble $ maxAvg - minAvg
+          , fromIntegral $ fromEnum fPrecision
+          , fromIntegral cdfSize
+          ]))
+
 renderAnalysisCDFs :: forall a p. (CDFFields a p, KnownCDF p, ToJSON (a p)) => Anchor -> (Field DSelect p a -> Bool) -> CDF2Aspect -> Maybe [Centile] -> RenderConfig -> a p -> [(Text, [Text])]
 
 renderAnalysisCDFs _anchor _fieldSelr _c2a _centileSelr RenderConfig{rcFormat=AsTypst} _x =
-  -- This will be supported in the future, when more and more report types receive a typst rendering.
-  error "renderAnalysisCDFs(AsTypst): single-run / single-section typst output not yet supported."  
+  -- Typst output is template-based, and thus produced in IO by Cardano.Report.
+  error "renderAnalysisCDFs(AsTypst): use Cardano.Report.generateTypstCDFs"
 
 renderAnalysisCDFs _anchor _fieldSelr _c2a _centileSelr RenderConfig{rcFormat=AsJSON} x = (:[]) . ("",) . (:[]) . LT.toStrict $
   encodeToLazyText x
@@ -423,41 +460,6 @@ renderAnalysisCDFs a fieldSelr aspect _centileSelr rc@RenderConfig{rcFormat=AsRe
 
    hdrsProjs :: forall v. (Divisible v) => ([Text], Field DSelect p a -> CDF p v -> [Double])
    hdrsProjs = aspectColHeadersAndProjections aspect
-
-   aspectColHeadersAndProjections :: forall v. (Divisible v)
-                                  => CDF2Aspect -> ([Text], Field DSelect p a -> CDF p v -> [Double])
-   aspectColHeadersAndProjections = \case
-     OfOverallDataset ->
-       (,)
-       ["average", "CoV", "min", "max", "stddev", "range", "precision", "size"]
-       \Field{..} c@CDF{cdfRange=Interval cdfMin cdfMax, ..} ->
-         let avg = cdfAverageVal c & toDouble in
-         [ avg
-         , cdfStddev / avg
-         , fromRational . toRational $ cdfMin
-         , fromRational . toRational $ cdfMax
-         , cdfStddev
-         , fromRational . toRational $ cdfMax - cdfMin
-         , fromIntegral $ fromEnum fPrecision
-         , fromIntegral cdfSize
-         ]
-     OfInterCDF ->
-       (,)
-       ["average", "CoV", "min", "max", "stddev", "range", "precision", "size"]
-       (\Field{..} ->
-        cdfArity
-         (error "Cannot do inter-CDF statistics on plain CDFs")
-         (\CDF{cdfAverage=cdfAvg@CDF{cdfRange=Interval minAvg maxAvg,..}} ->
-             let avg = cdfAverageVal cdfAvg & toDouble in
-             [ avg
-             , cdfStddev / avg
-             , toDouble minAvg
-             , toDouble maxAvg
-             , cdfStddev
-             , toDouble $ maxAvg - minAvg
-             , fromIntegral $ fromEnum fPrecision
-             , fromIntegral cdfSize
-             ]))
 
 renderAnalysisCDFs a fieldSelr _c2a centiSelr rc@RenderConfig{rcFormat=AsPretty} x =
   (:[]) . ("",) $

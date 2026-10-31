@@ -99,6 +99,8 @@ data ChainCommand
   | ComputeMultiSummary
   |  RenderMultiSummary     RenderConfig TextOutputFile
 
+  |        RenderReport     TextOutputFile
+
   |             Compare     InputDir (Maybe TextInputFile) TextOutputFile
                             [( JsonInputFile SomeSummary
                              , JsonInputFile ClusterPerf
@@ -257,6 +259,12 @@ parseChainCommand =
      (ComputeMultiSummary & pure)
    , op "render-multi-summary" "Write out multi-run summary results"
      (writerOpts RenderMultiSummary "Render")
+   ]) <|>
+
+   subparser (mconcat [ commandGroup "Single-run report"
+   , op "report" "Generate a single-run Typst report, bundling the single table Typst files next to it"
+     (RenderReport
+       <$> optTextOutputFile "typst"    "Report .typ file to create.")
    ]) <|>
 
    subparser (mconcat [ commandGroup "Run comparison"
@@ -649,13 +657,9 @@ runChainCommand _ c@ComputePropagation = missingCommandData c
   ["run metadata & genesis", "chain", "data domains for slots & blocks"]
 
 runChainCommand s@State{sBlockProp=Just [prop]}
-  c@(RenderPropagation rc@RenderConfig{..} f subset) = do
+  c@(RenderPropagation rc f subset) = do
   progress "block-propagation" $ Q "rendering block propagation CDFs"
-  forM_ (renderAnalysisCDFs
-          (sAnchor s) (propSubsetFn subset) OfOverallDataset Nothing rc prop) $
-    \(name, body) ->
-      dumpText (T.unpack name) body (modeFilename f name rcFormat)
-      & firstExceptT (CommandError c)
+  renderCDFs c rc f (sAnchor s) (propSubsetFn subset) OfOverallDataset prop
   pure s
 runChainCommand _ c@RenderPropagation{} = missingCommandData c
   ["block propagation"]
@@ -681,13 +685,9 @@ runChainCommand _ c@ComputeMultiPropagation{} = missingCommandData c
   ["block propagation"]
 
 runChainCommand s@State{sMultiBlockProp=Just prop}
-  c@(RenderMultiPropagation rc@RenderConfig{..} f subset aspect) = do
+  c@(RenderMultiPropagation rc f subset aspect) = do
   progress "block-propagations" (Q "rendering multi-run block propagation")
-  forM_ (renderAnalysisCDFs
-          (sAnchor s) (propSubsetFn subset) aspect Nothing rc prop) $
-    \(name, body) ->
-      dumpText (T.unpack name) body (modeFilename f name rcFormat)
-      & firstExceptT (CommandError c)
+  renderCDFs c rc f (sAnchor s) (propSubsetFn subset) aspect prop
   pure s
 runChainCommand _ c@RenderMultiPropagation{} = missingCommandData c
   ["multi-run block propagation"]
@@ -724,12 +724,9 @@ runChainCommand _ c@ComputeClusterPerf{} = missingCommandData c
   ["machine performance stats"]
 
 runChainCommand s@State{sClusterPerf=Just [perf]}
-  c@(RenderClusterPerf rc@RenderConfig{..} f subset) = do
+  c@(RenderClusterPerf rc f subset) = do
   progress "clusterperf" (Q $ printf "rendering cluster performance")
-  forM_ (renderAnalysisCDFs (sAnchor s) (perfSubsetFn subset) OfOverallDataset Nothing rc perf) $
-    \(name, body) ->
-      dumpText (T.unpack name) body (modeFilename f name rcFormat)
-      & firstExceptT (CommandError c)
+  renderCDFs c rc f (sAnchor s) (perfSubsetFn subset) OfOverallDataset perf
   pure s
 runChainCommand _ c@RenderClusterPerf{} = missingCommandData c
   ["multi-run block propagation"]
@@ -755,12 +752,9 @@ runChainCommand _ c@ComputeMultiClusterPerf{} = missingCommandData c
   ["cluster performance stats"]
 
 runChainCommand s@State{sMultiClusterPerf=Just (MultiClusterPerf perf)}
-  c@(RenderMultiClusterPerf rc@RenderConfig{..} f subset aspect) = do
+  c@(RenderMultiClusterPerf rc f subset aspect) = do
   progress "clusterperfs" (Q $ printf "rendering multi-run cluster performance")
-  forM_ (renderAnalysisCDFs (sAnchor s) (perfSubsetFn subset) aspect Nothing rc perf) $
-    \(name, body) ->
-      dumpText (T.unpack name) body (modeFilename f name rcFormat)
-      & firstExceptT (CommandError c)
+  renderCDFs c rc f (sAnchor s) (perfSubsetFn subset) aspect perf
   pure s
 runChainCommand _ c@RenderMultiClusterPerf{} = missingCommandData c
   ["multi-run cluster performance stats"]
@@ -774,6 +768,9 @@ runChainCommand s c@ComputeSummary = do
 
 runChainCommand s@State{sSummaries = Just (summary:_)} c@(RenderSummary rc@RenderConfig{..} f) = do
   progress "summary" (Q "rendering summary")
+  bodySummary <- if rcFormat == AsTypst
+    then liftIO $ (:[]) <$> generateTypstSummary rc anchor (iFields sumFieldsReport) summary
+    else pure    $ renderSummary rc anchor (iFields sumFieldsReport) summary
   dumpText "summary" bodySummary (modeFilename f "" rcFormat)
     & firstExceptT (CommandError c)
   forM_ (sumProfilingData summary) $
@@ -787,8 +784,7 @@ runChainCommand s@State{sSummaries = Just (summary:_)} c@(RenderSummary rc@Rende
       dumpText "profiling" bodyProfiling (TextOutputFile $ replaceFileName (unTextOutputFile f) "profiling" System.FilePath.<.> "org")
         & firstExceptT (CommandError c)
   pure s
- where bodySummary = renderSummary rc anchor (iFields sumFieldsReport) summary
-       anchor = sAnchor s
+ where anchor = sAnchor s
 runChainCommand _ c@RenderSummary{} = missingCommandData c
   ["run summary"]
 
@@ -814,6 +810,9 @@ runChainCommand _ c@ComputeMultiSummary{} = missingCommandData c
 runChainCommand s@State{sMultiSummary=Just summary}
   c@(RenderMultiSummary rc@RenderConfig{..} f) = do
   progress "multi-summary" (Q "rendering multi-run summary")
+  body <- if rcFormat == AsTypst
+    then liftIO $ (:[]) <$> generateTypstSummary rc anchor (iFields sumFieldsReport) summary
+    else pure    $ renderSummary rc anchor (iFields sumFieldsReport) summary
   dumpText "multi-summary" body (modeFilename f "" rcFormat)
     & firstExceptT (CommandError c)
   forM_ (sumProfilingData summary) $
@@ -827,10 +826,21 @@ runChainCommand s@State{sMultiSummary=Just summary}
       dumpText "multi-profiling" bodyProfiling (TextOutputFile $ replaceFileName (unTextOutputFile f) "profiling" System.FilePath.<.> "org")
         & firstExceptT (CommandError c)
   pure s
- where body = renderSummary rc anchor (iFields sumFieldsReport) summary
-       anchor = sAnchor s
+ where anchor = sAnchor s
 runChainCommand _ c@RenderMultiSummary{} = missingCommandData c
   ["multi-run summary"]
+
+runChainCommand s@State{ sSummaries   = Just [summary]
+                       , sClusterPerf = Just [perf]
+                       , sBlockProp   = Just [prop] }
+  c@(RenderReport f@(TextOutputFile outfp)) = do
+  progress "report" (Q "rendering single-run report")
+  body <- liftIO $ generateTypstReport outfp summary perf prop
+  dumpText "report" [body] f
+    & firstExceptT (CommandError c)
+  pure s
+runChainCommand _ c@RenderReport{} = missingCommandData c
+  ["single-run summary", "single-run cluster performance", "single-run block propagation"]
 
 runChainCommand s c@(Compare ede mTmpl outf@(TextOutputFile outfp) runs) = do
   progress "report" (Q $ printf "rendering report for %d runs" $ length runs)
@@ -870,18 +880,30 @@ runChainCommand s c@(Compare ede mTmpl outf@(TextOutputFile outfp) runs) = do
   mScalingCSV <- if length scalings == length xs        -- if for every run, we also got a Plutus budget summary...
     then liftIO (writeResultsCSV (takeDirectory outfp </> scalingFile) scalings) >> pure (Just scalingFile)
     else pure Nothing
-  (tmplEnv', typstReport) <- case xs of
+  typstReport <- case xs of
     baseline:deltas@(_:_) -> liftIO $ do
       Cardano.Report.generateTypst (takeFileName typstPath) mScalingCSV baseline deltas
     _ -> throwE $ CommandError c $ mconcat
          [ "At least two runs required for comparison." ]
-  liftIO $
-    withFile (outfp `System.FilePath.replaceExtension` "env.typ.json") WriteMode $
-      \hnd -> BS8.hPutStrLn hnd tmplEnv'
   dumpText "report" [typstReport] (TextOutputFile typstPath)
     & firstExceptT (CommandError c)
 
   pure s
+
+-- | Render CDF-based analysis results; Typst output is template-based, and comes from Cardano.Report.
+renderCDFs :: (CDFFields a p, KnownCDF p, ToJSON (a p))
+  => ChainCommand -> RenderConfig -> TextOutputFile -> Anchor -> (Field DSelect p a -> Bool) -> CDF2Aspect -> a p
+  -> ExceptT CommandError IO ()
+renderCDFs c rc@RenderConfig{rcFormat} f anchor fieldSelr aspect x
+  | rcFormat == AsTypst = do
+      body <- liftIO $ generateTypstCDFs rc anchor fieldSelr aspect x
+      dumpText "" [body] f
+        & firstExceptT (CommandError c)
+  | otherwise =
+      forM_ (renderAnalysisCDFs anchor fieldSelr aspect Nothing rc x) $
+        \(name, body) ->
+          dumpText (T.unpack name) body (modeFilename f name rcFormat)
+          & firstExceptT (CommandError c)
 
 missingCommandData :: ChainCommand -> [String] -> ExceptT CommandError IO a
 missingCommandData c xs =
