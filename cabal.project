@@ -149,3 +149,11 @@ if impl(ghc >= 9.14)
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
+
+-- Temporary snapshot memory fixes from ouroboros-consensus-5.x-backports.
+-- Last commit before the 5.3.0.0 version bump; retains node 11.2's 5.2 bounds.
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-consensus
+  tag: 7cb8e3f5d4c89d1a9fde9c3e643c30630b3a7f28
+  --sha256: sha256-9GP/wpiJ6Wd++bgFCGrXxYQZzQ3PwFdAXuS0Rk2eZnc=
