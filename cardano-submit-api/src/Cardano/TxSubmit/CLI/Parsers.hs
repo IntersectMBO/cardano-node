@@ -14,18 +14,22 @@ import           Cardano.CLI.Environment (EnvCli (..))
 import           Cardano.CLI.EraBased.Common.Option
 import           Cardano.TxSubmit.CLI.Types (ConfigFile (..), TxSubmitCommand (..),
                    TxSubmitNodeParams (..))
+import           Cardano.TxSubmit.Deprecation (deprecationNotice, guideUrl)
 import           Cardano.TxSubmit.Rest.Parsers (pWebserverConfig)
 
 import           Control.Applicative
 import           Options.Applicative (Parser, ParserInfo)
 import qualified Options.Applicative as Opt
+import qualified Options.Applicative.Help.Pretty as PP
 
 opts :: EnvCli -> ParserInfo TxSubmitCommand
 opts envCli =
   Opt.info (pTxSubmit envCli <**> Opt.helper) $
     mconcat
       [ Opt.fullDesc
-      , Opt.progDesc "Cardano transaction submission web API."
+      , Opt.progDesc "DEPRECATED: Cardano transaction submission web API."
+      , Opt.footerDoc . Just . PP.vsep $
+          fmap PP.pretty (deprecationNotice <> ["Migration guide: " <> guideUrl])
       ]
 
 pTxSubmit :: EnvCli -> Parser TxSubmitCommand
