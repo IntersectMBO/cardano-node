@@ -1,6 +1,5 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
-{-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -11,29 +10,36 @@
 module Cardano.Report
   ( generateOrg
   , generateTypst
+  , generateTypstCDFs
+  , generateTypstSummary
+  , generateTypstReport
   )
 where
 
 import           Cardano.Analysis.API
 import           Cardano.Analysis.Summary
 import           Cardano.Prelude
-import           Cardano.Render (renderScalarLim)
+import           Cardano.Render (Anchor, CDF2Aspect, RenderConfig (..), aspectColHeadersAndProjections,
+                                 renderAnchorDateVer, renderAnchorFiltersAndDomains, renderAnchorRuns,
+                                 renderScalarLim)
+import           Cardano.Typst
 import           Cardano.Util as Util
 
-import           Prelude (id, isNegativeZero, tail, unzip3)
+import           Prelude (id, tail, unzip3)
 
 import qualified Data.Aeson.Encode.Pretty as AEP
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
+import qualified Data.HashMap.Strict as HM
 import qualified Data.Map.Strict as Map
 import           Data.String (IsString (..))
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as LT
-import qualified Data.Text.Lazy.Builder as LT (toLazyText)
-import qualified Data.Text.Lazy.Builder.RealFloat as LT (FPFormat (..), formatRealFloat)
 import           Data.Tuple.Extra (fst3)
+import           System.Directory (doesFileExist)
 import           System.Environment (lookupEnv)
 import           System.FilePath ((</>))
+import qualified System.FilePath as FP
 import           System.Posix.User
 import           Text.EDE hiding (Id)
 
@@ -295,17 +301,10 @@ generateOrg (InputDir ede) mReport (SomeSummary summ, cp, SomeBlockProp bp) rest
 --- Typst
 ---
 
-data Coloring = NoCol| Green | Red deriving (Eq, Show)
-
-colorCode :: Coloring -> Text
-colorCode NoCol = T.empty
-colorCode Green = "gr"
-colorCode Red   = "rd"
-
 newtype TypstCell = C (Text, Coloring, Int) deriving Show
 
 instance IsString TypstCell where
-  fromString x = C (fromString x, NoCol, 0)
+  fromString = cell . fromString
 
 instance ToJSON TypstCell where
   toJSON (C (t, col, width)) = object
@@ -313,22 +312,16 @@ instance ToJSON TypstCell where
     , "width" .= width
     ]
 
--- The convoluted logic around NumField serves the sole purpose of mimicking the
--- status quo of what the `em` based comparison reports show - where the logic is split up
--- between`Field` definitions, `locli` rendering code and `em` Org mode formulae.
--- Furthermore, it tags the field for custom coloring to be used in the future.
-
-type NumField = ((Double, Maybe Int), Coloring)
-
-
-numFieldValue :: NumField -> Double
-numFieldValue = fst . fst
-
+-- | A cell displaying the text verbatim.
 cell :: Text -> TypstCell
-cell t = C (t, NoCol, 0)
+cell t = C (typstEscape t, NoCol, 0)
+
+-- | A cell displaying the text in monospace (raw, so no escaping applies).
+rawCell :: Text -> TypstCell
+rawCell t = C (wrapIn "``" t, NoCol, 0)
 
 cellNumField :: NumField -> TypstCell
-cellNumField nf@(_, col) = C (renderNumField nf, col, 0)
+cellNumField nf@(_, col) = C (typstEscape $ renderNumField nf, col, 0)
 
 justifyCells :: [TypstCell] -> [TypstCell]
 justifyCells [] = []
@@ -351,9 +344,9 @@ renderTableTypst tmpl@TmplTableTypst{..} =
       Left txts     -> map (map cell) txts
       Right doubles -> map (map cellNumField) (insertDeltaRows tstRowDesc doubles)
 
-    runIdsMono  = wrapIn "``" <$> tstRunIds
-    runIds      = map cell $
-      if isRight tstVals then insertDeltaHeaders runIdsMono else runIdsMono
+    runIds = if isRight tstVals
+             then insertDeltaHeaders (rawCell <$> tstRunIds)
+             else rawCell <$> tstRunIds
 
     allContent =
         map cell (T.empty : tstRowDesc)
@@ -361,7 +354,7 @@ renderTableTypst tmpl@TmplTableTypst{..} =
 
     table = transpose $ map justifyCells allContent
 
-insertDeltaHeaders :: [Text] -> [Text]
+insertDeltaHeaders :: [TypstCell] -> [TypstCell]
 insertDeltaHeaders (base:rs@(_:_)) =
   base : concatMap extraCols rs
   where
@@ -388,38 +381,6 @@ insertDeltaRows rowDescs =
           | otherwise                = ((absDelta, Just 3), (relDelta, Just $ if abs relDelta < 1.0 then 1 else 0))
       in x : noColoring valAbs : noColoring valDelta : go base rds xs
     go _ [] _ = error "insertDeltaRows: implementation error - missing row definitions"
-
-nan, threshold :: Double
-nan       = 0 / 0
-threshold = 0.0001
-
-renderNumField :: NumField -> Text
-renderNumField ((val, prec), _)
-  | absval < threshold / 10 = zeroPaddedText
-  | otherwise =
-    let res = LT.toStrict $ LT.toLazyText $ LT.formatRealFloat format prec' val
-    in if decimals > 3 && '.' `T.elem` res
-      then T.dropWhileEnd (== '0') res
-      else res
-  where
-    absval   = abs val
-    decimals = fromMaybe 1 prec
-    zeroPaddedText =
-      let start = if val < 0.0 || isNegativeZero val then "-0" else "0"
-      in if
-        | decimals == 0 -> start
-        | decimals > 3  -> start <> ".0"
-        | otherwise     -> start <> "." <> T.replicate decimals "0"
-    (format, prec') =
-      let
-        cutoff
-          | decimals <= 5    = prec
-          | absval >= 10000  = Just 0
-          | absval >= 1000   = Just 1
-          | absval >= 100    = Just 2
-          | absval >= 10     = Just 3
-          | otherwise        = Just 4
-      in if absval < threshold then (LT.Exponent, Just 0) else (LT.Fixed, cutoff)
 
 
 data TmplSectionTypst
@@ -475,19 +436,10 @@ generateTypst ::
             FilePath
          -> Maybe FilePath
          -> (SomeSummary, ClusterPerf, SomeBlockProp) -> [(SomeSummary, ClusterPerf, SomeBlockProp)]
-         -> IO (ByteString, Text)
+         -> IO Text
 generateTypst typstFileName mScalingCSV theBase@(SomeSummary summ, cp, SomeBlockProp bp) rest = do
-  ctx       <- getReport metas (last templates & trManifest & getComponent "cardano-node" & ciVersion)
-  tmplMain  <- getDataFileName $ "report-templates" </> "typst" </> "main_comparison.ede"
-  tmpl      <- parseFile tmplMain
-
-  let tmplEnv           = mkTmplEnv ctx templates
-      tmplEnvSerialised = AEP.encodePretty tmplEnv
-  Text.EDE.result
-    (error . show)
-    (pure . (LBS.toStrict tmplEnvSerialised,) . LT.toStrict) $ tmpl >>=
-    \x ->
-      renderWith mempty x tmplEnv
+  ctx <- getReport metas (last templates & trManifest & getComponent "cardano-node" & ciVersion)
+  renderTypstTemplate "main_comparison.ede" $ mkTmplEnv ctx templates
  where
    allRuns = theBase : rest
 
@@ -534,6 +486,116 @@ generateTypst typstFileName mScalingCSV theBase@(SomeSummary summ, cp, SomeBlock
      , "typstFile"  .= typstFileName
      ]
      ++ maybe [] (\csvFile -> ["scalingCSV" .= csvFile]) mScalingCSV
+
+
+-- | The single-run report: bundles the single table files (as written by the
+--   workbench's single-run analysis) found next to the report, by importing them.
+--   Missing table files are noted in the report, instead of failing its compilation.
+generateTypstReport :: FilePath -> SummaryOne -> ClusterPerf -> BlockProp f -> IO Text
+generateTypstReport typstPath summ cp bp = do
+  ctx <- getReport [sumMeta summ] (baseTmpl & trManifest & getComponent "cardano-node" & ciVersion)
+  summaryFile  <- tableFile (summaryReportSection summ)
+  sectionFiles <- mapM tableFile (analysesReportSections cp bp)
+  renderTypstTemplate "main_single.ede" $ fromPairs
+    [ "report"     .= ctx
+    , "base"       .= baseTmpl
+    , "runs"       .= [baseTmpl]
+    , "summary"    .= summaryFile
+    , "analyses"   .= sectionFiles
+    , "dictionary" .= metricDictionary
+    , "charts"     .= charts
+    , "typstFile"  .= FP.takeFileName typstPath
+    ]
+ where
+   baseTmpl = liftTmplRun summ
+
+   -- The table file names are those of the Org mode report tables, with a .typ extension.
+   tableFile :: Section -> IO TableFile
+   tableFile STable{sTitle, sOrgFile} = do
+     let tfName = FP.replaceExtension (T.unpack sOrgFile) "typ"
+     tfPresent <- doesFileExist (FP.takeDirectory typstPath </> tfName)
+     pure TableFile{tfTitle = sTitle, ..}
+
+data TableFile
+  = TableFile
+    { tfTitle   :: !Text
+    , tfName    :: !FilePath
+    , tfPresent :: !Bool
+    }
+
+instance ToJSON TableFile where
+  toJSON TableFile{..} = object
+    [ "title"   .= tfTitle
+    , "name"    .= tfName
+    , "present" .= tfPresent
+    ]
+
+-- | Render one of the bundled Typst templates (report-templates/typst).
+renderTypstTemplate :: FilePath -> HM.HashMap Text Value -> IO Text
+renderTypstTemplate name env = do
+  path <- getDataFileName $ "report-templates" </> "typst" </> name
+  tmpl <- parseFile path
+  Text.EDE.result
+    (error . show)
+    (pure . LT.toStrict) $ tmpl >>=
+    \x ->
+      renderWith mempty x env
+
+
+--
+-- Single tables: the per-run (or multi-run) counterparts of Org mode report tables.
+--
+
+-- | One row per metric; the columns as for the Org mode report tables.
+generateTypstCDFs :: forall p a. (CDFFields a p, KnownCDF p)
+  => RenderConfig -> Anchor -> (Field DSelect p a -> Bool) -> CDF2Aspect -> a p -> IO Text
+generateTypstCDFs rc anchor fieldSelr aspect x =
+  renderTypstSingle rc anchor
+    (cell "metric" : fmap cell (fst (hdrsProjs @Integer)))
+    (fields' <&> \f@Field{..} ->
+        cell (fShortDesc <> ", " <> renderUnit fUnit)
+        : zipWith (\prec v -> cellNumField ((v, prec), NoCol))
+                  (colPrecs f)
+                  (mapFieldWithKey x (snd hdrsProjs) f))
+ where
+   fields' :: [Field DSelect p a]
+   fields' = filter fieldSelr cdfFields
+
+   hdrsProjs :: forall v. (Divisible v) => ([Text], Field DSelect p a -> CDF p v -> [Double])
+   hdrsProjs = aspectColHeadersAndProjections aspect
+
+   -- average, CoV, min, max, stddev, range, precision, size;
+   -- field-derived precision as in the comparison report.
+   colPrecs :: Field DSelect p a -> [Maybe Int]
+   colPrecs Field{fWidth} =
+     let prec = succ <$> unWidth fWidth
+     in [prec, Just 3, prec, prec, prec, prec, Just 0, Just 0]
+
+generateTypstSummary :: forall f a. (a ~ Summary f, TimelineFields a)
+  => RenderConfig -> Anchor -> (Field ISelect I a -> Bool) -> a -> IO Text
+generateTypstSummary rc anchor fieldSelr summ =
+  renderTypstSingle rc anchor
+    ["Parameter", "Value"]
+    (filter fieldSelr timelineFields <&> \f ->
+        [ cell (fShortDesc f)
+        , cell (renderScalarLim (Just 32) summ f) ])
+
+renderTypstSingle :: RenderConfig -> Anchor -> [TypstCell] -> [[TypstCell]] -> IO Text
+renderTypstSingle RenderConfig{rcDateVerMetadata, rcRunMetadata} anchor header rows =
+  renderTypstTemplate "single_table.ede" $ fromPairs
+    [ "anchor" .= object
+      ( [ "title"    .= typstEscape (renderAnchorRuns anchor)    | rcRunMetadata ]
+     <> [ "subtitle" .= typstEscape (renderAnchorFiltersAndDomains anchor) ]
+     <> [ "dateVer"  .= typstEscape (renderAnchorDateVer anchor) | rcDateVerMetadata ]
+      )
+    , "table" .= object
+      [ "header" .= Util.head table
+      , "rows"   .= tail table
+      ]
+    ]
+ where
+   -- justify column-wise
+   table = transpose . map justifyCells . transpose $ header : rows
 
 
 --
