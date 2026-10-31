@@ -183,6 +183,7 @@ testPartialYamlConfig =
     , pncResponderCoreAffinityPolicy = mempty
     , pncLedgerDbConfig = mempty
     , pncEgressPollInterval = mempty
+    , pncEgressBudgetMbps = mempty
     , pncRpcConfig = mempty
     , pncTxSubmissionLogicVersion = mempty
     , pncTxSubmissionInitDelay = mempty
@@ -238,6 +239,7 @@ testPartialCliConfig =
     , pncResponderCoreAffinityPolicy = mempty
     , pncLedgerDbConfig = mempty
     , pncEgressPollInterval = mempty
+    , pncEgressBudgetMbps = mempty
     , pncRpcConfig = mempty
     , pncTxSubmissionLogicVersion = mempty
     , pncTxSubmissionInitDelay = mempty
@@ -262,6 +264,7 @@ eExpectedConfig = do
     , ncDiffusionMode = InitiatorAndResponderDiffusionMode
     , ncExperimentalProtocolsEnabled = True
     , ncEgressPollInterval = 0
+    , ncEgressBudgetMbps = 950
     -- The block-fetch concurrency defaults, which the node now states rather
     -- than leaving to consensus; neither test layer sets them.
     , ncMaxConcurrencyBulkSync = Just (MaxConcurrencyBulkSync 1)
