@@ -825,7 +825,7 @@ defaultPartialNodeConfiguration =
       -- https://ouroboros-network.cardano.intersectmbo.org/ouroboros-network/Ouroboros-Network-Diffusion-Configuration.html#v:defaultTimeWaitTimeout
     , pncEgressPollInterval       = Last (Just Ouroboros.defaultEgressPollInterval)
       -- https://ouroboros-network.cardano.intersectmbo.org/ouroboros-network/Ouroboros-Network-Diffusion-Configuration.html#v:defaultEgressPollInterval
-    , pncEgressBudgetMbps         = Last (Just 250)
+    , pncEgressBudgetMbps         = Last (Just 950)
       -- the budget of 'Ouroboros.Network.Diffusion.Configuration.defaultEgressSchedulingWith'
     , pncAcceptedConnectionsLimit = Last (Just Ouroboros.defaultAcceptedConnectionsLimit)
       -- https://ouroboros-network.cardano.intersectmbo.org/ouroboros-network/Ouroboros-Network-Diffusion-Configuration.html#v:defaultAcceptedConnectionsLimit

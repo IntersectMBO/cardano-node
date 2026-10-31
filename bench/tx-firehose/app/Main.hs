@@ -71,8 +71,7 @@ import Data.Maybe (fromMaybe)
 import Data.Set qualified as Set
 import Data.Text (Text)
 import Data.Text qualified as T
-import Data.Time.Clock (UTCTime, diffUTCTime, getCurrentTime)
-import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
+import Data.Time.Clock (getCurrentTime)
 import Data.Time.Format.ISO8601 (iso8601Show)
 import Numeric.Natural (Natural)
 import Options.Applicative qualified as Opt
@@ -102,8 +101,6 @@ data Options = Options
   , optSigningKey :: !FilePath
   , optStakingKey :: !(Maybe FilePath)
   , optTps :: !Double
-  , optTpsSchedule :: ![(Double, Double)]
-  , optScheduleStart :: !(Maybe Integer)
   , optInputsPerTx :: !(Maybe Natural)
   , optOutputsPerTx :: !Natural
   , optFee :: !Integer
@@ -152,26 +149,6 @@ optionsParser =
       ( Opt.long "tps"
           <> Opt.metavar "NATURAL"
           <> Opt.help "Target submissions per second (rate ceiling)"
-      )
-    <*> Opt.option
-      (Opt.eitherReader parseSchedule)
-      ( Opt.long "tps-schedule"
-          <> Opt.metavar "SECONDS:TPS,..."
-          <> Opt.value []
-          <> Opt.help
-            "Vary the rate over time instead of holding --tps: linearly between \
-            \these points, in seconds since the schedule started, holding the \
-            \last one. E.g. 0:20,3600:250 ramps up over an hour."
-      )
-    <*> optional
-      ( Opt.option
-          Opt.auto
-          ( Opt.long "schedule-start"
-              <> Opt.metavar "POSIX_SECONDS"
-              <> Opt.help
-                "When the schedule started. Default: at startup. Set it so that a \
-                \restart resumes the schedule rather than starting it over."
-          )
       )
     <*> optional
       ( Opt.option
@@ -247,11 +224,9 @@ main = do
   let color = fromMaybe (colorFromPublicKey (Api.getVerificationKey signingKey)) (optColor opts)
   announceColor color
 
-  scheduleStart <- maybe getCurrentTime (pure . posixSecondsToUTCTime . fromInteger) (optScheduleStart opts)
-
   currentEra <- queryCurrentEra connInfo
   runInEra currentEra $ \sbe ->
-    runFirehoseInEra sbe opts connInfo networkId signingKey mStakeVk color scheduleStart
+    runFirehoseInEra sbe opts connInfo networkId signingKey mStakeVk color
 
 -- | Show the colour on stderr at startup, as a block when the terminal can
 -- render it and as bare hex otherwise.
@@ -277,7 +252,6 @@ runInEra (AnyCardanoEra ce) k =
 validateOptions :: Options -> IO ()
 validateOptions opts = do
   when (optTps opts <= 0) $ die "--tps must be > 0"
-  when (any ((<= 0) . snd) (optTpsSchedule opts)) $ die "--tps-schedule rates must be > 0"
   when (optInputsPerTx opts == Just 0) $ die "--inputs-per-tx must be >= 1"
   when (optOutputsPerTx opts == 0) $ die "--outputs-per-tx must be >= 1"
   when (optMaxConsecutiveErrors opts <= 0) $
@@ -303,9 +277,8 @@ runFirehoseInEra ::
   SigningKey Api.PaymentKey ->
   Maybe (Api.VerificationKey Api.StakeKey) ->
   Color ->
-  UTCTime ->
   IO ()
-runFirehoseInEra sbe opts connInfo networkId signingKey mStakeVk color scheduleStart = do
+runFirehoseInEra sbe opts connInfo networkId signingKey mStakeVk color = do
   trace "TxFirehose.Startup.Query" "Info" $
     Aeson.object ["address" .= T.pack (show addrAny), "era" .= show sbe]
 
@@ -325,7 +298,7 @@ runFirehoseInEra sbe opts connInfo networkId signingKey mStakeVk color scheduleS
       { localChainSyncClient = NoLocalChainSyncClient
       , localStateQueryClient = Nothing
       , localTxSubmissionClient =
-          Just (mkFirehoseClient sbe opts addrInEra signingKey initialFunds color scheduleStart)
+          Just (mkFirehoseClient sbe opts addrInEra signingKey initialFunds color)
       , localTxMonitoringClient = Nothing
       }
  where
@@ -345,17 +318,11 @@ mkFirehoseClient ::
   SigningKey Api.PaymentKey ->
   Map TxIn Integer ->
   Color ->
-  UTCTime ->
   LocalTxSubmissionClient TxInMode TxValidationErrorInCardanoMode IO ()
-mkFirehoseClient sbe opts addr sk initialFunds color scheduleStart =
+mkFirehoseClient sbe opts addr sk initialFunds color =
   LocalTxSubmissionClient (step initialFunds 0)
  where
-  -- The rate now, which only a schedule changes.
-  currentTps = case optTpsSchedule opts of
-    [] -> pure (optTps opts)
-    schedule -> do
-      now <- getCurrentTime
-      pure (scheduledTps schedule (realToFrac (diffUTCTime now scheduleStart)))
+  !period = round (1_000_000 / optTps opts) :: Int
   !target = fromIntegral (optOutputsPerTx opts) :: Int
   !mFixedInputs = fromIntegral <$> optInputsPerTx opts :: Maybe Int
   !maxErrs = optMaxConsecutiveErrors opts
@@ -422,14 +389,12 @@ mkFirehoseClient sbe opts addr sk initialFunds color scheduleStart =
     !consec
     BuiltTx{btxSigned, btxId, btxSize, btxInputs, btxOutputs} =
       SendMsgSubmitTx (TxInMode sbe btxSigned) $ \result -> do
-        tps <- currentTps
-        threadDelay (round (1_000_000 / tps))
+        threadDelay period
         case result of
           SubmitSuccess -> do
             trace "TxFirehose.Submit.Success" "Info" $
               Aeson.object $
                 [ "txId" .= btxId
-                , "tps" .= tps
                 , "size" .= btxSize
                 , "inputs" .= btxInputs
                 , "outputs" .= length btxOutputs
@@ -479,32 +444,6 @@ mkFirehoseClient sbe opts addr sk initialFunds color scheduleStart =
     | otherwise = step funds consec'
    where
     !consec' = consec + 1
-
--- | Parse @SECONDS:TPS,...@ with the times increasing.
-parseSchedule :: String -> Either String [(Double, Double)]
-parseSchedule str = do
-  points <- traverse point (splitOn ',' str)
-  if and (zipWith (<) (map fst points) (drop 1 (map fst points)))
-    then pure points
-    else Left "times in a --tps-schedule must increase"
- where
-  point p = case break (== ':') p of
-    (t, ':' : r) | [(t', "")] <- reads t, [(r', "")] <- reads r -> Right (t', r')
-    _ -> Left ("not SECONDS:TPS: " ++ p)
-  splitOn c xs = case break (== c) xs of
-    (a, _ : b) -> a : splitOn c b
-    (a, []) -> [a]
-
--- | The rate a schedule gives at some seconds after it started.
-scheduledTps :: [(Double, Double)] -> Double -> Double
-scheduledTps schedule t = case (before, after) of
-  ([], (_, r) : _) -> r
-  (_, []) -> snd (last schedule)
-  (_, (t1, r1) : _) ->
-    let (t0, r0) = last before
-     in r0 + (r1 - r0) * (t - t0) / (t1 - t0)
- where
-  (before, after) = span ((<= t) . fst) schedule
 
 -- | Does this rejection mean the inputs we spent no longer exist?
 --

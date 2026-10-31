@@ -65,7 +65,7 @@ instance ToJSON LeiosMinOfferLead where
   toJSON = toJSON . unLeiosMinOfferLead
 
 -- | Whether, and how, this node scales the endorser blocks it forges by how
--- much of the quorum margin recent announcements lost.
+-- much of the stake votes in time for recent announcements.
 --
 -- Absent from the configuration, or with @Enabled: false@, the node forges
 -- endorser blocks at the capacity the protocol allows. Every other field is
@@ -73,11 +73,12 @@ instance ToJSON LeiosMinOfferLead where
 --
 -- > LeiosAdaptiveEndorsements:
 -- >   Enabled: true
--- >   GainP: 2
--- >   Attack: 0.1
--- >   Release: 0.03
+-- >   TargetParticipation: 0.95
+-- >   GainP: 4
+-- >   GainD: 1
+-- >   Attack: 0.3
+-- >   Release: 0.08
 -- >   MinScale: 0.1
--- >   AliveWindow: 20
 newtype LeiosAdaptiveEndorsements = LeiosAdaptiveEndorsements
   { unLeiosAdaptiveEndorsements :: Maybe LeiosAdaptiveEbConfig }
   deriving (Eq, Show)
@@ -85,11 +86,12 @@ newtype LeiosAdaptiveEndorsements = LeiosAdaptiveEndorsements
 instance FromJSON LeiosAdaptiveEndorsements where
   parseJSON = withObject "LeiosAdaptiveEndorsements" $ \o -> do
     enabled <- o .:? "Enabled" .!= True
+    aebTargetParticipation <- o .:? "TargetParticipation" .!= aebTargetParticipation defaults
     aebGainP <- o .:? "GainP" .!= aebGainP defaults
+    aebGainD <- o .:? "GainD" .!= aebGainD defaults
     aebAttack <- o .:? "Attack" .!= aebAttack defaults
     aebRelease <- o .:? "Release" .!= aebRelease defaults
     aebMinScale <- o .:? "MinScale" .!= aebMinScale defaults
-    aebAliveWindow <- o .:? "AliveWindow" .!= aebAliveWindow defaults
     pure . LeiosAdaptiveEndorsements $
       if enabled then Just MkLeiosAdaptiveEbConfig{..} else Nothing
    where
@@ -100,9 +102,10 @@ instance ToJSON LeiosAdaptiveEndorsements where
   toJSON (LeiosAdaptiveEndorsements (Just cfg)) =
     object
       [ "Enabled" .= True
+      , "TargetParticipation" .= aebTargetParticipation cfg
       , "GainP" .= aebGainP cfg
+      , "GainD" .= aebGainD cfg
       , "Attack" .= aebAttack cfg
       , "Release" .= aebRelease cfg
       , "MinScale" .= aebMinScale cfg
-      , "AliveWindow" .= aebAliveWindow cfg
       ]
