@@ -254,7 +254,7 @@ test-suite cardano-node-test
                       , hedgehog-extras ^>= 0.10
                       , iproute
                       , mtl
-                      , ouroboros-consensus:{ouroboros-consensus, diffusion}
+                      , ouroboros-consensus:{ouroboros-consensus, cardano, diffusion, protocol}
                       , ouroboros-network:{api, framework, ouroboros-network}
                       , text
                       , trace-dispatcher
@@ -266,6 +266,7 @@ test-suite cardano-node-test
                         Test.Cardano.Node.FilePermissions
                         Test.Cardano.Node.Gen
                         Test.Cardano.Node.Json
+                        Test.Cardano.Node.LeaderCredentials
                         Test.Cardano.Node.POM
                         Test.Cardano.Node.TopLevel
                         Test.Cardano.Tracing.ForgingStats

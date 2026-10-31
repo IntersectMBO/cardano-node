@@ -2,6 +2,15 @@
 
 ## Next version
 
+- Bulk credentials entries now accept `[opcert, vrf, kes, bls]` as well as legacy
+  `[opcert, vrf, kes]` triples. The optional fourth element holds one embedded
+  BLS signing-key text envelope or an array of them, preserving per-pool key order.
+  Omission, `null`, and `[]` mean no BLS keys; malformed supplied keys fail the
+  entire load. Entries with and without BLS keys may be mixed. This extension
+  applies only to the node loader, not independent tools that require triples.
+  Use distinct keys for different pools; registration and committee membership
+  remain operator responsibilities.
+
 - Added a `--shelley-bls-key FILEPATH` option to `cardano-node run` for supplying a block producer's BLS (Leios) signing key alongside the existing VRF/KES/operational-certificate keys. The key is threaded into the consensus block-producer credentials and used as the Leios voting key. It is optional: producers that do not supply it no longer vote (previously a placeholder key was derived from cold-key material). Generate one with `cardano-cli dijkstra node key-gen-BLS`.
 
 - `LeiosDbConfig` with `Backend: SQLite` no longer takes any paths. Its two partitions follow the node's own `DatabasePath` the way the VolatileDB and the ImmutableDB do: `leios.vol.db` next to `volatile/`, `leios.imm.db` next to `immutable/`, which are separate volumes when `--immutable-database-path` and `--volatile-database-path` are given. Any `Filepath`, `VolatileFilepath` or `ImmutableFilepath` key is ignored, and an existing LeiosDb under the old `leios.db.vol`/`leios.db.imm` names is not picked up: the node starts a fresh one and re-fetches the endorser-block closures.
