@@ -1,0 +1,5 @@
+{% if file.present %}
+#{ import "{{ file.name }}": locli-table; locli-table }
+{% else %}
+#align(center)[#text(fill: red)[Table file `{{ file.name }}` was not found when this report was generated.]]
+{% endif %}
