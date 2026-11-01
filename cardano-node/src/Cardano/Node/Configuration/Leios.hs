@@ -1,14 +1,19 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.Node.Configuration.Leios(
   LeiosDbConfig(..)
   , LeiosMinOfferLead(..)
+  , LeiosAdaptiveEndorsements(..)
   ) where
 
 import           Data.Aeson (FromJSON (parseJSON), ToJSON (toJSON), Value (String), object,
-                   withObject, (.:), (.=))
+                   withObject, (.!=), (.:), (.:?), (.=))
 import           Data.Word (Word64)
+
+import           LeiosAdaptiveEndorsements (LeiosAdaptiveEbConfig (..),
+                   defaultLeiosAdaptiveEbConfig)
 
 -- | Which LeiosDB backend to run. Where its files live is not configurable
 -- here: the SQLite backend has a volatile and an immutable partition, and
@@ -58,3 +63,46 @@ instance FromJSON LeiosMinOfferLead where
 
 instance ToJSON LeiosMinOfferLead where
   toJSON = toJSON . unLeiosMinOfferLead
+
+-- | Whether, and how, this node scales the endorser blocks it forges by how
+-- much of the quorum margin recent announcements lost.
+--
+-- Absent from the configuration, or with @Enabled: false@, the node forges
+-- endorser blocks at the capacity the protocol allows. Every other field is
+-- optional and defaults to 'defaultLeiosAdaptiveEbConfig':
+--
+-- > LeiosAdaptiveEndorsements:
+-- >   Enabled: true
+-- >   GainP: 2
+-- >   Attack: 0.1
+-- >   Release: 0.03
+-- >   MinScale: 0.1
+-- >   AliveWindow: 20
+newtype LeiosAdaptiveEndorsements = LeiosAdaptiveEndorsements
+  { unLeiosAdaptiveEndorsements :: Maybe LeiosAdaptiveEbConfig }
+  deriving (Eq, Show)
+
+instance FromJSON LeiosAdaptiveEndorsements where
+  parseJSON = withObject "LeiosAdaptiveEndorsements" $ \o -> do
+    enabled <- o .:? "Enabled" .!= True
+    aebGainP <- o .:? "GainP" .!= aebGainP defaults
+    aebAttack <- o .:? "Attack" .!= aebAttack defaults
+    aebRelease <- o .:? "Release" .!= aebRelease defaults
+    aebMinScale <- o .:? "MinScale" .!= aebMinScale defaults
+    aebAliveWindow <- o .:? "AliveWindow" .!= aebAliveWindow defaults
+    pure . LeiosAdaptiveEndorsements $
+      if enabled then Just MkLeiosAdaptiveEbConfig{..} else Nothing
+   where
+    defaults = defaultLeiosAdaptiveEbConfig
+
+instance ToJSON LeiosAdaptiveEndorsements where
+  toJSON (LeiosAdaptiveEndorsements Nothing) = object ["Enabled" .= False]
+  toJSON (LeiosAdaptiveEndorsements (Just cfg)) =
+    object
+      [ "Enabled" .= True
+      , "GainP" .= aebGainP cfg
+      , "Attack" .= aebAttack cfg
+      , "Release" .= aebRelease cfg
+      , "MinScale" .= aebMinScale cfg
+      , "AliveWindow" .= aebAliveWindow cfg
+      ]

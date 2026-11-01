@@ -165,6 +165,7 @@ nodeRunParser = do
            , pncTxSubmissionInitDelay = mempty
            , pncLeiosDbConfig = mempty
            , pncLeiosMinOfferLead = mempty
+           , pncLeiosAdaptiveEndorsements = mempty
            }
 
 -- | Fill the Byron credentials in from the deprecated aliases where

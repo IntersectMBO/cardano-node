@@ -189,6 +189,7 @@ testPartialYamlConfig =
     , pncTxSubmissionInitDelay = mempty
     , pncLeiosDbConfig = mempty
     , pncLeiosMinOfferLead = mempty
+    , pncLeiosAdaptiveEndorsements = mempty
     }
 
 -- | Example partial configuration theoretically created
@@ -245,6 +246,7 @@ testPartialCliConfig =
     , pncTxSubmissionInitDelay = mempty
     , pncLeiosDbConfig = mempty
     , pncLeiosMinOfferLead = mempty
+    , pncLeiosAdaptiveEndorsements = mempty
     }
 
 -- | Expected final NodeConfiguration
@@ -264,7 +266,7 @@ eExpectedConfig = do
     , ncDiffusionMode = InitiatorAndResponderDiffusionMode
     , ncExperimentalProtocolsEnabled = True
     , ncEgressPollInterval = 0
-    , ncEgressBudgetMbps = 950
+    , ncEgressBudgetMbps = 250
     -- The block-fetch concurrency defaults, which the node now states rather
     -- than leaving to consensus; neither test layer sets them.
     , ncMaxConcurrencyBulkSync = Just (MaxConcurrencyBulkSync 1)
@@ -309,6 +311,7 @@ eExpectedConfig = do
     , ncTxSubmissionInitDelay = defaultTxSubmissionInitDelay
     , ncLeiosDbConfig = LeiosDbSQLite
     , ncLeiosMinOfferLead = Nothing
+    , ncLeiosAdaptiveEndorsements = Nothing
     }
 
 -- | Test that the legacy flat LedgerDB snapshot config format (options directly
