@@ -299,13 +299,6 @@ source-repository-package
   --sha256: sha256-I/E/WmTuAcQnpXgpv6dph0C4q4RZivbl+uv3oMCKjrY=
   subdir: common client stub convention
 
--- ghc-debug-client 0.8 bumped its bound to contra-tracer ^>=0.2, but cardano-node's
--- ecosystem (ouroboros-consensus, ...) pins contra-tracer 0.1.0.2. ghc-debug-client
--- only uses the stable core API (Control.Tracer: Tracer/traceWith/contramap/debugTracer),
--- all present in 0.1.0.2, so relax its lower bound to let it build against the pinned
--- version. (Only ghc-debug-client depends on contra-tracer among the SRP packages.)
-allow-older: ghc-debug-client:contra-tracer
-
 -- (ghc-debug 0.8's source trips -Werror; that's relaxed to -Wwarn for its libs
 -- in nix/haskell.nix, since cabal.project per-package ghc-options don't reach
 -- the source-repository-package build.)

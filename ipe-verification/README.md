@@ -54,7 +54,9 @@ The top-level `ghcOptions` is applied as a per-component **default** and is
 **overridden (not appended)** by any explicit
 `packages.<name>.components.<c>.ghcOptions`. So most packages get the IPE flags,
 but a package that sets its own component `ghcOptions` would silently lose them
-(this bit `plutus-core` in the 11.0.1 IPE work). The `infoTableMapped` overlay
+(this bit `plutus-core` in the 11.0.1 IPE work). W44 also needs this for
+`cardano-addresses`' C symbol-renaming options and the ghc-debug libraries'
+warning/debug options. The `infoTableMapped` overlay
 re-adds the flags at that same per-component path so they merge by
 concatenation; the `--all` sweep is what proves no package slipped through.
 

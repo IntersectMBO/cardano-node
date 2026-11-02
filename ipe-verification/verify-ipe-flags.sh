@@ -195,6 +195,9 @@ check "IPE local: cardano-node exe"              "${IPE}.cardano-node.components
 check "IPE SRP dep: ouroboros-consensus library" "${IPE}.ouroboros-consensus.components.library"     yes
 check "IPE ledger dep: cardano-ledger-core lib"  "${IPE}.cardano-ledger-core.components.library"     yes
 check "IPE hackage dep: aeson library"           "${IPE}.aeson.components.library"                   yes
+check "IPE override: cardano-addresses lib"      "${IPE}.cardano-addresses.components.library"       yes
+check "IPE override: plutus-core lib"            "${IPE}.plutus-core.components.library"             yes
+check "IPE override: ghc-debug-stub lib"         "${IPE}.ghc-debug-stub.components.library"           yes
 check "IPE CONTROL: normal ouroboros-consensus"  "${PROJ}.hsPkgs.ouroboros-consensus.components.library" no
 echo "# ghc-debug stub linked by the +ghc-debug flag (plan-wide on this branch,"
 echo "# so present in BOTH the debug and the default node exe -- no neg. control):"

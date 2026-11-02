@@ -38,6 +38,35 @@ nix build .#cardano-node-debug   # instrumented node (IPE + ghc-debug stub)
 nix build .#cardano-debug        # snapshot / analysis client
 ```
 
+The `jl/leios-w44-debug` branch ports the instrumentation onto the W44 node
+base (`b004fe0c5`) and keeps its consensus, network, ledger and API pins.
+The default compiler remains GHC 9.6.7. The IPE build also preserves W44's
+per-component compiler options, including the `cardano-addresses` symbol
+renames and the Plutus external interpreter.
+
+For a combined continuous heap profile and on-demand snapshots, use the
+instrumented binary with:
+
+```nix
+systemd.services.cardano-node.environment.GHC_DEBUG_SOCKET =
+  "/run/cardano-node/ghc-debug.socket";
+services.cardano-node = {
+  eventlog = true;
+  profiling = "space-info"; # -hi
+  rts_flags_override = [
+    "-i30"
+    "-l-agu"
+    "--eventlog-flush-interval=300"
+  ];
+};
+```
+
+This takes a heap census every 30 seconds and flushes the reduced eventlog
+every five minutes. By default the NixOS service writes `cardano-node.eventlog`
+and `cardano-node.hp` in its state directory; `profilingOutputDir` can select
+another writable directory. Archive them before restarting, since the filenames
+are reused. Keep the same RTS heap/GC settings as the comparison node.
+
 On this branch the `ghc-debug` cabal flag is enabled project-wide (it has to be,
 so `ghc-debug-stub` lands in the install plan), so the stub is linked into
 *every* build — but it stays **dormant unless `GHC_DEBUG_SOCKET` is set**, so a

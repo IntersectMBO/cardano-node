@@ -252,15 +252,14 @@ let
           ({ lib, ... }: {
             # ghc-debug 0.8 (from the source-repository-package) config. These
             # per-component ghcOptions REPLACE the project-wide default for these
-            # libs (which carries `program-options: -Werror` + the IPE flags):
+            # libs. The infoTableMapped overlay adds the IPE flags back:
             #  * -Wwarn: 0.8's source has -Wduplicate-exports / -Wunused-imports
             #    warnings that -Werror makes fatal; we don't fix upstream's warnings.
             #    (cabal.project `package X ghc-options` does NOT reach the SRP build,
             #    so this must be set here.)
             #  * -g3 (client/common): DWARF so a segfault in the closure-decode path
             #    (heap_view_closurePtrsAsWords / unpackClosure#) gives a gdb backtrace
-            #    with Haskell frames. Dropping the IPE default is fine -- the client
-            #    doesn't need IPE on itself.
+            #    with Haskell frames.
             packages.ghc-debug-client.components.library.ghcOptions = [ "-g3" "-Wwarn" ];
             packages.ghc-debug-common.components.library.ghcOptions = [ "-g3" "-Wwarn" ];
             packages.ghc-debug-stub.components.library.ghcOptions = [ "-Wwarn" ];
@@ -537,16 +536,25 @@ project.appendOverlays (with haskellLib.projectOverlays; [
       };
 
       infoTableMapped = final.appendModule {
-        modules = [{
-          ghcOptions = [
+        modules = [({ lib, ... }: let
+          ipeFlags = [
             "-finfo-table-map"
             "-fdistinct-constructor-tables"
           ];
-          packages.plutus-core.components.library.ghcOptions = [
-            "-finfo-table-map"
-            "-fdistinct-constructor-tables"
-          ];
-        }];
+        in {
+          ghcOptions = ipeFlags;
+          # Explicit component options replace the project-wide default.
+          # Merge IPE flags into these components without losing their existing
+          # C symbol renames, external interpreter or warning/debug flags.
+          packages = lib.genAttrs [
+            "cardano-addresses"
+            "plutus-core"
+            "ghc-debug-client"
+            "ghc-debug-common"
+            "ghc-debug-stub"
+            "ghc-debug-convention"
+          ] (_: { components.library.ghcOptions = ipeFlags; });
+        })];
       };
 
       ghcDebug = final.infoTableMapped.appendModule {
