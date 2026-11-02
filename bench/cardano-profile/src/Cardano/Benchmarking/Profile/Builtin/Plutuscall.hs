@@ -129,3 +129,12 @@ profilesPlutuscall =
   , mscalmul       & P.name "plutuscall-voltv11-mscalmul"  . postPlomin . P.v11Preview
   , expmod         & P.name "plutuscall-voltv11-expmod"    . postPlomin . P.v11Preview
   ]
+  ++
+  -- The reference script worst cases with g consecutive transactions sharing a
+  -- variant: down to 65 / g distinct scripts per block, which the ledger decodes
+  -- once each, for the same reference script fees. Without a group, g is 1.
+  [ profile & P.name (name ++ "-g" ++ show g) . postPlomin . P.plutusVariantGroup g
+  | (profile, name) <- [ (refScript1MiB,      "plutuscall-volt-refscript-1mib")
+                       , (refScript1MiBDense, "plutuscall-volt-refscript-1mib-dense") ]
+  , g <- [2, 4, 8, 16, 32]
+  ]
