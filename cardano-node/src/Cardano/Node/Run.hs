@@ -525,6 +525,7 @@ handleSimpleNode blockType shelleyGenesisHash pInfo mkBlockForging tracers forgi
             , srnSnapshotPolicyArgs           = snapshotPolicyArgs
             , srnQueryBatchSize               = queryBatchSize
             , srnLedgerDbBackendArgs          = selectorToArgs ldbBackend (nonImmutableDbPath dbPath)
+            , srnLeiosAnnouncementAgeLimits   = Nothing
             }
  where
   shelleyGenesisFile :: Api.ShelleyGenesisFile In

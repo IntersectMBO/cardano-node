@@ -41,6 +41,7 @@ import           Ouroboros.Consensus.Ledger.Inspect (LedgerEvent)
 import           Ouroboros.Consensus.Leios.Types (LeiosVote (..))
 import           Ouroboros.Consensus.Leios.VoteState (TraceLeiosVoteState (..))
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client (TraceChainSyncClientEvent)
+import           Ouroboros.Consensus.MiniProtocol.LeiosFetch.Trace (TraceLeiosFetchClientEvent (..))
 import           Ouroboros.Consensus.MiniProtocol.LeiosNotify.Trace
                    (TraceLeiosNotifyClientEvent (..))
 import qualified Ouroboros.Consensus.Network.NodeToClient as NodeToClient
@@ -456,6 +457,7 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
       , Consensus.leiosDbTracer = nullTracer
       , Consensus.leiosNotifyClientTracer = mkTracer traceLeiosNotifyClientToStderr
       , Consensus.leiosVoteStateTracer = mkTracer traceLeiosVoteStateToStderr
+      , Consensus.leiosFetchClientTracer = mkTracer traceLeiosFetchClientToStderr
       }
 
 -- | Until the vote state is traced properly (ouroboros-consensus#2447), the
@@ -467,6 +469,14 @@ traceLeiosVoteStateToStderr = \case
     hPutStrLn stderr ("TraceLeiosVoteAwaitingWindow " <> showVote vote <> " " <> show early)
   TraceLeiosVoteValidated{} -> pure ()
   TraceLeiosCertified rbHash _cert -> hPutStrLn stderr ("TraceLeiosCertified " <> show rbHash)
+  ev -> hPutStrLn stderr (show ev)
+
+-- | The endorser blocks and closures the node acquires go to stderr too, for
+-- the acceptance demo.
+traceLeiosFetchClientToStderr :: TraceLeiosFetchClientEvent -> IO ()
+traceLeiosFetchClientToStderr = \case
+  TraceLeiosFetchClientBlockArrived{} -> pure ()
+  TraceLeiosFetchClientTxsArrived{} -> pure ()
   ev -> hPutStrLn stderr (show ev)
 
 -- | The votes the node adds, and those it has too late, go to stderr too, for
