@@ -1,4 +1,5 @@
 {-# LANGUAGE Trustworthy #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 -- "loop", "secp-ecdsa" and "secp-schnorr"
@@ -26,6 +27,13 @@ compressedFor15Epochs =
   . P.generatorEpochs 15 . P.initCooldown 5
   . P.shutdownOnSlot 9000
 
+-- | 40 minutes, the last 30 of them (from slot 600) measured.
+compressedFor4Epochs :: Types.Profile -> Types.Profile
+compressedFor4Epochs =
+    V.timescaleCompressed
+  . P.generatorEpochs 4 . P.initCooldown 5
+  . P.shutdownOnSlot 2400
+
 --------------------------------------------------------------------------------
 
 profilesPlutuscall :: [Types.Profile]
@@ -33,16 +41,16 @@ profilesPlutuscall =
   ------------------------------------------------------------------------------
   -- plutuscall: 6 nodes, FixedLoaded and "--shutdown-on-slot-synced 9000"
   ------------------------------------------------------------------------------
-  let plutusCall =
+  let plutusCallFor duration =
           P.empty
         & P.fixedLoaded
         . P.uniCircle . V.hosts 6 . P.loopback
-        . compressedFor15Epochs
+        . duration
         . V.datasetSmall
         . V.fundsDefault
         . P.traceForwardingOn
         . P.analysisStandard
-        . P.desc "Small dataset, honest 15 epochs duration"
+      plutusCall = plutusCallFor compressedFor15Epochs & P.desc "Small dataset, honest 15 epochs duration"
 
       loop            = plutusCall & V.plutusTypeLoop             . V.plutusDoubleSaturation     . P.analysisSizeModerate  . P.analysisEpoch3Plus
       ecdsa           = plutusCall & V.plutusTypeECDSA            . V.plutusDoubleSaturation     . P.analysisSizeModerate  . P.analysisEpoch3Plus
@@ -61,12 +69,31 @@ profilesPlutuscall =
       -- never run, so the three differ in script bytes, not execution. All pay
       -- the fee of the dearest, the witness discharge. No size filter, as their
       -- blocks differ in size by the scripts.
-      loopV3          = plutusCall & P.txFeeOverwrite 2000000 . V.plutusTypeLoopV3 . V.plutusDoublePlusSaturation . P.analysisEpoch3Plus
+      loopV3          = plutusCall & P.txFeeOverwrite 2_000_000 . V.plutusTypeLoopV3 . V.plutusDoublePlusSaturation . P.analysisEpoch3Plus
       -- The same loop as a Plutus V4 script, for Dijkstra.
-      loopV4          = plutusCall & P.txFeeOverwrite 2000000 . V.plutusTypeLoopV4 . V.plutusDoublePlusSaturation . P.analysisEpoch3Plus
+      loopV4          = plutusCall & P.txFeeOverwrite 2_000_000 . V.plutusTypeLoopV4 . V.plutusDoublePlusSaturation . P.analysisEpoch3Plus
       loopV3Script15k src =
-                        plutusCall & P.plutusVariants src 200 (Just 15000) . P.txFeeOverwrite 2000000
+                        plutusCall & P.plutusVariants src 200 (Just 15_000) . P.txFeeOverwrite 2_000_000
                                    . V.plutusTypeLoopV3 . V.plutusDoublePlusSaturation . P.analysisEpoch3Plus
+
+      -- The worst case of reference scripts on mainnet parameters: blocks full
+      -- of them, at the limit of 1 MiB per block, which make the nodes decode
+      -- the most script per lovelace. Every transaction spends one input,
+      -- locked at a variant of LoopV3 of its own, of about 16 KB (the largest
+      -- that a transaction publishing it can carry), within the first tier of
+      -- the reference script fee (25,600 bytes per transaction). The loop
+      -- runs no iterations, so execution costs next to nothing, and 65 such
+      -- transactions fill a block's 1 MiB. 128 variants keep the transactions
+      -- of a block from sharing one, which the ledger would decode once. 4 tps
+      -- keeps the blocks full, about 66 transactions every 20 seconds.
+      -- Mempool.AttemptAdd, silenced by the workbench, marks the start of the
+      -- validation of each transaction the mempool adds.
+      refScript1MiB   = plutusCallFor compressedFor4Epochs
+                      & P.plutusVariants Types.ScriptByReference 128 (Just 15_900)
+                      . P.plutusType "FixedLoop" . P.plutusScript "LoopV3" . P.redeemerInt 1_000_000
+                      . V.plutusBase . P.txFee 600_000 . P.tps 4
+                      . P.analysisEpoch2Plus . P.enableTracers ["Mempool.AttemptAdd"]
+                      . P.desc "Small dataset, 4 epochs, blocks full of reference scripts"
 
       postPlomin      = V.genesisVariantVoltaire
   in [
@@ -84,6 +111,7 @@ profilesPlutuscall =
   , loopV3                                  & P.name "plutuscall-volt-loopv3"              . postPlomin
   , loopV3Script15k Types.ScriptInWitness   & P.name "plutuscall-volt-loopv3-script15k"    . postPlomin
   , loopV3Script15k Types.ScriptByReference & P.name "plutuscall-volt-loopv3-refscript15k" . postPlomin
+  , refScript1MiB                           & P.name "plutuscall-volt-refscript-1mib"       . postPlomin
 
   -- LoopV3 and LoopV4 on the v12 preview (Dijkstra, PV12): run with ERA=dijkstra.
   , loopV3         & P.name "plutuscall-voltv12-loopv3"    . postPlomin . P.v12Preview . P.v11Preview

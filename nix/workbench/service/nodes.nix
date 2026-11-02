@@ -143,8 +143,10 @@ with pkgs.lib; let
       ##   2. either hardforks config, or preset (typically mainnet)
       ##   3. profile-specific verbatim node config section
       ##   4. tracing backend's config
-      nodeConfig =
-        import ./tracing.nix
+      ##   5. the profile's own TraceOptions, over the tracing backend's: a
+      ##      profile can then also enable a tracer the backend silences
+      nodeConfig = recursiveUpdate
+        (import ./tracing.nix
         {
           inherit (pkgs) lib;
           inherit nodeSpec;
@@ -253,7 +255,8 @@ with pkgs.lib; let
               then readJSONMay (../profile/presets + "/${profile.preset}/config.json")
               else configHardforksIntoEra eraName
             ))
-          profile.node.verbatim);
+          profile.node.verbatim))
+        { TraceOptions = profile.node.verbatim.TraceOptions or {}; };
 
       extraArgs =
         ["+RTS" "-scardano-node.gcstats" "-RTS"]

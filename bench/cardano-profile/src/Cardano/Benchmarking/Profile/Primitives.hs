@@ -82,7 +82,7 @@ module Cardano.Benchmarking.Profile.Primitives (
   -- Node's TxSubmissionInitDelay.
   , txSubmissionInitDelay
   -- Node's tracers.
-  , silenceTracers
+  , silenceTracers, enableTracers
   -- Node's RTS params.
   , rtsGcNonMoving, rtsGcAllocSize
   , rtsThreads, rtsHeapLimit, rtsEventlogged
@@ -110,7 +110,7 @@ module Cardano.Benchmarking.Profile.Primitives (
   -- Analysis params.
   , analysisOff, analysisStandard, analysisPerformance
   , analysisSizeSmall, analysisSizeModerate, analysisSizeModerate2, analysisSizeFull
-  , analysisUnitary, analysisEpoch3Plus, analysisEpoch4Plus, analysisEpoch5Plus
+  , analysisUnitary, analysisEpoch2Plus, analysisEpoch3Plus, analysisEpoch4Plus, analysisEpoch5Plus
   , cBlockMinimumAdoptions
 
   , preset
@@ -672,16 +672,24 @@ txSubmissionInitDelay i = node
   )
 
 -- | Silence these tracer namespaces. Name individual messages
--- (e.g. "Mempool.AddedTx"): the workbench's own tracing configuration takes
--- precedence for the namespaces it sets.
+-- (e.g. "Mempool.AddedTx"). The profile's settings take precedence over the
+-- workbench's own tracing configuration.
 silenceTracers :: HasCallStack => [Text.Text] -> Types.Profile -> Types.Profile
-silenceTracers namespaces = node
+silenceTracers = traceSeverity "Silence"
+
+-- | Trace these messages at severity Debug, also when the workbench's own
+-- tracing configuration silences them: the profile's take precedence.
+enableTracers :: HasCallStack => [Text.Text] -> Types.Profile -> Types.Profile
+enableTracers = traceSeverity "Debug"
+
+traceSeverity :: HasCallStack => Text.Text -> [Text.Text] -> Types.Profile -> Types.Profile
+traceSeverity severity namespaces = node
   (\n ->
     let v = Types.verbatim n
     in if isJust (Types.traceOptions v)
-       then error "silenceTracers: `TraceOptions` already set."
+       then error "traceSeverity: `TraceOptions` already set."
        else n {Types.verbatim = v {Types.traceOptions = Just $ KeyMap.fromList
-              [ (Key.fromText ns, Aeson.object ["severity" Aeson..= ("Silence" :: Text.Text)])
+              [ (Key.fromText ns, Aeson.object ["severity" Aeson..= severity])
               | ns <- namespaces ]}}
   )
 
@@ -992,6 +1000,9 @@ analysisSizeFull = analysisFiltersAppend "size-full"
 
 analysisUnitary :: HasCallStack => Types.Profile -> Types.Profile
 analysisUnitary = analysisFiltersAppend "unitary"
+
+analysisEpoch2Plus :: HasCallStack => Types.Profile -> Types.Profile
+analysisEpoch2Plus = analysisFiltersAppend "epoch2+"
 
 analysisEpoch3Plus :: HasCallStack => Types.Profile -> Types.Profile
 analysisEpoch3Plus = analysisFiltersAppend "epoch3+"
