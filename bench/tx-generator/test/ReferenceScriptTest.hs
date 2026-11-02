@@ -125,7 +125,7 @@ referenceScriptTests = testGroup "reference scripts"
 -- | Actions using the script set constructors, as a generator script would.
 scriptSetActions :: [Action]
 scriptSetActions =
-  [ DefineScriptSet "loops" (ScriptSetSpec (Left "LoopV3") 20 (ScriptSizeFixed 4_096))
+  [ DefineScriptSet "loops" (ScriptSetSpec (Left "LoopV3") 20 (ScriptSizeFixed PaddingMixed 4_096))
   , DefineScriptSet "loops-minimal" (ScriptSetSpec (Right "LoopV3.plutus") 1 ScriptSizeMinimal)
   , Submit (AnyCardanoEra ConwayEra) LocalSocket txParams $
       PublishScripts "genesis" "loops" "ReferenceScripts" (PayToAddr "Funds" "genesis")
@@ -295,7 +295,7 @@ balanced pparams ledgerTx utxo =
 loopV3Variants :: Int -> IO [ScriptInAnyLang]
 loopV3Variants count = do
   base <- readPlutusScript (Right $ "scripts-fallback" </> "LoopV3.plutus") >>= either (assertFailure . show) (pure . fst)
-  either (assertFailure . show) pure $ scriptVariants (ScriptSizeFixed 4_096) count base
+  either (assertFailure . show) pure $ scriptVariants (ScriptSizeFixed PaddingMixed 4_096) count base
 
 scriptHashOf :: ScriptInAnyLang -> ScriptHash
 scriptHashOf (ScriptInAnyLang _ script) = hashScript script

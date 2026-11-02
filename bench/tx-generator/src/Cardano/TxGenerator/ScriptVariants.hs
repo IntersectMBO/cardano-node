@@ -17,13 +17,16 @@ Variant @i@ of a base script with program @p@ is
 > [(lam _ p) (delay padding_i)]
 
 where @padding_i@ holds the variant's identifier and a generated program tree
-that brings the serialised script to the requested size. The padding is
-decoded like any other part of a script, but is never evaluated: the
-application returns @p@ itself, so every variant behaves like the base script
-and costs the same few extra execution steps.
+that brings the serialised script to the requested size: chunks mixing the
+kinds of terms compiled scripts are made of, or a spine of applications over
+error terms, the costliest to decode per byte (see 'ScriptPadding'). The
+padding is decoded like any other part of a script, but is never evaluated:
+the application returns @p@ itself, so every variant behaves like the base
+script and costs the same few extra execution steps.
 -}
 module Cardano.TxGenerator.ScriptVariants
-  ( ScriptSizeSpec (..)
+  ( ScriptPadding (..)
+  , ScriptSizeSpec (..)
   , VariantIx (..)
   , plutusScriptSize
   , scriptVariant
@@ -33,7 +36,7 @@ module Cardano.TxGenerator.ScriptVariants
 import           Cardano.Api (PlutusScript (PlutusScriptSerialised), Script (PlutusScript),
                    ScriptInAnyLang (..))
 
-import           Cardano.TxGenerator.Types (TxGenError (TxGenError))
+import           Cardano.TxGenerator.Types (ScriptPadding (..), TxGenError (TxGenError))
 
 import           Prelude
 
@@ -52,9 +55,9 @@ import qualified UntypedPlutusCore as UPLC
 data ScriptSizeSpec
   = ScriptSizeMinimal
     -- ^ No padding beyond the variant identifier: a few bytes above the base script.
-  | ScriptSizeFixed !Int
+  | ScriptSizeFixed !ScriptPadding !Int
     -- ^ Every variant this many bytes, or a few bytes above where the encoding
-    -- does not allow the exact size.
+    -- does not allow the exact size, padded with the given padding.
   deriving (Show, Eq, Generic)
 
 -- | The number of a variant of a script, from 0.
@@ -105,12 +108,13 @@ checkIdentifierRange count
   = Left $ TxGenError $ "ScriptVariants: unsupported number of variants: " ++ show count
   | otherwise = Right ()
 
--- | How much padding a variant carries: a number of generated chunks of
--- program, and the length of a filler bytestring for the last few bytes.
-data PaddingShape = PaddingShape !Int !Int
+-- | How much padding a variant carries: of which kind, a number of generated
+-- pieces of program (chunks, or error terms of the spine), and the length of a
+-- filler bytestring for the last few bytes.
+data PaddingShape = PaddingShape !ScriptPadding !Int !Int
 
 variantProgram :: Program -> PaddingShape -> VariantIx -> Program
-variantProgram (UPLC.Program () version body) (PaddingShape chunks fillerLength) (VariantIx i) =
+variantProgram (UPLC.Program () version body) (PaddingShape kind pieces fillerLength) (VariantIx i) =
   UPLC.Program () version $
     UPLC.Apply () (UPLC.LamAbs () binder body) (UPLC.Delay () padding)
  where
@@ -118,31 +122,40 @@ variantProgram (UPLC.Program () version body) (PaddingShape chunks fillerLength)
   padding = balanced $
       integer (fromIntegral $ identifierOffset + i)
     : bytestring (BS.replicate fillerLength 0xab)
-    : map chunk [0 .. chunks - 1]
+    : case kind of
+        PaddingMixed      -> map chunk [0 .. pieces - 1]
+        PaddingErrorSpine -> [errorSpine pieces]
 
 paddingShape :: ScriptSizeSpec -> Program -> Either TxGenError PaddingShape
-paddingShape ScriptSizeMinimal _ = Right (PaddingShape 0 0)
-paddingShape (ScriptSizeFixed target) base
-  | target <= sizeOf (PaddingShape 0 0) = Right (PaddingShape 0 0)
-  | otherwise = Right (PaddingShape chunks (fillerFor chunks))
+paddingShape ScriptSizeMinimal _ = Right (PaddingShape PaddingMixed 0 0)
+paddingShape (ScriptSizeFixed kind target) base
+  | target <= sizeOf (shapeOf 0 0) = Right (shapeOf 0 0)
+  | otherwise = Right (shapeOf pieces (fillerFor pieces))
  where
+  shapeOf = PaddingShape kind
   sizeOf shape = SBS.length $ serialiseUPLC $ variantProgram base shape (VariantIx 0)
-  minimal = sizeOf (PaddingShape 0 0)
-  perChunk :: Double
-  perChunk = fromIntegral (sizeOf (PaddingShape 64 0) - minimal) / 64
-  -- Chunks fill all but the last few bytes, which the filler tops up.
-  chunks = shrink $ max 0 $ floor (fromIntegral (target - minimal - 16) / perChunk)
+  minimal = sizeOf (shapeOf 0 0)
+  perPiece :: Double
+  perPiece = fromIntegral (sizeOf (shapeOf 64 0) - minimal) / 64
+  -- Pieces fill all but the last few bytes, which the filler tops up.
+  pieces = shrink $ max 0 $ floor (fromIntegral (target - minimal - 16) / perPiece)
   shrink n
-    | n > 0 && sizeOf (PaddingShape n 0) > target - 4 = shrink (n - 1 - n `div` 32)
+    | n > 0 && sizeOf (shapeOf n 0) > target - 4 = shrink (n - 1 - n `div` 32)
     | otherwise = max 0 n
   -- The smallest filler that reaches the target; size grows with the filler.
   fillerFor n = search 0 target
    where
     search lo hi
       | lo >= hi = lo
-      | sizeOf (PaddingShape n mid) >= target = search lo mid
+      | sizeOf (shapeOf n mid) >= target = search lo mid
       | otherwise = search (mid + 1) hi
      where mid = (lo + hi) `div` 2
+
+-- | @n@ applications nested to the left over error terms, @[[[error error]
+-- error] ...]@: closed, and with a term every 4 bits of the encoding, the
+-- most a decoder has to build per byte.
+errorSpine :: Int -> Term
+errorSpine n = iterate (\t -> UPLC.Apply () t (UPLC.Error ())) (UPLC.Error ()) !! n
 
 -- | A closed piece of program, mixing the kinds of terms compiled scripts are
 -- made of: lambdas, applications, variables, builtins and constants.

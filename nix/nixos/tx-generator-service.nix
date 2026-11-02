@@ -98,7 +98,7 @@ in pkgs.commonLib.defServiceModule
           limitExecutionSteps = mayOpt int   "Limit for saturation tuning: steps;  null means per-Tx limit from ProtocolParameters.";
           datum               = mayOpt attrs "Plutus script datum.";
           redeemer            = mayOpt attrs "Plutus script redeemer.";
-          variants            = mayOpt attrs "Variants of the script with distinct hashes, for the benchmark to spend in turn: { count, size, source }, where size is in bytes (null for as small as can be) and source is \"reference\" or \"witness\"; null for the script itself.";
+          variants            = mayOpt attrs "Variants of the script with distinct hashes, for the benchmark to spend in turn: { count, size, source, group, padding }, where size is in bytes (null for as small as can be), source is \"reference\" or \"witness\", group is the number of consecutive inputs locked at one variant, and padding is \"mixed\" (default) or \"error-spine\"; null for the script itself.";
         };
 
         # Overrides the usage of Nix Store paths by default.

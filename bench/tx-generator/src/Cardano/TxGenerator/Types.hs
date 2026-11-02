@@ -25,6 +25,7 @@ import           Cardano.TxGenerator.ProtocolParameters (ProtocolParameters)
 import           Data.Aeson ((.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Types as Aeson (Parser)
+import           Data.Maybe (fromMaybe)
 import           GHC.Generics (Generic)
 import           GHC.Natural
 import           Prettyprinter
@@ -145,10 +146,10 @@ data TxGenPlutusParams
 -- | Variants of a Plutus script, with distinct hashes, for the benchmarking
 -- transactions to spend in turn (see "Cardano.TxGenerator.ScriptVariants"):
 -- 'variantsCount' of them, each 'variantsSize' bytes, or as small as they can
--- be. A setup phase publishes them as reference scripts. With
--- 'variantsByReference', the benchmarking transactions refer to them rather
--- than carry them in their witnesses; without, the setup is the same, so
--- that the two compare.
+-- be, padded with 'variantsPadding'. A setup phase publishes them as
+-- reference scripts. With 'variantsByReference', the benchmarking
+-- transactions refer to them rather than carry them in their witnesses;
+-- without, the setup is the same, so that the two compare.
 data PlutusVariants = PlutusVariants
   { variantsCount       :: !Int
   , variantsSize        :: !(Maybe Int)
@@ -158,8 +159,31 @@ data PlutusVariants = PlutusVariants
     -- without it, as many as a transaction spends, for every transaction to
     -- spend one variant. With 1, each input of a transaction has a variant
     -- of its own.
+  , variantsPadding     :: !ScriptPadding
   }
   deriving (Show, Eq)
+
+-- | What variants of a script are padded with to their size. The padding is
+-- decoded with the script but never run, so it changes only what decoding
+-- the script costs.
+data ScriptPadding
+  = PaddingMixed
+    -- ^ Pieces of program mixing the kinds of terms compiled scripts are made
+    -- of, with small constants.
+  | PaddingErrorSpine
+    -- ^ A spine of applications over error terms, 4 bits each: two terms to
+    -- decode per byte, the costliest padding to decode per byte measured.
+  deriving (Show, Eq, Generic)
+
+instance FromJSON ScriptPadding where
+  parseJSON = Aeson.withText "ScriptPadding" $ \case
+    "mixed"       -> pure PaddingMixed
+    "error-spine" -> pure PaddingErrorSpine
+    other         -> fail $ "ScriptPadding: \"mixed\" or \"error-spine\", not " ++ show other
+
+instance ToJSON ScriptPadding where
+  toJSON PaddingMixed      = Aeson.String "mixed"
+  toJSON PaddingErrorSpine = Aeson.String "error-spine"
 
 -- | The JSON form is shared by the Nix service definition in
 -- nix/nixos/tx-generator-service.nix and the profiles: @source@ is
@@ -171,6 +195,7 @@ instance FromJSON PlutusVariants where
       <*> o .:? "size"
       <*> (o .: "source" >>= source)
       <*> o .:? "group"
+      <*> (fromMaybe PaddingMixed <$> o .:? "padding")
    where
     source :: Text -> Aeson.Parser Bool
     source = \case
@@ -179,11 +204,12 @@ instance FromJSON PlutusVariants where
       other       -> fail $ "PlutusVariants: source is \"reference\" or \"witness\", not " ++ show other
 
 instance ToJSON PlutusVariants where
-  toJSON PlutusVariants{variantsCount, variantsSize, variantsByReference, variantsGroup} = Aeson.object
-    [ "count"  .= variantsCount
-    , "size"   .= variantsSize
-    , "source" .= (if variantsByReference then "reference" else "witness" :: Text)
-    , "group"  .= variantsGroup
+  toJSON PlutusVariants{variantsCount, variantsSize, variantsByReference, variantsGroup, variantsPadding} = Aeson.object
+    [ "count"   .= variantsCount
+    , "size"    .= variantsSize
+    , "source"  .= (if variantsByReference then "reference" else "witness" :: Text)
+    , "group"   .= variantsGroup
+    , "padding" .= variantsPadding
     ]
 
 -- | Documents how the `plutusScript` parameter above was eventually resolved
