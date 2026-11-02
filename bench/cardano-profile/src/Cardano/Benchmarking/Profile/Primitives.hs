@@ -108,7 +108,7 @@ module Cardano.Benchmarking.Profile.Primitives (
   -- Analysis params.
   , analysisOff, analysisStandard, analysisPerformance
   , analysisSizeSmall, analysisSizeModerate, analysisSizeModerate2, analysisSizeFull
-  , analysisUnitary, analysisEpoch3Plus, analysisEpoch4Plus, analysisEpoch5Plus
+  , analysisUnitary, analysisEpoch2Plus, analysisEpoch3Plus, analysisEpoch4Plus, analysisEpoch5Plus
   , cBlockMinimumAdoptions
 
   , preset
@@ -972,6 +972,9 @@ analysisSizeFull = analysisFiltersAppend "size-full"
 
 analysisUnitary :: HasCallStack => Types.Profile -> Types.Profile
 analysisUnitary = analysisFiltersAppend "unitary"
+
+analysisEpoch2Plus :: HasCallStack => Types.Profile -> Types.Profile
+analysisEpoch2Plus = analysisFiltersAppend "epoch2+"
 
 analysisEpoch3Plus :: HasCallStack => Types.Profile -> Types.Profile
 analysisEpoch3Plus = analysisFiltersAppend "epoch3+"
