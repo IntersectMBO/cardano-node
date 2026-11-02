@@ -45,14 +45,14 @@ scriptVariantsTests = testGroup "script variants"
   [ testGroup name
       [ testCase "variants have distinct hashes, the same size, and reach the target size" $ do
           base <- loadScript name
-          forM_ [ScriptSizeMinimal, ScriptSizeFixed 4_096, ScriptSizeFixed 12_000] $ \size -> do
+          forM_ [ScriptSizeMinimal, ScriptSizeFixed PaddingMixed 4_096, ScriptSizeFixed PaddingMixed 12_000, ScriptSizeFixed PaddingErrorSpine 12_000] $ \size -> do
             variants <- expectRight $ scriptVariants size 20 base
             let hashes = map scriptHashOf variants
                 sizes  = map sizeOf variants
             Set.size (Set.fromList $ scriptHashOf base : hashes) @?= 21
             Set.size (Set.fromList sizes) @?= 1
             case size of
-              ScriptSizeFixed target -> do
+              ScriptSizeFixed _ target -> do
                 assertBool ("smaller than the target: " ++ show sizes) $ head sizes >= target
                 assertBool ("too far above the target: " ++ show sizes) $ head sizes <= target + 8
               ScriptSizeMinimal ->
@@ -60,16 +60,17 @@ scriptVariantsTests = testGroup "script variants"
 
       , testCase "a single variant is the same as in the list of variants" $ do
           base <- loadScript name
-          variants <- expectRight $ scriptVariants (ScriptSizeFixed 4_096) 10 base
-          variant7 <- expectRight $ scriptVariant (ScriptSizeFixed 4_096) base (VariantIx 7)
+          variants <- expectRight $ scriptVariants (ScriptSizeFixed PaddingMixed 4_096) 10 base
+          variant7 <- expectRight $ scriptVariant (ScriptSizeFixed PaddingMixed 4_096) base (VariantIx 7)
           scriptHashOf variant7 @?= scriptHashOf (variants !! 7)
 
       , testCase "variants are well scoped" $ do
           base <- loadScript name
-          variants <- expectRight $ scriptVariants (ScriptSizeFixed 4_096) 3 base
-          forM_ variants $ \variant -> case wellScoped variant of
-            Left err -> assertFailure $ "free variable: " ++ show err
-            Right () -> pure ()
+          forM_ paddings $ \padding -> do
+            variants <- expectRight $ scriptVariants (ScriptSizeFixed padding 4_096) 3 base
+            forM_ variants $ \variant -> case wellScoped variant of
+              Left err -> assertFailure $ "free variable with " ++ show padding ++ ": " ++ show err
+              Right () -> pure ()
 
       , testCase "variants run like the base script, at one and the same cost" $ do
           base <- loadScript name
@@ -77,22 +78,24 @@ scriptVariantsTests = testGroup "script variants"
           redeemerFile <- either (assertFailure . show) pure =<< readScriptData ("data" </> name <.> "redeemer.json")
           -- The loop counter as the generator's automatic budgeting sets it before running a script.
           let redeemer = unsafeHashableScriptData $ scriptDataModifyNumber (const 1_000_000) $ getScriptData redeemerFile
-          variants <- expectRight $ scriptVariants (ScriptSizeFixed 4_096) 5 base
           let run script = preExecutePlutusScript pparams script (ScriptDataNumber 0) redeemer
           baseUnits <- expectRight $ run base
-          variantUnits <- mapM (expectRight . run) variants
-          Set.size (Set.fromList $ map unitsOf variantUnits) @?= 1
-          let ExecutionUnits steps memory = head variantUnits
-              ExecutionUnits baseSteps baseMemory = baseUnits
-          assertBool ("variant cheaper than the base script: " ++ show (variantUnits, baseUnits)) $
-            steps >= baseSteps && memory >= baseMemory
-          assertBool ("variant overhead too high: " ++ show (variantUnits, baseUnits)) $
-            steps - baseSteps <= 1_000_000 && memory - baseMemory <= 1_000
+          forM_ paddings $ \padding -> do
+            variants <- expectRight $ scriptVariants (ScriptSizeFixed padding 4_096) 5 base
+            variantUnits <- mapM (expectRight . run) variants
+            Set.size (Set.fromList $ map unitsOf variantUnits) @?= 1
+            let ExecutionUnits steps memory = head variantUnits
+                ExecutionUnits baseSteps baseMemory = baseUnits
+            assertBool ("variant cheaper than the base script: " ++ show (padding, variantUnits, baseUnits)) $
+              steps >= baseSteps && memory >= baseMemory
+            assertBool ("variant overhead too high: " ++ show (padding, variantUnits, baseUnits)) $
+              steps - baseSteps <= 1_000_000 && memory - baseMemory <= 1_000
       ]
   | name <- bundledScripts
   ]
  where
   unitsOf (ExecutionUnits s m) = (s, m)
+  paddings = [PaddingMixed, PaddingErrorSpine]
 
 loadScript :: String -> IO ScriptInAnyLang
 loadScript name =

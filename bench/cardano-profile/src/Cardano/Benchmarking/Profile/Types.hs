@@ -23,7 +23,7 @@ module Cardano.Benchmarking.Profile.Types (
 , NodeVerbatim (..)
 
 , Generator (..), SubTxs (..)
-, Plutus (..), Redeemer (..), Variants (..), ScriptSource (..)
+, Plutus (..), Redeemer (..), Variants (..), ScriptSource (..), ScriptPadding (..)
 
 , Workload (..)
 , Entrypoints (..)
@@ -508,14 +508,16 @@ instance Aeson.FromJSON Plutus where
 -- | Variants of the Plutus script, with distinct hashes, for the benchmark
 -- to spend in turn: how many, the size of each in bytes (without one, as
 -- small as they can be), where the transactions spending them find the
--- script, and how many consecutive inputs are locked at one variant (without
--- it, as many as a transaction spends). The JSON keys are those the
+-- script, how many consecutive inputs are locked at one variant (without
+-- it, as many as a transaction spends), and what they are padded with
+-- (without it, the tx-generator's default). The JSON keys are those the
 -- tx-generator expects.
 data Variants = Variants
-  { variants_count  :: Integer
-  , variants_size   :: Maybe Integer
-  , variants_source :: ScriptSource
-  , variants_group  :: Maybe Integer
+  { variants_count   :: Integer
+  , variants_size    :: Maybe Integer
+  , variants_source  :: ScriptSource
+  , variants_group   :: Maybe Integer
+  , variants_padding :: Maybe ScriptPadding
   }
   deriving (Eq, Show, Generic)
 
@@ -529,6 +531,8 @@ instance Aeson.ToJSON Variants where
       ["size" Aeson..= variants_size v | isJust (variants_size v)]
       ++
       ["group" Aeson..= variants_group v | isJust (variants_group v)]
+      ++
+      ["padding" Aeson..= variants_padding v | isJust (variants_padding v)]
 
 instance Aeson.FromJSON Variants where
   parseJSON =
@@ -538,6 +542,23 @@ instance Aeson.FromJSON Variants where
         <*> o Aeson..:? "size"
         <*> o Aeson..:  "source"
         <*> o Aeson..:? "group"
+        <*> o Aeson..:? "padding"
+
+-- | What the variants of a script are padded with to their size: pieces of
+-- program like compiled scripts have, or a spine of applications over error
+-- terms, the costliest to decode per byte.
+data ScriptPadding = PaddingMixed | PaddingErrorSpine
+  deriving (Eq, Show, Generic)
+
+instance Aeson.ToJSON ScriptPadding where
+  toJSON PaddingMixed      = Aeson.String "mixed"
+  toJSON PaddingErrorSpine = Aeson.String "error-spine"
+
+instance Aeson.FromJSON ScriptPadding where
+  parseJSON = Aeson.withText "ScriptPadding" $ \case
+    "mixed"       -> pure PaddingMixed
+    "error-spine" -> pure PaddingErrorSpine
+    other         -> fail $ "ScriptPadding: \"mixed\" or \"error-spine\", not " ++ show other
 
 -- | Where the transactions spending outputs locked by a script find it: in
 -- their witnesses, or in a reference input.
