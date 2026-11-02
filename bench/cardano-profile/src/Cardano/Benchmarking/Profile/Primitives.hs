@@ -91,7 +91,7 @@ module Cardano.Benchmarking.Profile.Primitives (
   , subTxs, txCount
   , plutusType, plutusScript
   , redeemerInt, redeemerFields
-  , plutusVariants, plutusVariantGroup
+  , plutusVariants, plutusVariantGroup, plutusVariantPadding
   , generatorEpochs
 
   -- Workload params.
@@ -811,7 +811,7 @@ plutusVariants source count size = plutus
   (\p ->
     if isJust (Types.variants p)
     then error "plutusVariants: `variants` already set."
-    else p {Types.variants = Just $ Types.Variants count size source Nothing}
+    else p {Types.variants = Just $ Types.Variants count size source Nothing Nothing}
   )
 
 -- | Locks @n@ consecutive benchmarking inputs at one variant of the Plutus
@@ -823,6 +823,16 @@ plutusVariantGroup n = plutus
     Nothing -> error "plutusVariantGroup: `variants` expected to be already set, but it isn't."
     Just v@Types.Variants{Types.variants_group = Nothing} -> p {Types.variants = Just v {Types.variants_group = Just n}}
     Just _ -> error "plutusVariantGroup: the variants' `group` already set."
+  )
+
+-- | Pads the variants of the Plutus script with this padding, instead of the
+-- tx-generator's default.
+plutusVariantPadding :: HasCallStack => Types.ScriptPadding -> Types.Profile -> Types.Profile
+plutusVariantPadding padding = plutus
+  (\p -> case Types.variants p of
+    Nothing -> error "plutusVariantPadding: `variants` expected to be already set, but it isn't."
+    Just v@Types.Variants{Types.variants_padding = Nothing} -> p {Types.variants = Just v {Types.variants_padding = Just padding}}
+    Just _ -> error "plutusVariantPadding: the variants' `padding` already set."
   )
 
 generatorEpochs :: HasCallStack => Integer -> Types.Profile -> Types.Profile
