@@ -92,6 +92,11 @@ profilesPlutuscall =
                       . P.analysisEpoch2Plus
                       . P.desc "Small dataset, 4 epochs, blocks full of reference scripts"
 
+      -- The same, with the variants padded with a spine of applications over
+      -- error terms: two terms to decode per byte, about 3.3 times the
+      -- decoding time per byte of the default padding.
+      refScript1MiBDense = refScript1MiB & P.plutusVariantPadding Types.PaddingErrorSpine
+
       postPlomin      = V.genesisVariantVoltaire
   in [
     loop        & P.name "plutuscall-loop"                 . postPlomin
@@ -109,6 +114,7 @@ profilesPlutuscall =
   , loopV3Script15k Types.ScriptInWitness   & P.name "plutuscall-volt-loopv3-script15k"    . postPlomin
   , loopV3Script15k Types.ScriptByReference & P.name "plutuscall-volt-loopv3-refscript15k" . postPlomin
   , refScript1MiB                           & P.name "plutuscall-volt-refscript-1mib"       . postPlomin
+  , refScript1MiBDense                      & P.name "plutuscall-volt-refscript-1mib-dense" . postPlomin
 
   -- LoopV3 and LoopV4 on the v12 preview (Dijkstra, PV12): run with ERA=dijkstra.
   , loopV3         & P.name "plutuscall-voltv12-loopv3"    . postPlomin . P.v12Preview . P.v11Preview

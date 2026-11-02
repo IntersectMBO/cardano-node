@@ -139,7 +139,7 @@ addScriptSet src = askNixOption _nix_plutus >>= \case
     emit $ DefineScriptSet name ScriptSetSpec
       { scriptSetBase  = plutusScript
       , scriptSetCount = variantsCount
-      , scriptSetSize  = maybe ScriptSizeMinimal ScriptSizeFixed variantsSize
+      , scriptSetSize  = maybe ScriptSizeMinimal (ScriptSizeFixed variantsPadding) variantsSize
       }
     logMsg "Publish reference scripts."
     era <- askNixOption _nix_era
