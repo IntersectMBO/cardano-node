@@ -536,24 +536,31 @@ project.appendOverlays (with haskellLib.projectOverlays; [
       };
 
       infoTableMapped = final.appendModule {
-        modules = [({ lib, ... }: let
+        modules = [({ config, lib, ... }: let
           ipeFlags = [
             "-finfo-table-map"
             "-fdistinct-constructor-tables"
           ];
+          sourcePackages = lib.unique (map (p: p.pkg-name)
+            (lib.filter (p: p.type == "configured") config.plan-json.install-plan));
         in {
           ghcOptions = ipeFlags;
-          # Explicit component options replace the project-wide default.
-          # Merge IPE flags into these components without losing their existing
-          # C symbol renames, external interpreter or warning/debug flags.
-          packages = lib.genAttrs [
-            "cardano-addresses"
-            "plutus-core"
-            "ghc-debug-client"
-            "ghc-debug-common"
-            "ghc-debug-stub"
-            "ghc-debug-convention"
-          ] (_: { components.library.ghcOptions = ipeFlags; });
+          # W44's Haskell.nix imports configure-args (including
+          # -hide-all-packages) as explicit package ghcOptions, overriding
+          # the global default. Merge IPE into every source package as well.
+          packages = lib.mkMerge [
+            (lib.genAttrs sourcePackages (_: { ghcOptions = ipeFlags; }))
+            # Explicit component options replace package defaults. Merge IPE
+            # without losing C symbol renames, interpreter or debug flags.
+            (lib.genAttrs [
+              "cardano-addresses"
+              "plutus-core"
+              "ghc-debug-client"
+              "ghc-debug-common"
+              "ghc-debug-stub"
+              "ghc-debug-convention"
+            ] (_: { components.library.ghcOptions = ipeFlags; }))
+          ];
         })];
       };
 

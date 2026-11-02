@@ -50,15 +50,17 @@ control (it must NOT carry them).
 
 ## haskell.nix gotcha covered by the sweep
 
-The top-level `ghcOptions` is applied as a per-component **default** and is
-**overridden (not appended)** by any explicit
-`packages.<name>.components.<c>.ghcOptions`. So most packages get the IPE flags,
-but a package that sets its own component `ghcOptions` would silently lose them
-(this bit `plutus-core` in the 11.0.1 IPE work). W44 also needs this for
-`cardano-addresses`' C symbol-renaming options and the ghc-debug libraries'
-warning/debug options. The `infoTableMapped` overlay
-re-adds the flags at that same per-component path so they merge by
-concatenation; the `--all` sweep is what proves no package slipped through.
+The top-level `ghcOptions` supplies defaults, which explicit package or
+component options override. W44's Haskell.nix imports `configure-args` from
+the install plan as package options, including `-hide-all-packages`. Merely
+setting the top-level flags therefore leaves most dependencies without IPE.
+
+The `infoTableMapped` overlay merges IPE flags into every source-built package
+listed in the install plan. It also merges them into explicit component
+options for `plutus-core`, `cardano-addresses` and the ghc-debug libraries,
+preserving their interpreter, C symbol-renaming and warning/debug options.
+The representative checks cover these overrides as well as ordinary packages
+and the non-IPE negative control.
 
 ## Ground truth: grep the derivation, not the config
 
