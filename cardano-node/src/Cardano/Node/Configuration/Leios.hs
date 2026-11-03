@@ -74,7 +74,7 @@ instance ToJSON LeiosMinOfferLead where
 -- > LeiosAdaptiveEndorsements:
 -- >   Enabled: true
 -- >   Decrease: 0.8
--- >   Increase: 0.01
+-- >   Increase: 0.02
 -- >   MinScale: 0.1
 newtype LeiosAdaptiveEndorsements = LeiosAdaptiveEndorsements
   { unLeiosAdaptiveEndorsements :: Maybe LeiosAdaptiveEbConfig }
