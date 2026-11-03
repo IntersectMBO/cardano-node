@@ -112,7 +112,7 @@
         "QueryBatchSize": 100000,
         "Snapshots": {
           "Interval": 86400,
-          "MaxDelay": 21600,
+          "MaxDelay": 3600,
           "MinDelay": 300,
           "NumOfDiskSnapshots": 2,
           "Offset": 0
