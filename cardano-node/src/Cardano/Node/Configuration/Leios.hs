@@ -64,8 +64,8 @@ instance FromJSON LeiosMinOfferLead where
 instance ToJSON LeiosMinOfferLead where
   toJSON = toJSON . unLeiosMinOfferLead
 
--- | Whether, and how, this node scales the endorser blocks it forges by how
--- much of the quorum margin recent announcements lost.
+-- | Whether, and how, this node scales the endorser blocks it forges down
+-- when announcements miss their quorum.
 --
 -- Absent from the configuration, or with @Enabled: false@, the node forges
 -- endorser blocks at the capacity the protocol allows. Every other field is
@@ -73,11 +73,9 @@ instance ToJSON LeiosMinOfferLead where
 --
 -- > LeiosAdaptiveEndorsements:
 -- >   Enabled: true
--- >   GainP: 2
--- >   Attack: 0.1
--- >   Release: 0.03
+-- >   Decrease: 0.8
+-- >   Increase: 0.01
 -- >   MinScale: 0.1
--- >   AliveWindow: 20
 newtype LeiosAdaptiveEndorsements = LeiosAdaptiveEndorsements
   { unLeiosAdaptiveEndorsements :: Maybe LeiosAdaptiveEbConfig }
   deriving (Eq, Show)
@@ -85,11 +83,9 @@ newtype LeiosAdaptiveEndorsements = LeiosAdaptiveEndorsements
 instance FromJSON LeiosAdaptiveEndorsements where
   parseJSON = withObject "LeiosAdaptiveEndorsements" $ \o -> do
     enabled <- o .:? "Enabled" .!= True
-    aebGainP <- o .:? "GainP" .!= aebGainP defaults
-    aebAttack <- o .:? "Attack" .!= aebAttack defaults
-    aebRelease <- o .:? "Release" .!= aebRelease defaults
+    aebDecrease <- o .:? "Decrease" .!= aebDecrease defaults
+    aebIncrease <- o .:? "Increase" .!= aebIncrease defaults
     aebMinScale <- o .:? "MinScale" .!= aebMinScale defaults
-    aebAliveWindow <- o .:? "AliveWindow" .!= aebAliveWindow defaults
     pure . LeiosAdaptiveEndorsements $
       if enabled then Just MkLeiosAdaptiveEbConfig{..} else Nothing
    where
@@ -100,9 +96,7 @@ instance ToJSON LeiosAdaptiveEndorsements where
   toJSON (LeiosAdaptiveEndorsements (Just cfg)) =
     object
       [ "Enabled" .= True
-      , "GainP" .= aebGainP cfg
-      , "Attack" .= aebAttack cfg
-      , "Release" .= aebRelease cfg
+      , "Decrease" .= aebDecrease cfg
+      , "Increase" .= aebIncrease cfg
       , "MinScale" .= aebMinScale cfg
-      , "AliveWindow" .= aebAliveWindow cfg
       ]
