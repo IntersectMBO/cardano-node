@@ -188,6 +188,12 @@ profilesCloud =
                               (Aeson.Object $ KeyMap.singleton "major" (Aeson.Number 11))
                             )
                           )
+  , valueVolt & P.name "value-v12stub-nomadperf"                           . P.dreps  10000
+              . P.shelley (KeyMap.insert "protocolParams"
+                            (Aeson.Object $ KeyMap.singleton "protocolVersion"
+                              (Aeson.Object $ KeyMap.singleton "major" (Aeson.Number 12))
+                            )
+                          )
   , valueVolt & P.name "value-volt-lsmt-nomadperf"                         . P.dreps  10000 . ephemeral . P.lsmt
   , valueVolt & P.name "value-volt-cgmem-nomadperf"                        . P.dreps  10000                      . cgmem
   -- Plutus (pre-Voltaire profiles)
@@ -204,6 +210,12 @@ profilesCloud =
                 . P.shelley (KeyMap.insert "protocolParams"
                               (Aeson.Object $ KeyMap.singleton "protocolVersion"
                                 (Aeson.Object $ KeyMap.singleton "major" (Aeson.Number 11))
+                              )
+                            )
+  , loopVolt    & P.name "plutus-v12stub-nomadperf"                        . P.dreps  10000
+                . P.shelley (KeyMap.insert "protocolParams"
+                              (Aeson.Object $ KeyMap.singleton "protocolVersion"
+                                (Aeson.Object $ KeyMap.singleton "major" (Aeson.Number 12))
                               )
                             )
   , loopV3Volt  & P.name "plutusv3-volt-nomadperf"                         . P.dreps  10000
