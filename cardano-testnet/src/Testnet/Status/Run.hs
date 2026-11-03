@@ -1,4 +1,5 @@
 {-# LANGUAGE NumericUnderscores #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Testnet.Status.Run (
     runCheckStatusOptions,
@@ -26,8 +27,13 @@ import           Data.Foldable (maximumBy)
 import           Data.List.NonEmpty (nonEmpty)
 import           Data.Maybe (fromMaybe, mapMaybe)
 import           Data.Ord (comparing)
+import           Data.Text (Text)
+import qualified Data.Text as T
 import           Data.Time (NominalDiffTime, UTCTime, addUTCTime, diffUTCTime, getCurrentTime)
 import           GHC.Stack (HasCallStack)
+import           Prettyprinter (Doc, concatWith, hardline, parens, pretty, softline)
+import           Prettyprinter.Render.Text (putDoc)
+import           Prettyprinter.Util (reflow)
 import           System.Directory (doesDirectoryExist, doesFileExist)
 import           System.Exit (exitWith)
 import           System.FilePath ((</>))
@@ -44,7 +50,7 @@ import           Testnet.Status.Types (CheckStatusOptions (..), NetworkStatus (.
                    OutputFormat (..), StatusReport (..), TipInfo (..), exitCodeForStatus)
 import           Testnet.Types (sgSlotLength, sgSystemStart, testnetEpochSlots)
 
-import           RIO (displayException, throwString, tryAny)
+import           RIO (displayException, hFlush, stdout, throwString, tryAny)
 import           UnliftIO.Async (forConcurrently)
 
 -- | Run the @status@ command: print the report (a table, or JSON) on stdout
@@ -60,9 +66,10 @@ runCheckStatusOptions
     } = do
       status <- checkStatus (fromMaybe defaultTestnetDir dir) timeoutSeconds
       case format of
-        OutputFormatText -> putStr $ renderStatusReportHumanReadable status
+        OutputFormatText -> putDoc $ renderStatusReportHumanReadable status
         OutputFormatJson -> do LBS.putStr $ encodePretty status
                                putStrLn ""
+      hFlush stdout
       exitWith . exitCodeForStatus $ reportStatus status
 
 -- | Check the testnet in the given output directory. Each node gets the
@@ -211,7 +218,7 @@ noTestnetReport outputDir = do
          }
 
 -- | Render a 'StatusReport' in a human readable way.
-renderStatusReportHumanReadable :: StatusReport -> String
+renderStatusReportHumanReadable :: StatusReport -> Doc ann
 renderStatusReportHumanReadable
   StatusReport
     { reportStatus = status
@@ -220,7 +227,7 @@ renderStatusReportHumanReadable
     , reportOutputDir = outputDir
     , reportProblemExplanation = problemExplanation
     } =
-  unlines $ ("Network: " <> summary status) : details <> errors
+  pretty (T.pack ("Network: " <> summary status)) <> hardline <> details <> hardline <> errors
   where
     notOk = length $ filter ((/= NodeOk) . probeNodeState) nodes
 
@@ -259,10 +266,10 @@ renderStatusReportHumanReadable
     summary NetworkStopped = "STOPPED - no node answers"
     summary NoTestnet = "NO-TESTNET - no " <> defaultManifestFile <> " in " <> outputDir
 
-    details :: [String]
+    details :: Doc ann
     details =
       case status of
-        NoTestnet -> ["No testnet" <> maybe "" (\x -> " (" <> explain x <> ")") problemExplanation]
+        NoTestnet -> "No testnet" <> maybe "" (\x -> softline <> parens (explain x)) problemExplanation
         _ -> renderTable $
                ["NODE", "ROLE", "STATE", "PID", "TIP SLOT", "TIP BLOCK", "TIP AGE"]
                  : [ [ nodeName
@@ -296,32 +303,38 @@ renderStatusReportHumanReadable
                       <- nodes
                    ]
 
-    explain :: NoTestnetReason -> String
-    explain DirMissing = "The directory " <> outputDir <> " does not exist."
-    explain NotReady = "Genesis files exist, but no manifest: the testnet is still starting or it never became ready."
-    explain NotATestnetDir = outputDir <> " is not a testnet output directory."
+    -- The directory is one word: a line can break around it, never inside it.
+    explain :: NoTestnetReason -> Doc ann
+    explain DirMissing = reflow "The directory" <> softline <> pretty outputDir <> softline <> reflow "does not exist."
+    explain NotReady = reflow "Genesis files exist, but no manifest: the testnet is still starting or it never became ready."
+    explain NotATestnetDir = pretty outputDir <> softline <> reflow "is not a testnet output directory."
 
-    errors :: [String]
-    errors =
-      [ nodeName <> ": " <> err
+    errors :: Doc ann
+    errors = mconcat
+      [ pretty (T.pack (nodeName <> ": " <> err)) <> hardline
       | NodeProbeResult{probeNodeName = nodeName, probeError = Just err} <- nodes
       ]
 
--- | Render an array of strings as a table, where each string in the output list is a line.
-renderTable :: [[String]] -> [String]
+-- | Render rows of cells as a table, with a border around every cell.
+renderTable :: [[String]] -> Doc ann
 renderTable rows =
-  ("+" ++ concat ["-" ++ replicate width '-' ++ "-+" | width <- widths])
-        : concatMap
-            ( \row ->
-                [ concat ("|" : [" " ++ pad width cell ++ " |" | (cell, width) <- zip row widths])
-                , concat ("+" : ["-" ++ replicate width '-' ++ "-+" | width <- widths])
-                ]
-            )
-            rows
+  hLine
+    <> hardline
+    <> concatWith (\x y -> x <> hardline <> y)
+         (map (\row ->
+                pretty (T.concat ("|" : [ " " <> pad width cell <> " |" | (cell, width) <- zip row widths ]))
+                  <> hardline
+                  <> hLine
+              ) rows)
   where
+    hLine :: Doc ann
+    hLine = pretty $ T.concat ("+" : [ "-" <> T.replicate w "-" <> "-+" | w <- widths ])
+
     widths :: [Int]
-    widths = map (maximum . map length) (transpose rows)
+    widths = map (maximum . map (length . sanitize)) (transpose rows)
 
-    pad :: Int -> String -> [Char]
-    pad w s = s ++ replicate (w - length s) ' '
+    pad :: Int -> String -> Text
+    pad w s = let ss = sanitize s in T.pack ss <> T.replicate (w - length ss) " "
 
+    sanitize :: String -> String
+    sanitize = unwords . lines . filter (/= '\r')

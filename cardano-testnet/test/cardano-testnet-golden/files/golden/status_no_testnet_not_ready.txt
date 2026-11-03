@@ -1,2 +1,3 @@
 Network: NO-TESTNET - no manifest.json in testnet
-No testnet (Genesis files exist, but no manifest: the testnet is still starting or it never became ready.)
+No testnet (Genesis files exist, but no manifest: the testnet is still starting
+or it never became ready.)

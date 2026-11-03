@@ -147,23 +147,23 @@ golden_StatusJson = propertyOnce $ do
 golden_StatusTable :: Property
 golden_StatusTable = propertyOnce $ do
   base <- H.getProjectBase
-  diffVsGoldenFile (renderStatusReportHumanReadable sampleReport) $
+  diffVsGoldenFile (show $ renderStatusReportHumanReadable sampleReport) $
     base </> goldenFile "status.txt"
-  diffVsGoldenFile (renderStatusReportHumanReadable sampleNoTestnetReport) $
+  diffVsGoldenFile (show $ renderStatusReportHumanReadable sampleNoTestnetReport) $
     base </> goldenFile "status_no_testnet.txt"
   diffVsGoldenFile
-    (renderStatusReportHumanReadable sampleNoTestnetReport{reportProblemExplanation = Just NotReady}) $
+    (show $ renderStatusReportHumanReadable sampleNoTestnetReport{reportProblemExplanation = Just NotReady}) $
     base </> goldenFile "status_no_testnet_not_ready.txt"
   diffVsGoldenFile
-    (renderStatusReportHumanReadable sampleNoTestnetReport{reportProblemExplanation = Just NotATestnetDir}) $
+    (show $ renderStatusReportHumanReadable sampleNoTestnetReport{reportProblemExplanation = Just NotATestnetDir}) $
     base </> goldenFile "status_no_testnet_not_a_testnet_dir.txt"
-  diffVsGoldenFile (renderStatusReportHumanReadable sampleRunningReport) $
+  diffVsGoldenFile (show $ renderStatusReportHumanReadable sampleRunningReport) $
     base </> goldenFile "status_running.txt"
-  diffVsGoldenFile (renderStatusReportHumanReadable sampleStalledReport) $
+  diffVsGoldenFile (show $ renderStatusReportHumanReadable sampleStalledReport) $
     base </> goldenFile "status_stalled.txt"
-  diffVsGoldenFile (renderStatusReportHumanReadable sampleStalledNoBlocksReport) $
+  diffVsGoldenFile (show $ renderStatusReportHumanReadable sampleStalledNoBlocksReport) $
     base </> goldenFile "status_stalled_no_blocks.txt"
-  diffVsGoldenFile (renderStatusReportHumanReadable sampleStoppedReport) $
+  diffVsGoldenFile (show $ renderStatusReportHumanReadable sampleStoppedReport) $
     base </> goldenFile "status_stopped.txt"
 
 -- | The real command, without a testnet: the exit code, stdout and stderr for
@@ -181,7 +181,9 @@ golden_StatusCommand = propertyOnce . moduleWorkspace "status-command" $ \dir ->
   code === ExitFailure 5
   lines (filter (/= '\r') out) ===
     [ "Network: NO-TESTNET - no manifest.json in " <> missing
-    , "No testnet (The directory " <> missing <> " does not exist.)"
+    , "No testnet (The directory"
+    , missing
+    , "does not exist.)"
     ]
   err === ""
 
