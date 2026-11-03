@@ -150,7 +150,7 @@ Configuration:
         # Randomised snapshot delay range, in seconds.
         # Both Min and Max need to be specified, otherwise the default delay of (5min, 10min) will be used.
         MinDelay: 300
-        MaxDelay: 21600
+        MaxDelay: 3600
 
         # The number of disk snapshots to keep.
         NumOfDiskSnapshots: 2
