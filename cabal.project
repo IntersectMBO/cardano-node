@@ -152,3 +152,11 @@ if impl(ghc >= 9.14)
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
+
+-- TODO remove once a cardano-rpc release with WaitForTx is on CHaP
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-api
+  tag: c727cd63bd4753d59fef75efc864876f182eb1a8
+  --sha256: sha256-wH7+aTQ6LNoSE0uVXgCPEmPXFVgD1Lru3dLmI3acfcE=
+  subdir: cardano-rpc
