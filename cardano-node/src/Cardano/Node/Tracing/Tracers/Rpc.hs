@@ -58,6 +58,7 @@ instance LogFormatting TraceRpc where
                 TraceRpcEvalTxDecodingError _ -> []
                 TraceRpcEvalTxSpan s -> [spanToObject s]
                 TraceRpcReadMempoolSpan s -> [spanToObject s]
+                TraceRpcWaitForTxSpan s -> [spanToObject s]
                 TraceRpcWatchMempoolSpan s -> [spanToObject s]
           TraceRpcSync syncTrace ->
             ["kind" .= String "SyncService"]
@@ -89,6 +90,7 @@ instance LogFormatting TraceRpc where
     TraceRpcSubmit (TraceRpcSubmitSpan (SpanBegin _)) -> [CounterM "rpc.request.SubmitService.SubmitTx" Nothing]
     TraceRpcSubmit (TraceRpcEvalTxSpan (SpanBegin _)) -> [CounterM "rpc.request.SubmitService.EvalTx" Nothing]
     TraceRpcSubmit (TraceRpcReadMempoolSpan (SpanBegin _)) -> [CounterM "rpc.request.SubmitService.ReadMempool" Nothing]
+    TraceRpcSubmit (TraceRpcWaitForTxSpan (SpanBegin _)) -> [CounterM "rpc.request.SubmitService.WaitForTx" Nothing]
     TraceRpcSubmit (TraceRpcWatchMempoolSpan (SpanBegin _)) -> [CounterM "rpc.request.SubmitService.WatchMempool" Nothing]
     TraceRpcSync (TraceRpcFetchBlockSpan (SpanBegin _)) -> [CounterM "rpc.request.SyncService.FetchBlock" Nothing]
     TraceRpcSync (TraceRpcReadTipSpan (SpanBegin _)) -> [CounterM "rpc.request.SyncService.ReadTip" Nothing]
@@ -118,6 +120,7 @@ instance MetaTrace TraceRpc where
             TraceRpcEvalTxDecodingError _ -> ["EvalTxDecodingError"]
             TraceRpcEvalTxSpan _ -> ["EvalTx", "Span"]
             TraceRpcReadMempoolSpan _ -> ["ReadMempool", "Span"]
+            TraceRpcWaitForTxSpan _ -> ["WaitForTx", "Span"]
             TraceRpcWatchMempoolSpan _ -> ["WatchMempool", "Span"]
       TraceRpcSync syncTrace ->
         "SyncService"
@@ -144,6 +147,7 @@ instance MetaTrace TraceRpc where
     ["SubmitService", "SubmitTx", "Span"] -> Just Debug
     ["SubmitService", "EvalTx", "Span"] -> Just Debug
     ["SubmitService", "ReadMempool", "Span"] -> Just Debug
+    ["SubmitService", "WaitForTx", "Span"] -> Just Debug
     ["SubmitService", "WatchMempool", "Span"] -> Just Debug
     ["SubmitService", "N2cConnectionError"] -> Just Warning -- this is a more serious error, this shouldn't happen
     ["SubmitService", "TxDecodingError"] -> Just Debug -- request error
@@ -169,6 +173,7 @@ instance MetaTrace TraceRpc where
     ["SubmitService", "SubmitTx", "Span"] -> Just "Span for the SubmitTx UTXORPC method."
     ["SubmitService", "EvalTx", "Span"] -> Just "Span for the EvalTx UTXORPC method."
     ["SubmitService", "ReadMempool", "Span"] -> Just "Span for the ReadMempool UTXORPC method."
+    ["SubmitService", "WaitForTx", "Span"] -> Just "Span for the WaitForTx UTXORPC method."
     ["SubmitService", "WatchMempool", "Span"] -> Just "Span for the WatchMempool UTXORPC method."
     ["SubmitService", "N2cConnectionError"] ->
       Just
@@ -202,6 +207,8 @@ instance MetaTrace TraceRpc where
       [("rpc.request.SubmitService.EvalTx", "Span for the EvalTx UTXORPC method.")]
     ["SubmitService", "ReadMempool", "Span"] ->
       [("rpc.request.SubmitService.ReadMempool", "Span for the ReadMempool UTXORPC method.")]
+    ["SubmitService", "WaitForTx", "Span"] ->
+      [("rpc.request.SubmitService.WaitForTx", "Span for the WaitForTx UTXORPC method.")]
     ["SubmitService", "WatchMempool", "Span"] ->
       [("rpc.request.SubmitService.WatchMempool", "Span for the WatchMempool UTXORPC method.")]
     ["SyncService", "FetchBlock", "Span"] ->
@@ -224,6 +231,7 @@ instance MetaTrace TraceRpc where
           , ["SubmitService", "SubmitTx", "Span"]
           , ["SubmitService", "EvalTx", "Span"]
           , ["SubmitService", "ReadMempool", "Span"]
+          , ["SubmitService", "WaitForTx", "Span"]
           , ["SubmitService", "WatchMempool", "Span"]
           , ["SubmitService", "N2cConnectionError"]
           , ["SubmitService", "TxDecodingError"]
