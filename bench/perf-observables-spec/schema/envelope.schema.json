@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "envelope.schema.json",
+  "title": "Envelope",
+  "description": "Common envelope of every event in a log stream (specification section 2.2).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["at", "ns", "sev", "thread", "host", "data"],
+  "properties": {
+    "at": {
+      "$ref": "types.schema.json#/$defs/Timestamp",
+      "description": "The moment the event occurred, taken synchronously at the emission point."
+    },
+    "ns": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9]+(\\.[A-Za-z0-9]+)*$",
+      "description": "Namespace: dot-separated, case-sensitive."
+    },
+    "sev": {
+      "enum": ["Debug", "Info", "Notice", "Warning", "Error", "Critical"],
+      "description": "Severity; informational."
+    },
+    "thread": {
+      "type": "string",
+      "description": "Opaque identifier of the emitting thread or task."
+    },
+    "host": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The node's name, unique within the cluster, constant for the run."
+    },
+    "data": {
+      "type": "object",
+      "description": "The payload; specified per namespace in observables.schema.json."
+    }
+  }
+}

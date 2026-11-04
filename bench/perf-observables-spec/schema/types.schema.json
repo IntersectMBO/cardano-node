@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "types.schema.json",
+  "title": "Basic types",
+  "description": "Canonical syntax of the basic types (specification section 3).",
+  "$defs": {
+    "Timestamp": {
+      "description": "RFC 3339 date-time in UTC with Z suffix and fractional seconds.",
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{1,9}Z$"
+    },
+    "SlotNo": {
+      "description": "Absolute slot number.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "BlockNo": {
+      "description": "Block number; the first block of the chain has number 0.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "BlockHash": {
+      "description": "Full block (header) hash: 64 lowercase hex characters.",
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "ChainHash": {
+      "description": "A block hash, or \"genesis\".",
+      "oneOf": [
+        { "$ref": "#/$defs/BlockHash" },
+        { "const": "genesis" }
+      ]
+    },
+    "Point": {
+      "description": "\"<BlockHash>@<SlotNo>\", or \"genesis\".",
+      "type": "string",
+      "pattern": "^([0-9a-f]{64}@(0|[1-9][0-9]*)|genesis)$"
+    },
+    "TxId": {
+      "description": "Full transaction ID: 64 lowercase hex characters.",
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "Duration": {
+      "description": "Seconds, fractional.",
+      "type": "number",
+      "minimum": 0
+    },
+    "Size": {
+      "description": "Bytes.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "Count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "ConnectionId": {
+      "description": "\"<local host:port> <remote host:port>\"; IPv6 addresses in brackets.",
+      "type": "string",
+      "pattern": "^\\S+:[0-9]+ \\S+:[0-9]+$"
+    },
+    "Peer": {
+      "type": "object",
+      "required": ["connectionId"],
+      "properties": {
+        "connectionId": { "$ref": "#/$defs/ConnectionId" }
+      }
+    },
+    "EdgeTiming": {
+      "description": "Start ({\"edge\": \"Starting\"}) or completion ({\"edge\": <Duration>}) of an operation traced on both edges.",
+      "type": "object",
+      "required": ["edge"],
+      "properties": {
+        "edge": {
+          "oneOf": [
+            { "const": "Starting" },
+            { "$ref": "#/$defs/Duration" }
+          ]
+        }
+      }
+    },
+    "MempoolSize": {
+      "type": "object",
+      "required": ["numTxs", "bytes"],
+      "properties": {
+        "numTxs": { "$ref": "#/$defs/Count" },
+        "bytes":  { "$ref": "#/$defs/Size" }
+      }
+    },
+    "TxRef": {
+      "type": "object",
+      "required": ["txid"],
+      "properties": {
+        "txid": { "$ref": "#/$defs/TxId" }
+      }
+    }
+  }
+}
