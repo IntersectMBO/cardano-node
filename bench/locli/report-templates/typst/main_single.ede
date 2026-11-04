@@ -65,6 +65,10 @@ We analyse `{{ base.ver }}` ({{ base.meta.era | toTitle }}), under {{ base.workl
 = Analysis
 
 {% for section in analyses %}
+{% if section.value.title == "Ledger Snapshots" %}
+// Derived / complementary metrics go on a page of their own.
+#pagebreak()
+{% endif %}
 == {{ section.value.title }}
 
 {% include "import_table.ede" with file = section.value %}

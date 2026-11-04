@@ -27,6 +27,7 @@ data Range
 
 data Unit
   = Sec  -- Second
+  | Ms   -- Millisecond
   | Hz   -- Hertz
   | B    -- Byte
   | KB   -- Kibibyte: 2^10
@@ -57,6 +58,7 @@ data Unit
 renderUnit :: Unit -> Text
 renderUnit = \case
     Sec -> "s"
+    Ms  -> "ms"
     Hz  -> "Hz"
     B   -> "Bytes"
     KB  -> "KiB"

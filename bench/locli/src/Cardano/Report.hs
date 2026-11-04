@@ -25,7 +25,7 @@ import           Cardano.Render (Anchor, CDF2Aspect, RenderConfig (..), aspectCo
 import           Cardano.Typst
 import           Cardano.Util as Util
 
-import           Prelude (id, tail, unzip3)
+import           Prelude (id, tail, unzip3, zipWith3)
 
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Map.Strict as Map
@@ -152,9 +152,25 @@ blockPropSections bp =
     "End-to-end propagation"
   ]
 
+-- | Derived / complementary performance metrics; reports put them on a page of their own.
+derivedPerfSections :: MachPerf (CDF I) -> [Section]
+derivedPerfSections mp =
+  [ STable mp (DSel @MachPerf $ dFields mtFieldsSnapshots)    "clusterperf.snapshots.typ"
+    "Ledger Snapshots"
+
+  , STable mp (DSel @MachPerf $ dFields mtFieldsTxProcessing) "clusterperf.txprocessing.typ"
+    "Transaction Processing"
+  ]
+
+-- | NB. The comparison report pairs these with 'selAnalyses' in 'generateTypst' by position.
 analysesReportSections :: MachPerf (CDF I) -> BlockProp f -> [Section]
 analysesReportSections mp bp =
-  machPerfSection mp : blockPropSections bp
+  machPerfSection mp : blockPropSections bp <> derivedPerfSections mp
+
+-- | Metrics whose value 0 most likely indicates a problem (e.g. trace parsing),
+--   not a measurement: their cells are rendered as a warning.
+fieldsWarnIfZero :: [FieldName]
+fieldsWarnIfZero = [ "cdfSnapTaken" ]
 
 rowDecriptions :: FSelect -> [Text]
 rowDecriptions = \case
@@ -331,10 +347,14 @@ extractAsText fieldSelr summ =
    fields' :: [Field ISelect I a]
    fields' = filter fieldSelr timelineFields
 
+-- | The average of each selected field: not available without data; colored as a warning where applicable.
 extractAverage :: forall p a. (CDFFields a p, KnownCDF p)
-    => (Field DSelect p a -> Bool) -> a p -> [(Double, Maybe Int)]
+    => (Field DSelect p a -> Bool) -> a p -> [NumField]
 extractAverage fieldSelr x =
-  fields' <&> f &&& (fmap succ . unWidth . fWidth)
+  fields' <&> \fld@Field{fId, fWidth} ->
+    let avg = if mapField x cdfSize fld == 0 then nan else f fld
+    in ( (avg, succ <$> unWidth fWidth)
+       , if FieldName fId `elem` fieldsWarnIfZero && avg == 0 then Yellow else NoCol )
  where
    fields' :: [Field DSelect p a]
    fields' = filter fieldSelr cdfFields
@@ -354,19 +374,19 @@ generateTypst typstFileName mScalingCSV theBase@(SomeSummary summ, cp, SomeBlock
  where
    allRuns = theBase : rest
 
-   numFieldUncolored = (`zip` repeat NoCol)
-
    selSummary :: Field ISelect I a -> Bool
    selSummary = iFields sumFieldsReport
 
+   -- NB. In the order of 'analysesReportSections'.
    selAnalyses :: (SomeSummary, ClusterPerf, SomeBlockProp) -> [[NumField]]
    selAnalyses (_, cperf, SomeBlockProp sbp) =
-     map numFieldUncolored
-      [ extractAverage (dFields mtFieldsReport)   cperf
-      , extractAverage (dFields bpFieldsControl)  sbp
-      , extractAverage (dFields bpFieldsForger)   sbp
-      , extractAverage (dFields bpFieldsPeers)    sbp
-      , extractAverage (dFields bpFieldsEndToEnd) sbp
+      [ extractAverage (dFields mtFieldsReport)       cperf
+      , extractAverage (dFields bpFieldsControl)      sbp
+      , extractAverage (dFields bpFieldsForger)       sbp
+      , extractAverage (dFields bpFieldsPeers)        sbp
+      , extractAverage (dFields bpFieldsEndToEnd)     sbp
+      , extractAverage (dFields mtFieldsSnapshots)    cperf
+      , extractAverage (dFields mtFieldsTxProcessing) cperf
       ]
 
    metas          :: [Metadata]
@@ -463,10 +483,24 @@ generateTypstCDFs rc anchor fieldSelr aspect x =
     (cell "metric" : fmap cell (fst (hdrsProjs @Integer)))
     (fields' <&> \f@Field{..} ->
         cell (fShortDesc <> ", " <> renderUnit fUnit)
-        : zipWith (\prec v -> cellNumField ((v, prec), NoCol))
-                  (colPrecs f)
-                  (mapFieldWithKey x (snd hdrsProjs) f))
+        : zipWith3 (\col prec v -> cellNumField ((v, prec), coloring f col v))
+                   [0 :: Int ..]
+                   (colPrecs f)
+                   (values f))
  where
+   -- A CDF without data (e.g. a metric missing from an older run's analysis) renders as
+   -- not available, except for its size.
+   values :: Field DSelect p a -> [Double]
+   values f
+     | mapField x cdfSize f == 0 = (nan <$ [1 .. 6 :: Int]) <> drop 6 (mapFieldWithKey x (snd hdrsProjs) f)
+     | otherwise                 = mapFieldWithKey x (snd hdrsProjs) f
+
+   -- Columns 0 and 2: average and min.
+   coloring :: Field DSelect p a -> Int -> Double -> Coloring
+   coloring Field{fId} col v
+     | FieldName fId `elem` fieldsWarnIfZero, col `elem` [0, 2], v == 0 = Yellow
+     | otherwise = NoCol
+
    fields' :: [Field DSelect p a]
    fields' = filter fieldSelr cdfFields
 

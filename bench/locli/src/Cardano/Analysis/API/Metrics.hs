@@ -447,10 +447,18 @@ perfSubsetFn :: PerfSubset -> (Field DSelect p a -> Bool)
 perfSubsetFn = \case
   PerfFull   -> const True
   PerfReport -> dFields mtFieldsReport
+  PerfSnapshots    -> dFields mtFieldsSnapshots
+  PerfTxProcessing -> dFields mtFieldsTxProcessing
 
 mtFieldsReport :: [FieldName]
 mtFieldsReport =
   [ "CentiCpu", "CentiGC", "CentiMut", "cdfSpanLensCpu", "RSS", "Heap", "Live", "Alloc", "GcsMinor", "GcsMajor", "NetRd", "NetWr", "FsRd", "FsWr", "cdfStarts" ]
+
+mtFieldsSnapshots, mtFieldsTxProcessing :: [FieldName]
+mtFieldsSnapshots =
+  [ "cdfSnapTaken", "cdfSnapDuration", "cdfLiveMajGcDuring", "cdfLiveMajGcOutside" ]
+mtFieldsTxProcessing =
+  [ "cdfTxsProcessed", "cdfTxsAccepted", "cdfTxsRejected", "cdfTxsRejectRatio", "cdfCpuPerTx", "cdfGcPerTx", "cdfMutPerTx" ]
 
 instance CDFFields MachPerf p where
   cdfFields =
@@ -551,6 +559,52 @@ instance CDFFields MachPerf p where
       "CPU spans at Ep boundary"
       "Length of over-85% CPU usage peaks, starting at epoch boundary, slots"
     ]
+
+   -- Ledger Snapshots
+   <> fBoth "cdfSnapTaken"        "Snap" "taken" W4 Cnt P0 Lin Free (DWord64 cdfSnapTaken)
+      "Taken"
+      "Ledger snapshots taken (completed) per host, during the analysed slots. 0 most likely indicates a trace parsing failure"
+
+   <> fBoth "cdfSnapDuration"     "Snap" "dur"   W5 Sec P2 Lin Free (DDeltaT cdfSnapDuration)
+      "Duration"
+      "Time it took to write a ledger snapshot to disk (ChainDB.LedgerEvent.Snapshot.TookSnapshot)"
+
+   <> fBoth "cdfLiveMajGcDuring"  "Live"  "snap" W5 MB  P0 Lin Free (DWord64 cdfLiveMajGcDuring)
+      "Live after majGC, during"
+      "RTS-reported live data after a major GC that occurred during a ledger snapshot write (from its start until 5s after its completion)"
+
+   <> fBoth "cdfLiveMajGcOutside" "Live"  "other" W5 MB P0 Lin Free (DWord64 cdfLiveMajGcOutside)
+      "Live after majGC, outside"
+      "RTS-reported live data after a major GC that occurred outside of ledger snapshot writes. The decisive measure of retained data; usually few samples"
+
+   -- Transaction Processing
+   <> fBoth "cdfTxsProcessed"     "Txns" "proc"  W7 Cnt P0 Lin Free (DWord64 cdfTxsProcessed)
+      "Txns processed"
+      "Transactions received from peers and submitted to the mempool, per host, over the analysed slots"
+
+   <> fBoth "cdfTxsAccepted"      "Txns" "acc"   W7 Cnt P0 Lin Free (DWord64 cdfTxsAccepted)
+      "Txns accepted"
+      "Processed transactions that were added to the mempool"
+
+   <> fBoth "cdfTxsRejected"      "Txns" "rej"   W7 Cnt P0 Lin Free (DWord64 cdfTxsRejected)
+      "Txns rejected"
+      "Processed transactions not added to the mempool: invalid, or already known. Run total of processed minus accepted, as the node's per-batch count isn't reliable"
+
+   <> fBoth "cdfTxsRejectRatio"   "Txns" "rej/"  W5 Rto P3 Lin R01 (DFloat cdfTxsRejectRatio)
+      "Reject ratio"
+      "Rejected / processed transactions. Explains differences between raw and per-transaction CPU usage"
+
+   <> fBoth "cdfCpuPerTx"         "CPU"  "/tx"   W5 Ms P3 Lin Free (DFloat cdfCpuPerTx)
+      "Proc CPU ÷ txns"
+      "Kernel-reported process CPU time, divided by the transactions processed. Not a per-tx cost: includes block validation, forging, snapshots and GC"
+
+   <> fBoth "cdfGcPerTx"          "GC"   "/tx"   W5 Ms P3 Lin Free (DFloat cdfGcPerTx)
+      "GC CPU ÷ txns"
+      "RTS-reported GC CPU time, divided by the transactions processed (as above). A heap regression shows here first"
+
+   <> fBoth "cdfMutPerTx"         "MUT"  "/tx"   W5 Ms P3 Lin Free (DFloat cdfMutPerTx)
+      "Mut CPU ÷ txns"
+      "RTS-reported mutator CPU time, divided by the transactions processed (as above)"
 
   fieldJSONOverlay f kvs =
     [ overlay kvs

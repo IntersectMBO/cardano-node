@@ -185,6 +185,7 @@ case "$op" in
             multi-clusterperf-json
             multi-clusterperf-gnuplot
             multi-clusterperf-report
+            multi-clusterperf-{snapshots,txprocessing}
             multi-clusterperf-full
 
             read-propagations
@@ -236,6 +237,7 @@ case "$op" in
             clusterperf-json
             clusterperf-gnuplot
             clusterperf-report
+            clusterperf-{snapshots,txprocessing}
             clusterperf-full
 
             compute-summary
@@ -291,6 +293,7 @@ case "$op" in
             clusterperf-json
             clusterperf-gnuplot
             clusterperf-report
+            clusterperf-{snapshots,txprocessing}
             clusterperf-full
         )
         verbose "analyse" "$(white performance), calling script:  $(colorise ${script[*]})"
@@ -424,8 +427,10 @@ case "$op" in
         vs=("${vr[@]/#summary-report/       'render-summary' --typst \"$adir\"/summary.typ            ${locli_render[*]}}")
         vt=("${vs[@]/#hash-timeline/        'hash-timeline'        --timeline \"$adir\"/hash-timeline.json }")
         vu=("${vt[@]/#report/               'report'                  --typst \"$adir\"/report-$run.typ }")
+        vv=("${vu[@]/#clusterperf-snapshots/    'render-clusterperf' --typst \"$adir\"/clusterperf.snapshots.typ    ${locli_render[*]} --snapshots }")
+        vw=("${vv[@]/#clusterperf-txprocessing/ 'render-clusterperf' --typst \"$adir\"/clusterperf.txprocessing.typ ${locli_render[*]} --tx-processing }")
         local ops_final=()
-        for v in "${vu[@]}"
+        for v in "${vw[@]}"
         do eval ops_final+=($v); done
 
         call_locli "$rtsmode" "${ops_final[@]}"
@@ -508,7 +513,9 @@ case "$op" in
         vj=(${vh[*]/#multi-summary-json/            'render-multi-summary' --json $adir/'summary.json' })
         vk=(${vj[*]/#multi-summary-report/          'render-multi-summary' --typst $adir/'summary.typ' })
         vl=(${vk[@]/#write-context/                 'write-meta-genesis'   --run-metafile    $dir/meta.json --shelley-genesis $shelley_genesis })
-        local ops_final=(${vl[*]})
+        vm=(${vl[*]/#multi-clusterperf-snapshots/    'render-multi-clusterperf' --typst $adir/'clusterperf.snapshots.typ'    --snapshots     $multi_aspect })
+        vn=(${vm[*]/#multi-clusterperf-txprocessing/ 'render-multi-clusterperf' --typst $adir/'clusterperf.txprocessing.typ' --tx-processing $multi_aspect })
+        local ops_final=(${vn[*]})
 
         call_locli "$rtsmode" "${ops_final[@]}"
 

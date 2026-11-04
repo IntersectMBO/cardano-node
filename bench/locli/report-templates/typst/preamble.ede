@@ -31,3 +31,4 @@
 //
 #let gr(body) = table.cell(fill: green.lighten(60%))[#body]
 #let rd(body) = table.cell(fill: red.lighten(60%))[#body]
+#let yw(body) = table.cell(fill: yellow.lighten(40%))[#body] // warning

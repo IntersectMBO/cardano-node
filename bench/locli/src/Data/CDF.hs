@@ -433,7 +433,7 @@ cdf2OfCDFs Combine{..} xs = do
   pure CDF
     { cdfSize    = sum sizes
     , cdfRange   = xs <&> cdfRange   & cRanges
-    , cdfStddev  = xs <&> cdfStddev  & cStddevs
+    , cdfStddev  = stddev
     , cdfAverage = cdf (nEquicentiles nCDFs) averages -- XXX: unweighted
     , cdfMedian  = listMedian $ xs <&> cdfMedian
     , ..
@@ -442,6 +442,17 @@ cdf2OfCDFs Combine{..} xs = do
    nCDFs    = length xs
    averages :: [Double]
    averages = xs <&> unI . cdfArity cdfAverage (cdfAverage . cdfAverage)
+
+   -- If every input CDF holds a single sample (e.g. a per-host run total), the combined
+   -- stddev is just the stddev of those samples -- whereas the approximation of 'cStddevs'
+   -- (e.g. the maximum of the inputs' stddevs) would always yield 0 there.
+   -- This deliberately stays limited to that case: the exact pooled stddev in general
+   -- (within-input variances plus the spread of the input averages) would change the
+   -- stddev and CoV of all existing metrics, breaking their comparability with
+   -- reports produced before.
+   stddev
+     | all ((== 1) . cdfSize) xs = Stat.stdDev (Vec.fromList averages)
+     | otherwise                 = xs <&> cdfStddev & cStddevs
 
    sizes    = xs <&> cdfSize
    samples  = xs <&> cdfSamples

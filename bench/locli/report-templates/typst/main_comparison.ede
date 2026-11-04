@@ -61,6 +61,10 @@ We compare {% for run in runs %}{%if !run.first%}{%if !run.last%}, {%else%} and 
 = Analysis
 
 {% for section in analyses %}
+{% if section.value.title == "Ledger Snapshots" %}
+// Derived / complementary metrics go on a page of their own.
+#pagebreak()
+{% endif %}
 == {{ section.value.title }}
 
 {% include "table_generic.ede" with table = section.value %}
