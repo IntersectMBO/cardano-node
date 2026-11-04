@@ -25,11 +25,10 @@ import           Cardano.Testnet
 
 import           Prelude
 
-import           Control.Exception (catch, throwIO, try)
-import           Control.Monad (replicateM, void, (>=>))
+import           Control.Exception (try)
+import           Control.Monad (replicateM, void)
 import qualified Data.ByteString as BS
 import           Data.Default.Class
-import           Data.IORef (newIORef, readIORef, writeIORef)
 import           Data.List.NonEmpty (NonEmpty ((:|)))
 import           GHC.Stack (HasCallStack, callStack)
 import           Lens.Micro
@@ -68,23 +67,9 @@ hprop_rpc_follow_tip = integrationRetryWorkspace 2 "rpc-follow-tip" $ \tempAbsBa
         :: [Rpc.Proto U5c.BlockRef]
         -> (IO (NextElem (Rpc.Proto U5c.FollowTipResponse)) -> IO a)
         -> H.Integration a
-      withFollowTip intersectRefs body = do
-        (result, cancelled) <- H.evalIO $ do
-          resultRef <- newIORef Nothing
-          let stream =
-                Rpc.withConnection def rpcServer $ \conn ->
-                  Rpc.serverStreaming conn (Rpc.rpc @(Rpc.Protobuf U5c.SyncService "followTip")) (def & U5c.intersect .~ intersectRefs) $
-                    body >=> (writeIORef resultRef . Just)
-          cancelled <- (False <$ stream) `catch` \e@GrpcException{grpcError} ->
-            if grpcError == GrpcCancelled then pure True else throwIO e
-          r <- readIORef resultRef
-          pure (r, cancelled)
-        -- A cancel after the body finished is the client closing the
-        -- connection; only one that cut the body short is a failure.
-        case result of
-          Nothing | cancelled ->
-            H.failMessage callStack "FollowTip stream was cancelled before the body finished"
-          _ -> H.nothingFail result
+      withFollowTip intersectRefs =
+        H.evalIO . Rpc.withServerStream rpcServer
+          (Proxy @(Rpc.Protobuf U5c.SyncService "followTip")) (def & U5c.intersect .~ intersectRefs)
 
       -- Open a fresh FollowTip stream intersecting at the given references,
       -- read exactly the requested number of messages, then let the
