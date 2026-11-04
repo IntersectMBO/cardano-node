@@ -8,9 +8,7 @@ import Cardano.Prelude          hiding (State, toText)
 
 import Data.Aeson                       qualified as Aeson
 import Data.Aeson.Text                  qualified as Aeson
-import Data.ByteString                  qualified as BS
 import Data.ByteString.Lazy.Char8       qualified as LBS
-import Data.ByteString.Char8            qualified as BS8
 import Data.Map                         qualified as Map
 import Data.Text                        (pack)
 import Data.Text                        qualified as T
@@ -24,7 +22,6 @@ import Options.Applicative              qualified as Opt
 import System.Directory                 (doesFileExist)
 import System.FilePath
 import System.Mem                       qualified as Mem (performGC)
-import System.Posix.Files               qualified as IO
 
 import Cardano.Analysis.API
 import Cardano.Analysis.BlockProp
@@ -101,7 +98,7 @@ data ChainCommand
 
   |        RenderReport     TextOutputFile
 
-  |             Compare     InputDir (Maybe TextInputFile) TextOutputFile
+  |             Compare     TextOutputFile
                             [( JsonInputFile SomeSummary
                              , JsonInputFile ClusterPerf
                              , JsonInputFile SomeBlockProp)]
@@ -268,12 +265,9 @@ parseChainCommand =
    ]) <|>
 
    subparser (mconcat [ commandGroup "Run comparison"
-   , op "compare" "Generate a report comparing multiple runs"
+   , op "compare" "Generate a Typst report comparing multiple runs"
      (Compare
-       <$> optInputDir       "ede"      "Directory with EDE templates."
-       <*> optional
-           (optTextInputFile "template" "Template to use as base.")
-       <*> optTextOutputFile "report"   "Report .org file to create."
+       <$> optTextOutputFile "typst"    "Report .typ file to create."
        <*> some
        ((,,)
         <$> optJsonInputFile "summary" "JSON analysis summary input file"
@@ -335,8 +329,6 @@ writerOpt ctor desc rcFormat = do
    optDescSuf = \case
      AsJSON    -> (,) "json"    " results as complete JSON dump"
      AsGnuplot -> (,) "gnuplot" " as individual Gnuplot files"
-     AsOrg     -> (,) "org"     " as Org-mode table"
-     AsReport  -> (,) "org-report"  " as Org-mode summary table"
      AsPretty  -> (,) "pretty"  " as text report"
      AsTypst   -> (,) "typst"   " as typst document"
 
@@ -773,16 +765,7 @@ runChainCommand s@State{sSummaries = Just (summary:_)} c@(RenderSummary rc@Rende
     else pure    $ renderSummary rc anchor (iFields sumFieldsReport) summary
   dumpText "summary" bodySummary (modeFilename f "" rcFormat)
     & firstExceptT (CommandError c)
-  forM_ (sumProfilingData summary) $
-    \profData -> do
-      let bodyProfiling =
-            renderProfilingData rc anchor
-              (uncurry (||)
-               . both ((>= 1.0) . unI . cdfAverage)
-               . (peTime &&& peAlloc))
-              profData
-      dumpText "profiling" bodyProfiling (TextOutputFile $ replaceFileName (unTextOutputFile f) "profiling" System.FilePath.<.> "org")
-        & firstExceptT (CommandError c)
+  renderProfiling c rc anchor f (sumProfilingData summary)
   pure s
  where anchor = sAnchor s
 runChainCommand _ c@RenderSummary{} = missingCommandData c
@@ -815,16 +798,7 @@ runChainCommand s@State{sMultiSummary=Just summary}
     else pure    $ renderSummary rc anchor (iFields sumFieldsReport) summary
   dumpText "multi-summary" body (modeFilename f "" rcFormat)
     & firstExceptT (CommandError c)
-  forM_ (sumProfilingData summary) $
-    \profData -> do
-      let bodyProfiling =
-            renderProfilingData rc anchor
-              (uncurry (||)
-               . both ((>= 1.0) . unI . cdfAverage)
-               . (peTime &&& peAlloc))
-              profData
-      dumpText "multi-profiling" bodyProfiling (TextOutputFile $ replaceFileName (unTextOutputFile f) "profiling" System.FilePath.<.> "org")
-        & firstExceptT (CommandError c)
+  renderProfiling c rc anchor f (sumProfilingData summary)
   pure s
  where anchor = sAnchor s
 runChainCommand _ c@RenderMultiSummary{} = missingCommandData c
@@ -842,7 +816,7 @@ runChainCommand s@State{ sSummaries   = Just [summary]
 runChainCommand _ c@RenderReport{} = missingCommandData c
   ["single-run summary", "single-run cluster performance", "single-run block propagation"]
 
-runChainCommand s c@(Compare ede mTmpl outf@(TextOutputFile outfp) runs) = do
+runChainCommand s c@(Compare outf@(TextOutputFile outfp) runs) = do
   progress "report" (Q $ printf "rendering report for %d runs" $ length runs)
   xs :: [(SomeSummary, ClusterPerf, SomeBlockProp)] <- forM runs $
     \(sumf,cpf,bpf)->
@@ -850,27 +824,8 @@ runChainCommand s c@(Compare ede mTmpl outf@(TextOutputFile outfp) runs) = do
       <$> readJsonData sumf (CommandError c)
       <*> readJsonData cpf  (CommandError c)
       <*> readJsonData bpf  (CommandError c)
-  (tmpl, tmplEnv, orgReport) <- case xs of
-    baseline:deltas@(_:_) -> liftIO $ do
-      Cardano.Report.generateOrg ede mTmpl baseline deltas
-    _ -> throwE $ CommandError c $ mconcat
-         [ "At least two runs required for comparison." ]
-  liftIO $
-    withFile (outfp `System.FilePath.replaceExtension` "env.json") WriteMode $
-      \hnd -> BS8.hPutStrLn hnd tmplEnv
-  dumpText "report" [orgReport] outf
-    & firstExceptT (CommandError c)
 
-  let tmplPath = Cardano.Util.replaceExtension outfp "ede"
-  liftIO . unlessM (IO.fileExist tmplPath) $
-    BS.writeFile tmplPath tmpl
-
-  -- For the time being, typst output is only used by the `compare` CLI command.
-  -- It's automatically created side-by-side with the Org mode report, and will
-  -- replace it eventually.
-  let
-    typstPath   = Cardano.Util.replaceExtension outfp "typ"
-    scalingFile = "plutus-workload-scaling.csv"
+  let scalingFile = "plutus-workload-scaling.csv"
 
   scalings :: [PlutusBudgetSummary] <- catMaybes <$> forM runs
     (\(unJsonInputFile -> sumf, _, _) ->
@@ -882,10 +837,10 @@ runChainCommand s c@(Compare ede mTmpl outf@(TextOutputFile outfp) runs) = do
     else pure Nothing
   typstReport <- case xs of
     baseline:deltas@(_:_) -> liftIO $ do
-      Cardano.Report.generateTypst (takeFileName typstPath) mScalingCSV baseline deltas
+      Cardano.Report.generateTypst (takeFileName outfp) mScalingCSV baseline deltas
     _ -> throwE $ CommandError c $ mconcat
          [ "At least two runs required for comparison." ]
-  dumpText "report" [typstReport] (TextOutputFile typstPath)
+  dumpText "report" [typstReport] outf
     & firstExceptT (CommandError c)
 
   pure s
@@ -904,6 +859,19 @@ renderCDFs c rc@RenderConfig{rcFormat} f anchor fieldSelr aspect x
         \(name, body) ->
           dumpText (T.unpack name) body (modeFilename f name rcFormat)
           & firstExceptT (CommandError c)
+
+-- | Profiling data, if any, goes next to the summary's Typst table, as profiling.typ.
+renderProfiling :: ChainCommand -> RenderConfig -> Anchor -> TextOutputFile -> Maybe (ProfilingData (CDF I))
+  -> ExceptT CommandError IO ()
+renderProfiling c rc@RenderConfig{rcFormat} anchor f mProfData =
+  when (rcFormat == AsTypst) $
+    forM_ mProfData $ \profData -> do
+      body <- liftIO $ generateTypstProfiling rc anchor significant profData
+      dumpText "profiling" [body] (TextOutputFile $ replaceFileName (unTextOutputFile f) "profiling.typ")
+        & firstExceptT (CommandError c)
+ where
+   -- Functions taking at least 1% of either time or allocation.
+   significant = uncurry (||) . both ((>= 1.0) . unI . cdfAverage) . (peTime &&& peAlloc)
 
 missingCommandData :: ChainCommand -> [String] -> ExceptT CommandError IO a
 missingCommandData c xs =

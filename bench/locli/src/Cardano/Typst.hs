@@ -36,11 +36,9 @@ colorCode NoCol = T.empty
 colorCode Green = "gr"
 colorCode Red   = "rd"
 
--- The convoluted logic around NumField serves the sole purpose of mimicking the
--- status quo of what the `em` based comparison reports show - where the logic is split up
--- between`Field` definitions, `locli` rendering code and `em` Org mode formulae.
--- Furthermore, it tags the field for custom coloring to be used in the future.
-
+-- | A value with its rendering precision (derived from the 'Field' definition),
+--   tagged for custom coloring to be used in the future. 'renderNumField' reproduces
+--   the number formatting the reports have always used.
 type NumField = ((Double, Maybe Int), Coloring)
 
 numFieldValue :: NumField -> Double

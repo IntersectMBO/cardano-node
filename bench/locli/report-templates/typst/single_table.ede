@@ -1,4 +1,4 @@
-// A single table rendered by locli (per-run counterpart of an Org mode report table).
+// A single table rendered by locli: one section of a run's (or multi-run's) analysis.
 // Compile with: typst compile <this file>
 //
 // The table is bound to `locli-table`, so the single-run report (main_single.ede) can

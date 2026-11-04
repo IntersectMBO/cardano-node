@@ -8,11 +8,11 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Report
-  ( generateOrg
-  , generateTypst
+  ( generateTypst
   , generateTypstCDFs
   , generateTypstSummary
   , generateTypstReport
+  , generateTypstProfiling
   )
 where
 
@@ -20,22 +20,18 @@ import           Cardano.Analysis.API
 import           Cardano.Analysis.Summary
 import           Cardano.Prelude
 import           Cardano.Render (Anchor, CDF2Aspect, RenderConfig (..), aspectColHeadersAndProjections,
-                                 renderAnchorDateVer, renderAnchorFiltersAndDomains, renderAnchorRuns,
+                                 profilingDataTable, renderAnchorDateVer, renderAnchorFiltersAndDomains, renderAnchorRuns,
                                  renderScalarLim)
 import           Cardano.Typst
 import           Cardano.Util as Util
 
 import           Prelude (id, tail, unzip3)
 
-import qualified Data.Aeson.Encode.Pretty as AEP
-import qualified Data.ByteString as BS
-import qualified Data.ByteString.Lazy as LBS
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Map.Strict as Map
 import           Data.String (IsString (..))
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as LT
-import           Data.Tuple.Extra (fst3)
 import           System.Directory (doesFileExist)
 import           System.Environment (lookupEnv)
 import           System.FilePath ((</>))
@@ -127,35 +123,32 @@ data Section where
   STable ::
     { sData      :: !(a p)
     , sFields    :: !FSelect
-    , sNameCol   :: !Text
-    , sValueCol  :: !Text
-    , sDataRef   :: !Text
-    , sOrgFile   :: !Text
+    , sTypstFile :: !FilePath -- ^ The single table file, as written by the workbench's analysis
     , sTitle     :: !Text
     } -> Section
 
 summaryReportSection :: Summary f -> Section
 summaryReportSection summ =
-  STable summ (ISel @SummaryOne $ iFields sumFieldsReport) "Parameter" "Value"   "summary" "summary.org"
+  STable summ (ISel @SummaryOne $ iFields sumFieldsReport) "summary.typ"
     "Overall run parameters"
 
 machPerfSection :: MachPerf (CDF I) -> Section
 machPerfSection mp =
-  STable mp (DSel @MachPerf     $ dFields mtFieldsReport)  "metric"  "average"    "perf" "clusterperf.report.org"
+  STable mp (DSel @MachPerf     $ dFields mtFieldsReport)  "clusterperf.report.typ"
     "Resource Usage"
 
 blockPropSections :: BlockProp f -> [Section]
 blockPropSections bp =
-  [ STable bp (DSel @BlockProp $ dFields bpFieldsControl)  "metric"  "average" "control" "blockprop.control.org"
+  [ STable bp (DSel @BlockProp $ dFields bpFieldsControl)  "blockprop.control.typ"
     "Anomaly control"
 
-  , STable bp (DSel @BlockProp $ dFields bpFieldsForger)   "metric"  "average"   "forge" "blockprop.forger.org"
+  , STable bp (DSel @BlockProp $ dFields bpFieldsForger)   "blockprop.forger.typ"
     "Forging"
 
-  , STable bp (DSel @BlockProp $ dFields bpFieldsPeers)    "metric"  "average"   "peers" "blockprop.peers.org"
+  , STable bp (DSel @BlockProp $ dFields bpFieldsPeers)    "blockprop.peers.typ"
     "Individual peer propagation"
 
-  , STable bp (DSel @BlockProp $ dFields bpFieldsEndToEnd) "metric"  "average" "end2end" "blockprop.endtoend.org"
+  , STable bp (DSel @BlockProp $ dFields bpFieldsEndToEnd) "blockprop.endtoend.typ"
     "End-to-end propagation"
   ]
 
@@ -213,88 +206,6 @@ instance ToJSON TmplRun where
       , "fileInfix"  .= filenameInfix trWorkload
       ]
 
-
-
----
---- Org
----
-
-liftTmplSectionOrg :: Section -> TmplSectionOrg
-liftTmplSectionOrg =
-  \case
-    STable{..} ->
-      TmplTableOrg
-      { tsTitle       = sTitle
-      , tsNameCol     = sNameCol
-      , tsValueCol    = sValueCol
-      , tsDataRef     = sDataRef
-      , tsOrgFile     = sOrgFile
-      , tsRowPrecs    = fs <&> fromEnum
-      , tsVars        = [ ("nSamples", "Sample count")
-                        ]
-      }
-     where fs = case sFields of
-                  ISel sel -> filter sel timelineFields <&> fPrecision
-                  DSel sel -> filter sel      cdfFields <&> fPrecision
-
-data TmplSectionOrg
-  = TmplTableOrg
-    { tsTitle        :: !Text
-    , tsNameCol      :: !Text
-    , tsValueCol     :: !Text
-    , tsDataRef      :: !Text
-    , tsOrgFile      :: !Text
-    , tsRowPrecs     :: ![Int]
-    , tsVars         :: ![(Text, Text)] -- map from Org constant name to description
-    }
-
-instance ToJSON TmplSectionOrg where
-  toJSON TmplTableOrg{..} = object
-    [ "title"     .= tsTitle
-    , "nameCol"   .= tsNameCol
-    , "valueCol"  .= tsValueCol
-    , "dataRef"   .= tsDataRef
-    , "orgFile"   .= tsOrgFile
-    -- Yes, strange as it is, this is the encoding to ease iteration in ED-E.
-    , "rowPrecs"  .= tsRowPrecs
-    , "vars"      .= Map.fromList (zip tsVars ([0..] <&> flip T.replicate ">" . (length tsVars -))
-                                   <&> \((k, name), angles) ->
-                                         (k, Map.fromList @Text
-                                             [("name", name),
-                                              ("angles", angles)]))
-    ]
-
-generateOrg :: InputDir -> Maybe TextInputFile
-         -> (SomeSummary, ClusterPerf, SomeBlockProp) -> [(SomeSummary, ClusterPerf, SomeBlockProp)]
-         -> IO (ByteString, ByteString, Text)
-generateOrg (InputDir ede) mReport (SomeSummary summ, cp, SomeBlockProp bp) rest = do
-  ctx  <- getReport metas (last restTmpls & trManifest & getComponent "cardano-node" & ciVersion)
-  tmplRaw <- BS.readFile (maybe defaultReportPath unTextInputFile mReport)
-  tmpl <- parseWith defaultSyntax (includeFile ede) "report" tmplRaw
-  let tmplEnv           = mkTmplEnv ctx baseTmpl restTmpls
-      tmplEnvSerialised = AEP.encodePretty tmplEnv
-  Text.EDE.result
-    (error . show)
-    (pure . (tmplRaw, LBS.toStrict tmplEnvSerialised,) . LT.toStrict) $ tmpl >>=
-    \x ->
-      renderWith mempty x tmplEnv
- where
-   metas = sumMeta summ : fmap (\(SomeSummary ss, _, _) -> sumMeta ss) rest
-
-   defaultReportPath = ede <> "/report.ede"
-
-   baseTmpl  = liftTmplRun summ
-   restTmpls = fmap ((\(SomeSummary ss) -> liftTmplRun ss). fst3) rest
-
-   mkTmplEnv rc b rs = fromPairs
-     [ "report"     .= rc
-     , "base"       .= b
-     , "runs"       .= rs
-     , "summary"    .= liftTmplSectionOrg (summaryReportSection summ)
-     , "analyses"   .= (liftTmplSectionOrg <$> analysesReportSections cp bp)
-     , "dictionary" .= metricDictionary
-     , "charts"     .= charts
-     ]
 
 
 ---
@@ -509,10 +420,8 @@ generateTypstReport typstPath summ cp bp = do
  where
    baseTmpl = liftTmplRun summ
 
-   -- The table file names are those of the Org mode report tables, with a .typ extension.
    tableFile :: Section -> IO TableFile
-   tableFile STable{sTitle, sOrgFile} = do
-     let tfName = FP.replaceExtension (T.unpack sOrgFile) "typ"
+   tableFile STable{sTitle, sTypstFile = tfName} = do
      tfPresent <- doesFileExist (FP.takeDirectory typstPath </> tfName)
      pure TableFile{tfTitle = sTitle, ..}
 
@@ -543,10 +452,10 @@ renderTypstTemplate name env = do
 
 
 --
--- Single tables: the per-run (or multi-run) counterparts of Org mode report tables.
+-- Single tables: one table per file, per run (or multi-run); bundled by the single-run report.
 --
 
--- | One row per metric; the columns as for the Org mode report tables.
+-- | One row per metric; columns: the statistics of 'aspectColHeadersAndProjections'.
 generateTypstCDFs :: forall p a. (CDFFields a p, KnownCDF p)
   => RenderConfig -> Anchor -> (Field DSelect p a -> Bool) -> CDF2Aspect -> a p -> IO Text
 generateTypstCDFs rc anchor fieldSelr aspect x =
@@ -580,6 +489,13 @@ generateTypstSummary rc anchor fieldSelr summ =
         [ cell (fShortDesc f)
         , cell (renderScalarLim (Just 32) summ f) ])
 
+-- | Profiling data (if the run was profiled): one row per function, sorted by time share.
+generateTypstProfiling :: RenderConfig -> Anchor -> (ProfileEntry (CDF I) -> Bool) -> ProfilingData (CDF I) -> IO Text
+generateTypstProfiling rc anchor flt pd =
+  renderTypstSingle rc anchor (cell <$> header) (fmap cell <$> rows)
+ where
+   (header, rows) = profilingDataTable flt pd
+
 renderTypstSingle :: RenderConfig -> Anchor -> [TypstCell] -> [[TypstCell]] -> IO Text
 renderTypstSingle RenderConfig{rcDateVerMetadata, rcRunMetadata} anchor header rows =
   renderTypstTemplate "single_table.ede" $ fromPairs
@@ -599,7 +515,7 @@ renderTypstSingle RenderConfig{rcDateVerMetadata, rcRunMetadata} anchor header r
 
 
 --
--- charts to be plotted (used in both report types)
+-- charts to be plotted
 --
 
 charts :: [DictEntry]

@@ -140,10 +140,6 @@ newtype GnuplotOutputFile
   = GnuplotOutputFile { unGnuplotOutputFile :: FilePath }
   deriving (Show, Eq)
 
-newtype OrgOutputFile
-  = OrgOutputFile { unOrgOutputFile :: FilePath }
-  deriving (Show, Eq)
-
 newtype TextInputFile
   = TextInputFile { unTextInputFile :: FilePath }
   deriving (Show, Eq)
