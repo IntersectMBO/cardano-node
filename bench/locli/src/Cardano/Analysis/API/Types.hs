@@ -1,3 +1,4 @@
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
@@ -9,6 +10,9 @@ module Cardano.Analysis.API.Types (module Cardano.Analysis.API.Types) where
 
 import Cardano.Prelude          hiding (head)
 
+import Data.Aeson               qualified as AE
+import Data.Aeson.Key           qualified as Key
+import Data.Aeson.KeyMap        qualified as KeyMap
 import Data.Text                qualified as T
 import Options.Applicative      qualified as Opt
 
@@ -168,6 +172,19 @@ data MachPerf f
     , cdfSpanLensCpu       :: !(CDF f Int)
     , cdfSpanLensCpuEpoch  :: !(CDF f Int)
     , cdfSpanLensCpuRwd    :: !(CDF f Int)
+    -- Ledger Snapshots
+    , cdfSnapTaken         :: !(CDF f Word64)          -- ^ per node: snapshots completed
+    , cdfSnapDuration      :: !(CDF f NominalDiffTime) -- ^ per snapshot: writing duration
+    , cdfLiveMajGcDuring   :: !(CDF f Word64)          -- ^ per major GC during a snapshot write: live data, MiB
+    , cdfLiveMajGcOutside  :: !(CDF f Word64)          -- ^ per major GC outside snapshot writes: live data, MiB
+    -- Transaction Processing (per node: run totals and ratios)
+    , cdfTxsProcessed      :: !(CDF f Word64)
+    , cdfTxsAccepted       :: !(CDF f Word64)
+    , cdfTxsRejected       :: !(CDF f Word64)
+    , cdfTxsRejectRatio    :: !(CDF f Double)
+    , cdfCpuPerTx          :: !(CDF f Double)          -- ^ process CPU ÷ txs processed, ms (not a per-tx cost)
+    , cdfMutPerTx          :: !(CDF f Double)          -- ^ RTS mutator CPU ÷ txs processed, ms
+    , cdfGcPerTx           :: !(CDF f Double)          -- ^ RTS GC CPU ÷ txs processed, ms
     , mpResourceCDFs       :: !(Resources (CDF f Word64))
     }
   deriving (Generic)
@@ -354,7 +371,43 @@ data RunScalars
 
 -- * MachPerf / ClusterPef
 --
-deriving instance (forall a. FromJSON a => FromJSON (f a), FromJSON (CDFList f (DataDomain I SlotNo))) => FromJSON (MachPerf f)
+
+-- | The record selector names of a single-constructor record type.
+recordSelectors :: forall a. GSelectors (Rep a) => Proxy a -> [Text]
+recordSelectors _ = gSelectors (Proxy @(Rep a))
+
+class GSelectors (r :: Type -> Type) where
+  gSelectors :: Proxy r -> [Text]
+
+instance GSelectors r => GSelectors (D1 c r) where
+  gSelectors _ = gSelectors (Proxy @r)
+
+instance GSelectors r => GSelectors (C1 c r) where
+  gSelectors _ = gSelectors (Proxy @r)
+
+instance (GSelectors l, GSelectors r) => GSelectors (l :*: r) where
+  gSelectors _ = gSelectors (Proxy @l) <> gSelectors (Proxy @r)
+
+instance Selector s => GSelectors (S1 s r) where
+  gSelectors _ = [T.pack $ selName (SelProxy :: SelProxy s r ())]
+
+-- | 'selName' only needs the selector's type, not a value of the field.
+data SelProxy (s :: k) (f :: Type -> Type) a = SelProxy
+
+-- | Lenient decoding: a CDF missing from the JSON (a metric added after the data was written,
+--   e.g. by an older locli) decodes as an empty CDF -- size 0, i.e. no data -- which reports render
+--   as not available. CDF fields are identified by locli's naming convention: their record
+--   selectors start with "cdf". Anything else missing still fails decoding.
+instance ( forall a. FromJSON a => FromJSON (f a), FromJSON (CDFList f (DataDomain I SlotNo))
+         , forall a. ToJSON a => ToJSON (f a), KnownCDF f)
+         => FromJSON (MachPerf f) where
+  parseJSON = AE.withObject "MachPerf" $ \o ->
+    AE.genericParseJSON AE.defaultOptions . AE.Object $
+      o <> KeyMap.fromList [ (k, emptyCDF) | k <- cdfKeys, not (k `KeyMap.member` o) ]
+   where
+     cdfKeys = filter ("cdf" `T.isPrefixOf`) (recordSelectors (Proxy @(MachPerf f))) <&> Key.fromText
+     emptyCDF = AE.toJSON (zeroCDF :: CDF f Double)
+
 deriving instance (forall a.   ToJSON a =>   ToJSON (f a),   ToJSON (CDFList f (DataDomain I SlotNo))) =>   ToJSON (MachPerf f)
 deriving instance (forall a.   NFData a =>   NFData (f a),   NFData (CDFList f (DataDomain I SlotNo))) =>   NFData (MachPerf f)
 deriving instance (forall a.     Show a =>     Show (f a),     Show (CDFList f (DataDomain I SlotNo))) =>     Show (MachPerf f)
@@ -373,6 +426,7 @@ data SlotStats a
     , slCountLeads   :: !Word64
     , slCountForges  :: !Word64
     , slChainDBSnap  :: !Word64
+    , slSnapshot     :: !(SMaybe (UTCTime, NominalDiffTime)) -- ^ a snapshot completed in this slot: at, duration
     , slRejectedTx   :: !Word64
     , slBlockNo      :: !BlockNo
     , slBlockGap     :: !Word64
@@ -495,12 +549,16 @@ adoptionCentilesBrief =
 data PerfSubset
   = PerfFull
   | PerfReport
+  | PerfSnapshots
+  | PerfTxProcessing
   deriving Show
 
 parsePerfSubset :: Opt.Parser PerfSubset
 parsePerfSubset =
   [ Opt.flag' PerfFull   (Opt.long "full"   <> Opt.help "Complete performance data")
   , Opt.flag' PerfReport (Opt.long "report" <> Opt.help "Only report-relevant perf data")
+  , Opt.flag' PerfSnapshots    (Opt.long "snapshots"     <> Opt.help "Ledger snapshot metrics")
+  , Opt.flag' PerfTxProcessing (Opt.long "tx-processing" <> Opt.help "Transaction processing metrics")
   ] & \case
         (x:xs) -> foldl (<|>) x xs
         [] -> error "Crazy world."

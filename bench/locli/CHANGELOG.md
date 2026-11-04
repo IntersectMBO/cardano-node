@@ -15,6 +15,10 @@
   - `compare` creates its Typst report from `--typst FILE`; the `--ede`, `--template` and `--report` options are gone, as are the dumped template environment and `.ede` files.
   - Removed render formats `--org` and `--org-report`.
   - Data values are escaped in all Typst tables (e.g. `---` no longer renders as an em dash).
+* New report sections, on a page of their own after End-to-end propagation (single-run and comparison reports; CLI: `render-clusterperf --snapshots / --tx-processing`):
+  - **Ledger Snapshots:** snapshots taken (a count of 0 is highlighted as a warning), write duration, and RTS live data after major GCs during vs. outside snapshot writes.
+  - **Transaction Processing:** transactions processed / accepted / rejected, reject ratio, and process / GC / mutator CPU time divided by the transactions processed (in the new unit `ms`). Rejected counts are run totals (processed minus accepted), as the node's per-batch count isn't reliable.
+* Reading analysis results is lenient towards CDFs missing from `clusterperf.json` (e.g. written by an older locli): they read as empty, and reports show them as not available (`—`), so older runs can still be compared against.
 
 ## 2.4 -- Jul 2026
 

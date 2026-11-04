@@ -28,13 +28,14 @@ import Data.Text.Lazy.Builder.RealFloat qualified as LT (FPFormat (..), formatRe
 -- Number formatting
 --
 
-data Coloring = NoCol| Green | Red deriving (Eq, Show)
+data Coloring = NoCol | Green | Red | Yellow deriving (Eq, Show)
 
 -- | The function names have to be in sync with report-templates/typst/preamble.ede.
 colorCode :: Coloring -> Text
 colorCode NoCol = T.empty
 colorCode Green = "gr"
 colorCode Red   = "rd"
+colorCode Yellow = "yw"
 
 -- | A value with its rendering precision (derived from the 'Field' definition),
 --   tagged for custom coloring to be used in the future. 'renderNumField' reproduces
@@ -50,6 +51,7 @@ threshold = 0.0001
 
 renderNumField :: NumField -> Text
 renderNumField ((val, prec), _)
+  | isNaN val               = "—" -- not available, or not defined
   | absval < threshold / 10 = zeroPaddedText
   | otherwise =
     let res = LT.toStrict $ LT.toLazyText $ LT.formatRealFloat format prec' val
