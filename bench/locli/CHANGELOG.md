@@ -9,6 +9,12 @@
 * Fixed double-counting ledger snapshot events in the machine timeline.
 * Fixed namespace drift for several traces, keeping backwards compatibility.
 * New test: Parse a fixture file log stream and round-trip it through SQLite.
+* Typst replaces Org mode for all report output; Org mode support is removed entirely (no more Emacs / LaTeX dependency for PDFs).
+  - The `render-*` commands' `--typst` output: standalone single-table documents (summary, cluster performance, block propagation sections, profiling data), generated from bundled templates.
+  - New CLI command `report`: a single-run Typst report, bundling the single-table files next to it.
+  - `compare` creates its Typst report from `--typst FILE`; the `--ede`, `--template` and `--report` options are gone, as are the dumped template environment and `.ede` files.
+  - Removed render formats `--org` and `--org-report`.
+  - Data values are escaped in all Typst tables (e.g. `---` no longer renders as an em dash).
 
 ## 2.4 -- Jul 2026
 

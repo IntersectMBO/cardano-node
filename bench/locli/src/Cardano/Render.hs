@@ -18,7 +18,6 @@ import Options.Applicative              qualified as Opt
 
 import Data.CDF
 
-import Cardano.Org
 import Cardano.Util
 import Cardano.Analysis.API
 
@@ -41,8 +40,6 @@ mkRenderConfigDef rcFormat =
 data RenderFormat
   = AsJSON
   | AsGnuplot
-  | AsOrg
-  | AsReport
   | AsPretty
   | AsTypst
   deriving (Eq, Show, Bounded, Enum)
@@ -108,16 +105,6 @@ renderAnchorDateVer a@Anchor{..} = mconcat
 renderAnchorDate :: Anchor -> Text
 renderAnchorDate = showText . posixSecondsToUTCTime . secondsToNominalDiffTime . fromIntegral @Int . round . utcTimeToPOSIXSeconds . aWhen
 
-renderAnchorOrgProperties :: RenderConfig -> Anchor -> [(Text, Text)]
-renderAnchorOrgProperties RenderConfig{rcDateVerMetadata, rcRunMetadata} a =
-  [ ("TITLE",    renderAnchorRuns a )                  | rcRunMetadata ]
-  <>
-  [ ("SUBTITLE", renderAnchorFiltersAndDomains a) ]
-  <>
-  [ ("DATE",     renderAnchorDate a)                   | rcDateVerMetadata ]
-  <>
-  [ ("VERSION",  renderProgramAndVersion (aVersion a)) | rcDateVerMetadata ]
-
 --
 --
 justifyHead, justifyData, justifyCentile, justifyProp :: Int -> Text -> Text
@@ -156,59 +143,24 @@ renderFieldCentiles x cdfProj Field{..} =
     DFloat  (cdfProj . ($ x) ->ds) -> ds <&> fmap (formatDouble fWidth)
     DDeltaT (cdfProj . ($ x) ->ds) -> ds <&> fmap (formatDiffTime fWidth)
 
-renderSummary :: forall f a. (a ~ Summary f, TimelineFields a, ToJSON a)
+renderSummary :: forall f a. (a ~ Summary f, ToJSON a)
   => RenderConfig -> Anchor -> (Field ISelect I a -> Bool) -> a -> [Text]
 renderSummary RenderConfig{rcFormat=AsJSON} _ _ x = (:[]) . LT.toStrict $ encodeToLazyText x
-renderSummary rc@RenderConfig{rcFormat=AsReport} a fieldSelr summ =
-  render $
-  Props
-  { oProps = renderAnchorOrgProperties rc a
-  , oConstants = []
-  , oBody = (:[]) $
-    Table
-    { tColHeaders     = ["Value"]
-    , tExtended       = True
-    , tApexHeader     = Just "Parameter"
-    , tColumns        = --transpose $
-                        [fields' <&> renderScalarLim (Just 32) summ]
-    -- , tColumns        = [kvs <&> snd]
-    , tRowHeaders     = fields' <&> fShortDesc
-    , tSummaryHeaders = []
-    , tSummaryValues  = []
-    , tFormula = []
-    , tConstants = []
-    }
-  }
- where
-   fields' :: [Field ISelect I a]
-   fields' = filter fieldSelr timelineFields
 renderSummary rc  _ _ _ =
   error $ "renderSummary: RenderConfig not supported:  " <> show rc
 
-renderProfilingData ::
-  RenderConfig -> Anchor -> (ProfileEntry (CDF I) -> Bool) -> ProfilingData (CDF I) -> [Text]
-renderProfilingData rc a flt pd =
-  render $
-  Props
-  { oProps = renderAnchorOrgProperties rc a
-  , oConstants = []
-  , oBody = (:[]) $
-    Table
-    { tColHeaders     = ["time, %", "range", "alloc, %", "source location"]
-    , tExtended       = True
-    , tApexHeader     = Just "Parameter"
-    , tColumns        = [ fieldsTime   <&> renderScalarLim (Just 6) pd
-                        , fieldsRange  <&> renderScalarLim (Just 6) pd
-                        , fieldsAlloc  <&> renderScalarLim (Just 6) pd
-                        , fieldsSrcLoc <&> renderScalarLim (Just 60) pd
-                        ]
-    , tRowHeaders     = pes <&> peFunc
-    , tSummaryHeaders = []
-    , tSummaryValues  = []
-    , tFormula        = []
-    , tConstants      = []
-    }
-  }
+-- | Profiling entries as a table, sorted by time share: a header, and one row per function.
+profilingDataTable :: (ProfileEntry (CDF I) -> Bool) -> ProfilingData (CDF I) -> ([Text], [[Text]])
+profilingDataTable flt pd =
+  ( ["function", "time, %", "range", "alloc, %", "source location"]
+  , transpose
+    [ pes <&> peFunc
+    , fieldsTime   <&> renderScalarLim (Just 6) pd
+    , fieldsRange  <&> renderScalarLim (Just 6) pd
+    , fieldsAlloc  <&> renderScalarLim (Just 6) pd
+    , fieldsSrcLoc <&> renderScalarLim (Just 60) pd
+    ]
+  )
  where
    pes :: [ProfileEntry (CDF I)]
    pes = filter flt (pdMap pd & Map.elems)
@@ -333,8 +285,6 @@ modeFilename :: TextOutputFile -> Text -> RenderFormat -> TextOutputFile
 modeFilename orig@(TextOutputFile f) name = \case
   AsJSON    -> orig
   AsGnuplot -> printf f name & TextOutputFile
-  AsOrg     -> orig
-  AsReport  -> orig
   AsPretty  -> orig
   AsTypst   -> orig
 
@@ -391,75 +341,6 @@ renderAnalysisCDFs anchor fieldSelr _c2a _centileSelr rc@RenderConfig{rcFormat=A
     "# " <> renderAnchor rc anchor :
     (mapRenderCDF ((== cdfField) . fId) Nothing (unliftCDFValExtra cdfIx) x
      & fmap (T.intercalate " "))
-
-renderAnalysisCDFs a fieldSelr _c2a centileSelr rc@RenderConfig{rcFormat=AsOrg} x =
-  (:[]) . ("",) . render $
-  Props
-  { oProps = renderAnchorOrgProperties rc a
-  , oConstants = []
-  , oBody = (:[]) $
-    Table
-    { tColHeaders     = fields' <&> fId
-    , tExtended       = True
-    , tApexHeader     = Just "centile"
-    , tColumns        = fields' <&> fmap (T.intercalate ":") . renderFieldCentiles x cdfSamplesProps
-    , tRowHeaders     = percSpecs <&> (T.take 6 . T.pack . printf "%.4f") . unCentile
-    , tSummaryHeaders = ["avg", "samples"]
-    , tSummaryValues  = [ fields' <&>
-                          \f@Field{..} ->
-                            mapField x (formatDouble fWidth . cdfAverageVal) f
-                        , fields' <&>
-                          \f@Field{..} ->
-                            mapField x (formatInt    fWidth . cdfSize) f
-                        ] & transpose
-    , tFormula = []
-    , tConstants = []
-    }
-  }
- where
-   cdfSamplesProps :: Divisible c => CDF p c -> [[c]]
-   cdfSamplesProps = fmap (pure . unliftCDFVal cdfIx . snd) . cdfSamples . restrictCDF
-
-   fields' :: [Field DSelect p a]
-   fields' = filterFields fieldSelr
-
-   restrictCDF :: forall c. CDF p c -> CDF p c
-   restrictCDF = maybe id subsetCDF centileSelr
-
-   percSpecs :: [Centile]
-   percSpecs = maybe (mapSomeFieldCDF centilesCDF x (fSelect . head $ cdfFields @a @p))
-                     id
-                     centileSelr
-
-renderAnalysisCDFs a fieldSelr aspect _centileSelr rc@RenderConfig{rcFormat=AsReport} x =
-  (:[]) . ("",) . render $
-  Props
-  { oProps = renderAnchorOrgProperties rc a
-  , oConstants = []
-  , oBody = (:[]) $
-    Table
-    { tColHeaders     = fst (hdrsProjs @Integer) -- This is crazy.
-    , tExtended       = True
-    , tApexHeader     = Just "metric"
-    , tColumns        = transpose $
-                        fields' <&>
-                        fmap (formatDouble W6)
-                        . mapFieldWithKey x (snd hdrsProjs)
-    , tRowHeaders     = fields' <&> (\Field{..} ->
-                                       fShortDesc <> ", " <> renderUnit fUnit)
-    , tSummaryHeaders = []
-    , tSummaryValues  = []
-    , tFormula = []
-    , tConstants = [("nSamples",
-                     fields' <&> mapField x (formatInt W4 . cdfSize) & head)]
-    }
-  }
- where
-   fields' :: [Field DSelect p a]
-   fields' = filter fieldSelr cdfFields
-
-   hdrsProjs :: forall v. (Divisible v) => ([Text], Field DSelect p a -> CDF p v -> [Double])
-   hdrsProjs = aspectColHeadersAndProjections aspect
 
 renderAnalysisCDFs a fieldSelr _c2a centiSelr rc@RenderConfig{rcFormat=AsPretty} x =
   (:[]) . ("",) $

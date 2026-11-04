@@ -97,7 +97,6 @@ library
                         Cardano.Analysis.Summary
 
                         Cardano.JSON
-                        Cardano.Org
                         Cardano.Typst
                         Cardano.Render
 
@@ -222,4 +221,3 @@ test-suite test-locli
 
   other-modules:        Test.Analysis.CDF
                         Test.Unlog.LogObjectDB
-                        Test.Unlog.Org
