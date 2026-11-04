@@ -115,7 +115,7 @@ jobs:
       run: git config --system core.longpaths true
 
     - name: Cache and install Cabal dependencies
-      uses: input-output-hk/cardano-dev/actions/cabal-cache@e811e25d3927d62ba87f1762ea51c36e65f0b09a # cabal-cache-0.0.1.0
+      uses: input-output-hk/cardano-dev/actions/cabal-cache@c7427b0921301778971d96b20ab234e8c34aedc3 # cabal-cache-0.0.1.2
       with:
         cabal-store: ${{ steps.setup-haskell.outputs.cabal-store }}
         cache-version: ${{ env.CABAL_CACHE_VERSION }}
