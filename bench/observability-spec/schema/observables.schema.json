@@ -1,0 +1,957 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "observables.schema.json",
+  "title": "Performance observable event",
+  "description": "One line of a log stream: the envelope, and for namespaces in the catalogue (specification section 5) the payload's required fields with canonical syntax. Events of other namespaces are only checked against the envelope. Generated; edit gen_observables.py instead.",
+  "allOf": [
+    {
+      "$ref": "envelope.schema.json"
+    },
+    {
+      "if": {
+        "required": [
+          "ns"
+        ],
+        "properties": {
+          "ns": {
+            "const": "Resources"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "$ref": "#/$defs/Resources"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "ns"
+        ],
+        "properties": {
+          "ns": {
+            "const": "Forge.Loop.StartLeadershipCheck"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "$ref": "#/$defs/Forge.Loop.StartLeadershipCheck"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "ns"
+        ],
+        "properties": {
+          "ns": {
+            "const": "Forge.Loop.BlockContext"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "$ref": "#/$defs/Forge.Loop.BlockContext"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "ns"
+        ],
+        "properties": {
+          "ns": {
+            "const": "Forge.Loop.LedgerState"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "$ref": "#/$defs/Forge.Loop.LedgerState"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "ns"
+        ],
+        "properties": {
+          "ns": {
+            "const": "Forge.Loop.LedgerView"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "$ref": "#/$defs/Forge.Loop.LedgerView"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "ns"
+        ],
+        "properties": {
+          "ns": {
+            "const": "Forge.Loop.NodeIsLeader"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "$ref": "#/$defs/Forge.Loop.NodeIsLeader"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "ns"
+        ],
+        "properties": {
+          "ns": {
+            "const": "Forge.Loop.NodeNotLeader"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "$ref": "#/$defs/Forge.Loop.NodeNotLeader"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "ns"
+        ],
+        "properties": {
+          "ns": {
+            "const": "Forge.Loop.ForgeTickedLedgerState"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "$ref": "#/$defs/Forge.Loop.ForgeTickedLedgerState"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "ns"
+        ],
+        "properties": {
+          "ns": {
+            "const": "Forge.Loop.ForgingMempoolSnapshot"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "$ref": "#/$defs/Forge.Loop.ForgingMempoolSnapshot"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "ns"
+        ],
+        "properties": {
+          "ns": {
+            "const": "Forge.Loop.ForgedBlock"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "$ref": "#/$defs/Forge.Loop.ForgedBlock"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "ns"
+        ],
+        "properties": {
+          "ns": {
+            "const": "Forge.Loop.AdoptedBlock"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "$ref": "#/$defs/Forge.Loop.AdoptedBlock"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "ns"
+        ],
+        "properties": {
+          "ns": {
+            "const": "ChainSync.Client.DownloadedHeader"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "$ref": "#/$defs/ChainSync.Client.DownloadedHeader"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "ns"
+        ],
+        "properties": {
+          "ns": {
+            "const": "BlockFetch.Client.SendFetchRequest"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "$ref": "#/$defs/BlockFetch.Client.SendFetchRequest"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "ns"
+        ],
+        "properties": {
+          "ns": {
+            "const": "BlockFetch.Client.CompletedBlockFetch"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "$ref": "#/$defs/BlockFetch.Client.CompletedBlockFetch"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "ns"
+        ],
+        "properties": {
+          "ns": {
+            "const": "ChainSync.ServerHeader.Update"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "$ref": "#/$defs/ChainSync.ServerHeader.Update"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "ns"
+        ],
+        "properties": {
+          "ns": {
+            "const": "BlockFetch.Server.SendBlock"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "$ref": "#/$defs/BlockFetch.Server.SendBlock"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "ns"
+        ],
+        "properties": {
+          "ns": {
+            "const": "ChainDB.AddBlockEvent.AddedToCurrentChain"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "$ref": "#/$defs/ChainDB.AddBlockEvent.AddedToCurrentChain"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "ns"
+        ],
+        "properties": {
+          "ns": {
+            "const": "ChainDB.AddBlockEvent.SwitchedToAFork"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "$ref": "#/$defs/ChainDB.AddBlockEvent.SwitchedToAFork"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "ns"
+        ],
+        "properties": {
+          "ns": {
+            "const": "ChainDB.LedgerEvent.Snapshot.TookSnapshot"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "$ref": "#/$defs/ChainDB.LedgerEvent.Snapshot.TookSnapshot"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "ns"
+        ],
+        "properties": {
+          "ns": {
+            "const": "LedgerMetrics"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "$ref": "#/$defs/LedgerMetrics"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "ns"
+        ],
+        "properties": {
+          "ns": {
+            "const": "TxSubmission.TxInbound.Collected"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "$ref": "#/$defs/TxSubmission.TxInbound.Collected"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "ns"
+        ],
+        "properties": {
+          "ns": {
+            "const": "TxSubmission.TxInbound.Processed"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "$ref": "#/$defs/TxSubmission.TxInbound.Processed"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "ns"
+        ],
+        "properties": {
+          "ns": {
+            "const": "Mempool.AddedTx"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "$ref": "#/$defs/Mempool.AddedTx"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "ns"
+        ],
+        "properties": {
+          "ns": {
+            "const": "Mempool.RemoveTxs"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "$ref": "#/$defs/Mempool.RemoveTxs"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "ns"
+        ],
+        "properties": {
+          "ns": {
+            "const": "Mempool.RejectedTx"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "$ref": "#/$defs/Mempool.RejectedTx"
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "Resources": {
+      "type": "object",
+      "required": [
+        "CentiCpu",
+        "Threads",
+        "RSS",
+        "FsRd",
+        "FsWr"
+      ],
+      "properties": {
+        "CentiCpu": {
+          "$ref": "types.schema.json#/$defs/Count"
+        },
+        "Threads": {
+          "$ref": "types.schema.json#/$defs/Count"
+        },
+        "RSS": {
+          "$ref": "types.schema.json#/$defs/Size"
+        },
+        "FsRd": {
+          "$ref": "types.schema.json#/$defs/Size"
+        },
+        "FsWr": {
+          "$ref": "types.schema.json#/$defs/Size"
+        },
+        "NetRd": {
+          "$ref": "types.schema.json#/$defs/Size"
+        },
+        "NetWr": {
+          "$ref": "types.schema.json#/$defs/Size"
+        },
+        "Alloc": {
+          "$ref": "types.schema.json#/$defs/Size"
+        },
+        "Live": {
+          "$ref": "types.schema.json#/$defs/Size"
+        },
+        "Heap": {
+          "$ref": "types.schema.json#/$defs/Size"
+        },
+        "CentiBlkIO": {
+          "$ref": "types.schema.json#/$defs/Count"
+        },
+        "CentiMut": {
+          "$ref": "types.schema.json#/$defs/Count"
+        },
+        "CentiGC": {
+          "$ref": "types.schema.json#/$defs/Count"
+        },
+        "GcsMajor": {
+          "$ref": "types.schema.json#/$defs/Count"
+        },
+        "GcsMinor": {
+          "$ref": "types.schema.json#/$defs/Count"
+        }
+      }
+    },
+    "Forge.Loop.StartLeadershipCheck": {
+      "type": "object",
+      "required": [
+        "slot"
+      ],
+      "properties": {
+        "slot": {
+          "$ref": "types.schema.json#/$defs/SlotNo"
+        }
+      }
+    },
+    "Forge.Loop.BlockContext": {
+      "type": "object",
+      "required": [
+        "slot",
+        "blockNo"
+      ],
+      "properties": {
+        "slot": {
+          "$ref": "types.schema.json#/$defs/SlotNo"
+        },
+        "blockNo": {
+          "$ref": "types.schema.json#/$defs/BlockNo"
+        },
+        "prev": {
+          "$ref": "types.schema.json#/$defs/Point"
+        }
+      }
+    },
+    "Forge.Loop.LedgerState": {
+      "type": "object",
+      "required": [
+        "slot"
+      ],
+      "properties": {
+        "slot": {
+          "$ref": "types.schema.json#/$defs/SlotNo"
+        }
+      }
+    },
+    "Forge.Loop.LedgerView": {
+      "type": "object",
+      "required": [
+        "slot"
+      ],
+      "properties": {
+        "slot": {
+          "$ref": "types.schema.json#/$defs/SlotNo"
+        }
+      }
+    },
+    "Forge.Loop.NodeIsLeader": {
+      "type": "object",
+      "required": [
+        "slot"
+      ],
+      "properties": {
+        "slot": {
+          "$ref": "types.schema.json#/$defs/SlotNo"
+        }
+      }
+    },
+    "Forge.Loop.NodeNotLeader": {
+      "type": "object",
+      "required": [
+        "slot"
+      ],
+      "properties": {
+        "slot": {
+          "$ref": "types.schema.json#/$defs/SlotNo"
+        }
+      }
+    },
+    "Forge.Loop.ForgeTickedLedgerState": {
+      "type": "object",
+      "required": [
+        "slot"
+      ],
+      "properties": {
+        "slot": {
+          "$ref": "types.schema.json#/$defs/SlotNo"
+        },
+        "prev": {
+          "$ref": "types.schema.json#/$defs/Point"
+        }
+      }
+    },
+    "Forge.Loop.ForgingMempoolSnapshot": {
+      "type": "object",
+      "required": [
+        "slot"
+      ],
+      "properties": {
+        "slot": {
+          "$ref": "types.schema.json#/$defs/SlotNo"
+        },
+        "prev": {
+          "$ref": "types.schema.json#/$defs/Point"
+        },
+        "mempoolHash": {
+          "$ref": "types.schema.json#/$defs/ChainHash"
+        },
+        "mempoolSlot": {
+          "$ref": "types.schema.json#/$defs/SlotNo"
+        }
+      }
+    },
+    "Forge.Loop.ForgedBlock": {
+      "type": "object",
+      "required": [
+        "slot",
+        "block",
+        "blockNo",
+        "blockPrev"
+      ],
+      "properties": {
+        "slot": {
+          "$ref": "types.schema.json#/$defs/SlotNo"
+        },
+        "block": {
+          "$ref": "types.schema.json#/$defs/BlockHash"
+        },
+        "blockNo": {
+          "$ref": "types.schema.json#/$defs/BlockNo"
+        },
+        "blockPrev": {
+          "$ref": "types.schema.json#/$defs/ChainHash"
+        }
+      }
+    },
+    "Forge.Loop.AdoptedBlock": {
+      "type": "object",
+      "required": [
+        "slot",
+        "blockHash",
+        "blockSize"
+      ],
+      "properties": {
+        "slot": {
+          "$ref": "types.schema.json#/$defs/SlotNo"
+        },
+        "blockHash": {
+          "$ref": "types.schema.json#/$defs/BlockHash"
+        },
+        "blockSize": {
+          "$ref": "types.schema.json#/$defs/Size"
+        }
+      }
+    },
+    "ChainSync.Client.DownloadedHeader": {
+      "type": "object",
+      "required": [
+        "block",
+        "blockNo",
+        "slot"
+      ],
+      "properties": {
+        "block": {
+          "$ref": "types.schema.json#/$defs/BlockHash"
+        },
+        "blockNo": {
+          "$ref": "types.schema.json#/$defs/BlockNo"
+        },
+        "slot": {
+          "$ref": "types.schema.json#/$defs/SlotNo"
+        },
+        "peer": {
+          "$ref": "types.schema.json#/$defs/Peer"
+        }
+      }
+    },
+    "BlockFetch.Client.SendFetchRequest": {
+      "type": "object",
+      "required": [
+        "head",
+        "length"
+      ],
+      "properties": {
+        "head": {
+          "$ref": "types.schema.json#/$defs/ChainHash"
+        },
+        "length": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "peer": {
+          "$ref": "types.schema.json#/$defs/Peer"
+        }
+      }
+    },
+    "BlockFetch.Client.CompletedBlockFetch": {
+      "type": "object",
+      "required": [
+        "block"
+      ],
+      "properties": {
+        "block": {
+          "$ref": "types.schema.json#/$defs/BlockHash"
+        },
+        "size": {
+          "$ref": "types.schema.json#/$defs/Size"
+        },
+        "delay": {
+          "$ref": "types.schema.json#/$defs/Duration"
+        },
+        "peer": {
+          "$ref": "types.schema.json#/$defs/Peer"
+        }
+      }
+    },
+    "ChainSync.ServerHeader.Update": {
+      "type": "object",
+      "required": [
+        "blockingRead"
+      ],
+      "properties": {
+        "addBlock": {
+          "$ref": "types.schema.json#/$defs/Point"
+        },
+        "rollBackTo": {
+          "$ref": "types.schema.json#/$defs/Point"
+        },
+        "blockingRead": {
+          "type": "boolean"
+        },
+        "risingEdge": {
+          "const": true
+        },
+        "peer": {
+          "$ref": "types.schema.json#/$defs/Peer"
+        }
+      },
+      "oneOf": [
+        {
+          "required": [
+            "addBlock"
+          ],
+          "not": {
+            "required": [
+              "rollBackTo"
+            ]
+          }
+        },
+        {
+          "required": [
+            "rollBackTo"
+          ],
+          "not": {
+            "required": [
+              "addBlock"
+            ]
+          }
+        }
+      ]
+    },
+    "BlockFetch.Server.SendBlock": {
+      "type": "object",
+      "required": [
+        "block"
+      ],
+      "properties": {
+        "block": {
+          "$ref": "types.schema.json#/$defs/ChainHash"
+        },
+        "peer": {
+          "$ref": "types.schema.json#/$defs/Peer"
+        }
+      }
+    },
+    "ChainDB.AddBlockEvent.AddedToCurrentChain": {
+      "type": "object",
+      "required": [
+        "newtip"
+      ],
+      "properties": {
+        "newtip": {
+          "$ref": "types.schema.json#/$defs/Point"
+        }
+      }
+    },
+    "ChainDB.AddBlockEvent.SwitchedToAFork": {
+      "type": "object",
+      "required": [
+        "newtip"
+      ],
+      "properties": {
+        "newtip": {
+          "$ref": "types.schema.json#/$defs/Point"
+        }
+      }
+    },
+    "ChainDB.LedgerEvent.Snapshot.TookSnapshot": {
+      "type": "object",
+      "required": [
+        "enclosedTime"
+      ],
+      "properties": {
+        "enclosedTime": {
+          "$ref": "types.schema.json#/$defs/EdgeTiming"
+        },
+        "tip": {
+          "$ref": "types.schema.json#/$defs/Point"
+        }
+      }
+    },
+    "LedgerMetrics": {
+      "type": "object",
+      "required": [
+        "slot",
+        "utxoSize",
+        "chainDensity"
+      ],
+      "properties": {
+        "slot": {
+          "$ref": "types.schema.json#/$defs/SlotNo"
+        },
+        "utxoSize": {
+          "$ref": "types.schema.json#/$defs/Count"
+        },
+        "chainDensity": {
+          "type": "number",
+          "minimum": 0
+        },
+        "delegMapSize": {
+          "$ref": "types.schema.json#/$defs/Count"
+        }
+      }
+    },
+    "TxSubmission.TxInbound.Collected": {
+      "type": "object",
+      "required": [
+        "count",
+        "peer"
+      ],
+      "properties": {
+        "count": {
+          "$ref": "types.schema.json#/$defs/Count"
+        },
+        "peer": {
+          "$ref": "types.schema.json#/$defs/Peer"
+        }
+      }
+    },
+    "TxSubmission.TxInbound.Processed": {
+      "type": "object",
+      "required": [
+        "accepted",
+        "rejected",
+        "peer"
+      ],
+      "properties": {
+        "accepted": {
+          "$ref": "types.schema.json#/$defs/Count"
+        },
+        "rejected": {
+          "$ref": "types.schema.json#/$defs/Count"
+        },
+        "peer": {
+          "$ref": "types.schema.json#/$defs/Peer"
+        }
+      }
+    },
+    "Mempool.AddedTx": {
+      "type": "object",
+      "required": [
+        "mempoolSize"
+      ],
+      "properties": {
+        "mempoolSize": {
+          "$ref": "types.schema.json#/$defs/MempoolSize"
+        },
+        "tx": {
+          "$ref": "types.schema.json#/$defs/TxRef"
+        }
+      }
+    },
+    "Mempool.RemoveTxs": {
+      "type": "object",
+      "required": [
+        "mempoolSize"
+      ],
+      "properties": {
+        "mempoolSize": {
+          "$ref": "types.schema.json#/$defs/MempoolSize"
+        },
+        "txs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "tx"
+            ],
+            "properties": {
+              "tx": {
+                "$ref": "types.schema.json#/$defs/TxRef"
+              }
+            }
+          }
+        }
+      }
+    },
+    "Mempool.RejectedTx": {
+      "type": "object",
+      "properties": {
+        "mempoolSize": {
+          "$ref": "types.schema.json#/$defs/MempoolSize"
+        },
+        "tx": {
+          "$ref": "types.schema.json#/$defs/TxRef"
+        }
+      }
+    }
+  }
+}
