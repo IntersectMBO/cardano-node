@@ -31,12 +31,13 @@ import Cardano.Ledger.Api
 import Cardano.Ledger.Api.Tx.AuxData (EraTxAuxData (TxAuxData), hashTxAuxData)
 import Cardano.Ledger.Api.Tx.In (TxId, TxIn, mkTxInPartial)
 import Cardano.Ledger.Coin (Coin (Coin))
+import Data.ByteString qualified as BS
 import Data.Function ((&))
 import Data.Map.Strict qualified as Map
 import Data.Maybe.Strict (StrictMaybe, maybeToStrictMaybe)
 import Data.Sequence.Strict qualified as StrictSeq
 import Data.Set qualified as Set
-import Data.Word (Word32)
+import Data.Word (Word32, Word64)
 import Lens.Micro ((%~), (.~), (^.))
 import Numeric.Natural (Natural)
 
@@ -59,8 +60,13 @@ data BuiltTx era = BuiltTx
   , btxOutputs :: ![Fund]
   }
 
+-- | Metadata label carrying the padding.
+paddingMetadataLabel :: Word64
+paddingMetadataLabel = 1023
+
 -- | Build and sign an era-generic 1..n-input, m-output transaction that
--- sends the change back to @destAddr@ under @signingKey@.
+-- sends the change back to @destAddr@ under @signingKey@, padded by about
+-- @padding@ bytes of metadata.
 buildTx ::
   forall era.
   Api.ShelleyBasedEraConstraints era =>
@@ -71,8 +77,9 @@ buildTx ::
   Natural ->
   Coin ->
   Color ->
+  Natural ->
   Either String (BuiltTx era)
-buildTx sbe destAddr signingKey inFunds numOutputs fee color
+buildTx sbe destAddr signingKey inFunds numOutputs fee color padding
   | null inFunds = Left "buildTx: no input funds"
   | numOutputs == 0 = Left "buildTx: outputs_per_tx must be >= 1"
   | feeLovelace < 0 = Left "buildTx: fee must be >= 0"
@@ -102,8 +109,15 @@ buildTx sbe destAddr signingKey inFunds numOutputs fee color
   mAuxData = maybeToStrictMaybe (Api.toAuxiliaryData sbe metadataInEra Api.TxAuxScriptsNone)
 
   metadataInEra =
-    Api.TxMetadataInEra sbe . Api.makeTransactionMetadata $
-      Map.singleton colorMetadataLabel (Api.TxMetaBytes (colorBytes color))
+    Api.TxMetadataInEra sbe . Api.makeTransactionMetadata . Map.fromList $
+      (colorMetadataLabel, Api.TxMetaBytes (colorBytes color))
+        : [(paddingMetadataLabel, Api.TxMetaList paddingChunks) | padding > 0]
+
+  -- Metadata byte strings hold at most 64 bytes each.
+  paddingChunks =
+    [ Api.TxMetaBytes (BS.replicate (fromIntegral (min 64 (padding - off))) 0)
+    | off <- [0, 64 .. padding - 1]
+    ]
 
   -- Body: pure ledger, era-generic via EraTxBody. The aux-data hash has to be
   -- in place before signing, since the witness covers it.

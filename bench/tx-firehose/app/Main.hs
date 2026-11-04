@@ -109,6 +109,7 @@ data Options = Options
   , optFee :: !Integer
   , optMaxConsecutiveErrors :: !Int
   , optColor :: !(Maybe Color)
+  , optPadBytes :: !Natural
   }
 
 parseOptions :: IO Options
@@ -216,6 +217,14 @@ optionsParser =
                 "Tag every tx with this colour as metadata, e.g. ff0000. \
                 \Default: derive one from the signing key."
           )
+      )
+    <*> Opt.option
+      Opt.auto
+      ( Opt.long "pad-bytes"
+          <> Opt.metavar "NATURAL"
+          <> Opt.value 0
+          <> Opt.showDefault
+          <> Opt.help "Pad every tx with about this many bytes of metadata"
       )
 
 main :: IO ()
@@ -385,7 +394,8 @@ mkFirehoseClient sbe opts addr sk initialFunds color scheduleStart =
           inFunds
           (optOutputsPerTx opts)
           (Coin (optFee opts))
-          color of
+          color
+          (optPadBytes opts) of
           Left err -> do
             trace "TxFirehose.Build.Fail" "Error" $
               Aeson.object ["error" .= T.pack err]
