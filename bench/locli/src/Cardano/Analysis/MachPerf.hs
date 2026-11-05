@@ -224,7 +224,7 @@ timelineStep Run{genesis} f accum@TimelineAccum{aSlotStats=cur:_, ..} lo =
               +
               fromSMaybe 0 slSpanTxsMem
       , slTxsAccepted = slTxsAccepted + acc
-      , slTxsRejected = slTxsRejected + max 0 (fromIntegral rej)
+      , slTxsRejected = slTxsRejected + fromIntegral (max 0 rej)
       })
     { aTxsCollectedAt = loTid `Map.delete` aTxsCollectedAt
     }
