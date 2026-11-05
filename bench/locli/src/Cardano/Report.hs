@@ -426,12 +426,13 @@ generateTypst typstFileName mScalingCSV theBase@(SomeSummary summ, cp, SomeBlock
 -- | The single-run report: bundles the single table files (as written by the
 --   workbench's single-run analysis) found next to the report, by importing them.
 --   Missing table files are noted in the report, instead of failing its compilation.
-generateTypstReport :: FilePath -> SummaryOne -> ClusterPerf -> BlockProp f -> IO Text
-generateTypstReport typstPath summ cp bp = do
+--   With a Plutus workload calibration CSV, it's rendered as an addendum.
+generateTypstReport :: FilePath -> Maybe FilePath -> SummaryOne -> ClusterPerf -> BlockProp f -> IO Text
+generateTypstReport typstPath mScalingCSV summ cp bp = do
   ctx <- getReport [sumMeta summ] (baseTmpl & trManifest & getComponent "cardano-node" & ciVersion)
   summaryFile  <- tableFile (summaryReportSection summ)
   sectionFiles <- mapM tableFile (analysesReportSections cp bp)
-  renderTypstTemplate "main_single.ede" $ fromPairs
+  renderTypstTemplate "main_single.ede" $ fromPairs $
     [ "report"     .= ctx
     , "base"       .= baseTmpl
     , "runs"       .= [baseTmpl]
@@ -441,6 +442,7 @@ generateTypstReport typstPath summ cp bp = do
     , "charts"     .= charts
     , "typstFile"  .= FP.takeFileName typstPath
     ]
+    ++ maybe [] (\csvFile -> ["scalingCSV" .= csvFile]) mScalingCSV
  where
    baseTmpl = liftTmplRun summ
 

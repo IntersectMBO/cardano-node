@@ -1,0 +1,50 @@
+{
+    "budgetPerBlock": {
+        "memory": 62000000,
+        "steps": 20000000000
+    },
+    "budgetPerTx": {
+        "memory": 14000000,
+        "steps": 10000000000
+    },
+    "budgetPerTxInput": {
+        "memory": 14000000,
+        "steps": 10000000000
+    },
+    "budgetStrategy": {
+        "tag": "TargetTxExpenditure"
+    },
+    "budgetTarget": {
+        "memory": 14000000,
+        "steps": 10000000000
+    },
+    "budgetUsedPerTxInput": {
+        "memory": 13999476,
+        "steps": 3104924739
+    },
+    "loopCounter": 3777,
+    "loopLimitingFactors": [
+        "ExceededMemoryLimit"
+    ],
+    "messageId": "txbudget",
+    "messageStrategy": "maxing out loops for tx budget was indicated",
+    "projectedBudgetUnusedPerBlock": {
+        "memory": 6002096,
+        "steps": 7580301044
+    },
+    "projectedBudgetUnusedPerTx": {
+        "memory": 524,
+        "steps": 6895075261
+    },
+    "projectedLoopsPerBlock": 15108,
+    "projectedTxFee": 1214868,
+    "projectedTxPerBlock": 4,
+    "projectedTxSize": 533,
+    "scriptArgDatum": {
+        "int": 0
+    },
+    "scriptArgRedeemer": {
+        "int": 1003777
+    },
+    "scriptId": "fallback: Loop.plutus"
+}

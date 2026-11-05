@@ -809,7 +809,9 @@ runChainCommand s@State{ sSummaries   = Just [summary]
                        , sBlockProp   = Just [prop] }
   c@(RenderReport f@(TextOutputFile outfp)) = do
   progress "report" (Q "rendering single-run report")
-  body <- liftIO $ generateTypstReport outfp summary perf prop
+  -- The report is written into the run's analysis directory.
+  mScalingCSV <- liftIO $ writeScalingCSV (takeDirectory outfp) [takeDirectory outfp]
+  body <- liftIO $ generateTypstReport outfp mScalingCSV summary perf prop
   dumpText "report" [body] f
     & firstExceptT (CommandError c)
   pure s
@@ -825,16 +827,8 @@ runChainCommand s c@(Compare outf@(TextOutputFile outfp) runs) = do
       <*> readJsonData cpf  (CommandError c)
       <*> readJsonData bpf  (CommandError c)
 
-  let scalingFile = "plutus-workload-scaling.csv"
-
-  scalings :: [PlutusBudgetSummary] <- catMaybes <$> forM runs
-    (\(unJsonInputFile -> sumf, _, _) ->
-      let budgetSummary = takeDirectory sumf </> ".." </> "generator" </> "plutus-budget-summary.json"
-      in liftIO $ readBudgetSummaryMaybe budgetSummary
-    )
-  mScalingCSV <- if length scalings == length xs        -- if for every run, we also got a Plutus budget summary...
-    then liftIO (writeResultsCSV (takeDirectory outfp </> scalingFile) scalings) >> pure (Just scalingFile)
-    else pure Nothing
+  mScalingCSV <- liftIO $ writeScalingCSV (takeDirectory outfp)
+    [ takeDirectory sumf | (unJsonInputFile -> sumf, _, _) <- runs ]
   typstReport <- case xs of
     baseline:deltas@(_:_) -> liftIO $ do
       Cardano.Report.generateTypst (takeFileName outfp) mScalingCSV baseline deltas
