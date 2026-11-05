@@ -58,10 +58,17 @@ The key words MUST, MUST NOT, SHOULD, SHOULD NOT and MAY are to be interpreted a
 
 The catalogue covers the observables the workbench's performance analysis (`locli`) needs.
 
-Each observable is one of:
-- *required:* always emitted;
-- *conditional:* emitted whenever the implementation performs the action the observable marks. An implementation that never performs it emits none, and consumers treat the absence as the action not having happened;
-- *optional:* MAY be emitted. If absent, consumers treat the work it involves (e.g. a ledger query) as not performed.
+Each observable is required, conditional or optional. They differ in when an implementation has to emit them, and so in what the absence of an event means to the analysis:
+
+#table(
+  columns: (auto, 1fr, 1.2fr),
+  table.header[][An implementation emits it …][If it's absent …],
+  [*required*], [always: it marks an action every implementation performs], [the stream doesn't conform],
+  [*conditional*], [whenever it performs the action the observable marks], [the action is taken to not have happened (e.g. no ledger snapshots were written)],
+  [*optional*], [if it chooses to, even when it performs the work], [consumers MAY assume the work wasn't performed. Metrics derived from the observable are not available; no key metric depends on an optional observable.],
+)
+
+So an implementation can add optional observables later and still get valid results. Leaving out a conditional observable is only correct for an implementation that never performs the action. Otherwise the analysis isn't just incomplete but wrong, because it counts the action as never having happened.
 
 Observables are required unless marked otherwise. They are grouped in tiers. An implementation claims conformance to a tier by emitting every required observable of that tier and of all lower tiers, and every conditional one whose action it performs.
 
