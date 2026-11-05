@@ -11,7 +11,7 @@ A specification of the events a Cardano node implementation has to emit so that 
 - **Emission requirements:** no sampling or rate limiting, complete hashes, timestamps taken at the emission point.
 - **Observable catalogue:** 25 namespaces across resource sampling, forge loop, block diffusion, chain selection, ledger, and transaction intake/mempool, each with emission point, payload and derived metrics.
 - **Ordering invariants and derived metrics:** what can be checked mechanically on any log, and how the workbench report metrics are computed.
-- **Deviations of the Haskell node:** where cardano-node 11.2.0 differs from the canonical form, syntactically (S1–S8) and semantically (E1–E5). Other implementations follow the specification, not the deviations.
+- **Deviations of the Haskell node:** where cardano-node 11.2.0 differs from the canonical form, syntactically (S1–S8) and semantically (E1). Other implementations follow the specification, not the deviations.
 
 ## Files
 

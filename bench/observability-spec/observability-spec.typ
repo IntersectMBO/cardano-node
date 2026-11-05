@@ -56,7 +56,7 @@ The key words MUST, MUST NOT, SHOULD, SHOULD NOT and MAY are to be interpreted a
 
 = Scope and conformance tiers <sec-scope>
 
-The catalogue covers the observables consumed by `locli` (the `interpreters` table in `bench/locli/src/Cardano/Unlog/LogObject.hs`), plus `ChainDB.AddBlockEvent.SwitchedToAFork`, which adopts blocks just as `AddedToCurrentChain` does.
+The catalogue covers the observables the workbench's performance analysis (`locli`) needs.
 
 Each observable is one of:
 - *required:* always emitted;
@@ -88,7 +88,9 @@ Events not listed here MAY be emitted; consumers ignore them.
 
 - The log is a stream of *JSON lines*: UTF-8, one JSON object per line, terminated by `\n`.
 - A stream MAY contain lines that aren't JSON objects (e.g. a start-up preamble on stdout). Consumers skip them; implementations SHOULD NOT emit them after the first event.
-- Each node writes its own stream. A cluster run consists of one stream per node.
+- Each node has its own stream. A cluster run consists of one stream per node.
+
+This stream is the format the analysis consumes; an implementation needn't produce it natively. One that traces in a different format (e.g. JSON with a different schema, a binary log, or OpenTelemetry) MAY provide a conversion into it instead, and conformance is then judged on the converted stream. The conversion MUST NOT alter what the native events record: `at` stays the timestamp taken at the emission point (@sec-emission), and no events are dropped or merged.
 
 == Envelope <sec-envelope-fields>
 
@@ -104,7 +106,7 @@ Every event is an object with exactly these fields (`schema/envelope.schema.json
   [`data`], [object], [The payload, specified per observable in @sec-catalogue.],
 )
 
-Payload objects MAY contain fields beyond those specified (e.g. `kind`, a redundant event name the Haskell node always adds). Consumers ignore unknown fields. A field specified as _required_ MUST be present, with the specified type and meaning.
+Payload objects MAY contain fields beyond those specified. Consumers ignore unknown fields. A field specified as _required_ MUST be present, with the specified type and meaning.
 
 // ----- 3 -------------------------------------------------------------
 
@@ -172,7 +174,7 @@ An operation that is traced on start and on completion is represented by two eve
 These requirements apply to any configuration used for benchmarking. They aren't about syntax, but violating them silently corrupts the derived metrics.
 
 + *Completeness.* Required and conditional events of tiers 1–3 MUST NOT be sampled, rate-limited, or dropped under load. Propagation metrics are computed per block and per node; one missing event removes that block's sample, or misattributes it.
-+ *Full detail.* All BlockHash, Point and TxId values MUST be complete (@sec-types). Where an implementation has configurable verbosity, benchmarking uses a level that yields complete values.
++ *Full detail.* All BlockHash, Point and TxId values MUST be complete (@sec-types).
 + *Emission point.* Each event MUST be emitted at the point specified in @sec-catalogue, with `at` taken there. If an implementation buffers or writes logs asynchronously, the timestamp MUST still be taken synchronously at the emission point.
 + *Tracing cost.* Emitting an event SHOULD NOT block the code being measured (e.g. on I/O). In a benchmark, the cost of tracing becomes part of the measured performance.
 + *Resource sampling period.* `Resources` MUST be sampled every 1000 ms (±10%).
@@ -373,7 +375,7 @@ A node receives the same header from several peers; consumers use the first occu
   [`addBlock`], [Point], [The point of the header announced (roll forward). Present iff this is a roll-forward.],
   [`rollBackTo`], [Point], [The point rolled back to. Present iff this is a rollback.],
   [`blockingRead`], [boolean], [`true` if the peer was already following at the tip, so the server had to wait for the chain to change: the update is a newly adopted block. `false` if the update was available immediately (the peer is catching up).],
-  [`risingEdge`], [boolean], [`true` on the event emitted before sending. #emph[opt.:] the Haskell node additionally emits a second event for the same update after the message has been sent, without this field; consumers ignore it.],
+  [`risingEdge`], [boolean], [`true`: the event is emitted before sending. An implementation MAY emit a second event for the same update after sending, without this field; consumers ignore events without it.],
   [`peer`], [`{connectionId}`], [The downstream peer. #opt],
 )
 
@@ -429,7 +431,7 @@ A header announcement is an event with `addBlock` present, `blockingRead: true` 
 
 === `LedgerMetrics` (tier 3, optional)
 
-#emitted[periodically, if at all; for benchmarking, once per slot, about 700 ms after the slot start. Obtaining the values can be costly (a ledger query), so implementations MAY omit this event.]
+#emitted[periodically, if at all; for benchmarking, once per slot, within the slot it reports (`slot`). Obtaining the values can be costly (a ledger query), so implementations MAY omit this event.]
 
 #fields(
   [`slot`], [SlotNo], [The slot it was taken in],
@@ -572,16 +574,12 @@ What the Haskell cardano-node emits differs from this specification in the follo
   [S8], [TxId in `Mempool.*` events], [truncated to 8 hex characters (`"a2f68ff4"`)], [full TxId],
 )
 
-== Semantics and completeness
+== Semantics
 
 #table(
   columns: (auto, 2fr, 1fr),
   table.header[\#][Haskell node behaviour][Specification],
-  [E1], [`AddedToCurrentChain` events that carry no ledger events are rate-limited to about 1.25 events per second (a budget-based limiter: short bursts pass, sustained higher rates are thinned). The limiter is set up in code (`withAddedToCurrentChainEmptyLimited`, `cardano-node/src/Cardano/Node/Tracing/Tracers/ChainDB.hs`), not in the configuration, because it applies only to the events _without_ ledger events, which a namespace-based limiter can't select. It reproduces the eliding tracer of the legacy logging system, though with the value inverted: the legacy code reported at most once per 1250 ms (0.8 events per second), while `limitFrequency` takes messages per second. It keeps chain sync from flooding the log with one event per adopted block. The suppressed events are exactly the ones adoption is measured from. Irrelevant at steady-state benchmark block rates, but bursts (catching up, fork switches) lose adoption timestamps, a violation of @sec-emission, item 1.], [Never limited. Making it configurable would need its own namespace for the events without ledger events.],
-  [E2], [The shipped configurations limit `BlockFetch.Client.CompletedBlockFetch` to 2 events per second (`maxFrequency`).], [Never limited (@sec-emission, item 1); remove the limiter for benchmarking at high block rates.],
-  [E3], [`TxInbound.Collected`/`Processed` are correlated by `locli` through the envelope's `thread`, which works because the Haskell node runs one inbound handler thread per peer.], [Correlated by `peer` (@sec-txs).],
-  [E4], [Severity is `Debug` for several required events (`BlockContext`, `LedgerState`, `LedgerView`, `ForgeTickedLedgerState`, `ForgingMempoolSnapshot`, `TxInbound.*`); a default configuration filters them out. The workbench configuration enables them.], [Severity is informational (@sec-envelope-fields); required events are always emitted for benchmarking.],
-  [E5], [`TxInbound.Collected.count` is the number of transactions in the peer's latest reply, but the batch submitted to the mempool is the transactions that can be acknowledged in order, which may include transactions buffered from earlier replies. `Processed.rejected` is computed as `count − accepted` instead of being counted, so it's wrong whenever the two batches differ, and *negative* when more is submitted than was received (389 of 6,755 events in a 20-hour node log). `accepted` is correct. Run totals are unaffected: every received transaction is submitted eventually, so Σ `count` − Σ `accepted` is exact, up to transactions still buffered at the end of the run.], [`count` is the size of the submitted batch; `rejected`, if emitted, equals `count − accepted` (@sec-txs).],
+  [E1], [`TxInbound.Collected.count` is the size of the peer's latest reply, not of the submitted batch, so `Processed.rejected` (computed as `count − accepted`) is wrong whenever the two differ, and can be negative.], [`count` is the size of the submitted batch; `rejected`, if emitted, equals `count − accepted` (@sec-txs).],
 )
 
 // ----- 9 -------------------------------------------------------------
