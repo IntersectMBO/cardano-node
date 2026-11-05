@@ -37,7 +37,7 @@ payloads = {
   "ChainDB.LedgerEvent.Snapshot.TookSnapshot": obj({"enclosedTime": T("EdgeTiming")}, {"tip": T("Point")}),
   "LedgerMetrics": obj(slot | {"utxoSize": T("Count"), "chainDensity": {"type": "number", "minimum": 0}}, {"delegMapSize": T("Count")}),
   "TxSubmission.TxInbound.Collected": obj({"count": T("Count")} | peer),
-  "TxSubmission.TxInbound.Processed": obj({"accepted": T("Count"), "rejected": T("Count")} | peer),
+  "TxSubmission.TxInbound.Processed": obj({"accepted": T("Count")} | peer, {"rejected": T("Count")}),
   "Mempool.AddedTx": obj({"mempoolSize": T("MempoolSize")}, {"tx": T("TxRef")}),
   "Mempool.RemoveTxs": obj({"mempoolSize": T("MempoolSize")},
                            {"txs": {"type": "array", "items": {"type": "object", "required": ["tx"], "properties": {"tx": T("TxRef")}}}}),

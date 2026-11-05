@@ -888,18 +888,17 @@
       "type": "object",
       "required": [
         "accepted",
-        "rejected",
         "peer"
       ],
       "properties": {
         "accepted": {
           "$ref": "types.schema.json#/$defs/Count"
         },
-        "rejected": {
-          "$ref": "types.schema.json#/$defs/Count"
-        },
         "peer": {
           "$ref": "types.schema.json#/$defs/Peer"
+        },
+        "rejected": {
+          "$ref": "types.schema.json#/$defs/Count"
         }
       }
     },

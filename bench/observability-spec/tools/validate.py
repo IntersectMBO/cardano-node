@@ -69,7 +69,9 @@ def main() -> int:
             print(f"{mark} {ns}: {valid[ns]} valid, {invalid[ns]} invalid")
     missing = sorted(ns for ns in catalogue if not valid[ns] and not invalid[ns])
     if missing:
-        print(f"\nnot present in log: {', '.join(missing)}")
+        # Absence of these is legitimate (specification section 1); all others are required.
+        category = {"ChainDB.LedgerEvent.Snapshot.TookSnapshot": "conditional", "LedgerMetrics": "optional"}
+        print(f"\nnot present in log: {', '.join(ns + (f' ({category[ns]})' if ns in category else '') for ns in missing)}")
     if errors:
         print("\nerrors:")
         for (ns, path, keyword), (count, msg, examples) in sorted(errors.items()):
