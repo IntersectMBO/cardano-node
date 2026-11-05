@@ -58,6 +58,7 @@ import           Codec.CBOR.Read (DeserialiseFailure)
 import           Control.Exception (SomeException(..), try)
 import           Control.Monad (unless)
 import           Control.Monad.IO.Class (MonadIO (..))
+import           Control.Tracer (nullTracer)
 import           Cardano.Network.OrphanInstances ()
 import           Data.Aeson (ToJSON (..))
 import qualified Data.ByteString.Char8 as BSC
@@ -466,6 +467,8 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
           traceWith txPerasVoteOut
       , Consensus.perasCertInclusionTracer = mkTracer $ traceWith txPerasCertInclusion
       , Consensus.perasVoteForgingTracer = mkTracer $ traceWith txPerasVoteForging
+      , Consensus.leiosDbTracer = nullTracer
+      , Consensus.leiosFetchServerTracer = nullTracer
       , Consensus.testnetTracer = mkTracer $ \case
           Consensus.DebugLog logMsg -> do
             traceM $ mconcat [ "[Testnet Debug]: " <> T.unpack logMsg ]
@@ -622,6 +625,8 @@ mkNodeToNodeTracers configReflection trBase trForward mbTrEKG _trDataPoint trCon
           traceWith txPerasCertDiffusion
       , NtN.tPerasVoteDiffusionTracer = mkTracer $
           traceWith txPerasVoteDiffusion
+      , NtN.tLeiosNotifyTracer = nullTracer
+      , NtN.tLeiosFetchTracer = nullTracer
       }
 
 mkDiffusionTracers ::

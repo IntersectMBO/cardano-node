@@ -583,7 +583,7 @@ calculateEpochStateDiff current next =
      else ppDiff diffResult
 
 instance (L.EraTxOut ledgerera, L.EraGov ledgerera, L.EraCertState ledgerera, L.EraStake ledgerera) => ToJSON (L.NewEpochState ledgerera) where
-  toJSON nes@(L.NewEpochState nesEL nesBprev nesBCur nesEs nesRu _stashedAvvm) =
+  toJSON nes@(L.NewEpochState nesEL nesBprev nesBCur nesEs nesRu _stashedAvvm _) =
     object
       [ "currentEpoch" .= nesEL
       , "priorBlocks" .= nesBprev
