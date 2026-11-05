@@ -92,6 +92,12 @@ prop_LogObject_sqlite_roundtrip = withTests 1 $ property $ do
 -- `legacyNamespaces` are kept for nodes still emitting a namespace's former
 -- name; they're absent from the (recent) log the fixture was extracted from.
 
+-- The fixture holds both edges of one ChainSync server update (rising edge with
+-- "risingEdge": true, falling edge without the field): only one is an announcement.
+prop_chainSync_update_announced_once = withTests 1 $ property $ do
+  logObjects <- evalIO $ readLogObjectStream fixtureFile False Nothing
+  length [ () | LogObject{loBody = LOChainSyncServerSendHeader{}} <- logObjects ] === 1
+
 prop_interpreters_covered_by_fixture = withTests 1 $ property $ do
   fixtureLines <- evalIO $ BS.lines <$> BS.readFile fixtureFile
   namespaces   <- forM fixtureLines $ \l ->

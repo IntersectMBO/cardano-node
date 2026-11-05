@@ -243,10 +243,12 @@ interpreters = Map.fromList
     \v -> case ( KeyMap.lookup "risingEdge" v
                , KeyMap.lookup "blockingRead" v
                , KeyMap.lookup "rollBackTo" v) of
-            (Just (Bool False), _, _) -> pure $ LOAny LAFallingEdge v
+            -- Each update is traced twice; the node only ever marks the rising edge
+            -- ("risingEdge": true), the falling edge comes without the field.
+            (re, _, _) | re /= Just (Bool True) -> pure $ LOAny LAFallingEdge v
             (_, Just (Bool False), _) -> pure $ LOAny LANonBlocking v
             (_, _, Just _)            -> pure $ LOAny LARollback    v
-            -- Should be either rising edge+rollforward, or legacy:
+            -- Rising edge of a blocking roll-forward:
             _ -> do
               blockLegacy <- v .:? "block"
               block       <- v .:? "addBlock"
