@@ -99,7 +99,7 @@ jobs:
         cabal-version: ${{ matrix.cabal }}
 
     - name: Install system dependencies
-      uses: input-output-hk/actions/base@6217329012a2fd613c8eec9a3f523684a8e91720 # latest
+      uses: input-output-hk/actions/base@895ed353e4cef9b111ed7d1a763ca672a7f9f368 # https://github.com/input-output-hk/actions/pull/52
       with:
         use-sodium-vrf: true # default is true
 
