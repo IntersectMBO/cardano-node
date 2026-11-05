@@ -83,6 +83,8 @@ We analyse `{{ base.ver }}` ({{ base.meta.era | toTitle }}), under {{ base.workl
 #pagebreak()
 
 
+{% include "plutus_calibration.ede" %}
+
 = Appendix A: charts
 
 == Cluster performance charts

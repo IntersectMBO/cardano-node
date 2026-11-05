@@ -11,12 +11,14 @@ import           Cardano.Prelude
 import           Data.Aeson (FromJSON, eitherDecodeFileStrict)
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
+import           System.Directory (createDirectory)
 import           System.FilePath ((</>))
 import           System.IO.Temp (withSystemTempDirectory)
 
 import           Cardano.Analysis.API
 import           Cardano.Render
 import           Cardano.Report
+import           Cardano.Unlog.PlutusBudgetSummary (writeScalingCSV)
 import           Cardano.Util (zeroUTCTime)
 
 import           Test.Analysis.Compat (addedIn3_0, clusterPerfFixture, decodeClusterPerf, withoutKeys)
@@ -80,14 +82,15 @@ prop_single_run_report_renders = withTests 1 $ property $ do
 
   evalIO (withSystemTempDirectory "locli-test-report" $ \dir -> do
       let reportFile = dir </> "report-fixture-run.typ"
-      missing <- generateTypstReport reportFile summ cp bp
+      missing <- generateTypstReport reportFile Nothing summ cp bp
       for_ tableFiles $ \f -> T.writeFile (dir </> f) ""
-      present <- generateTypstReport reportFile summ cp bp
+      present <- generateTypstReport reportFile Nothing summ cp bp
       pure (missing, present))
     >>= \(missing, present) -> do
       for_ [missing, present] $ \t -> do
         assertRendered t
         assertContains "<export_file_name>" t
+        assert . not $ "Plutus Workload Calibration" `T.isInfixOf` t
       -- a table file is imported if present, otherwise noted as missing
       for_ tableFiles $ \f -> do
         let imported = "import \"" <> T.pack f <> "\""
@@ -97,6 +100,35 @@ prop_single_run_report_renders = withTests 1 $ property $ do
         annotate f
         assert . not $ imported `T.isInfixOf` missing
         assert . not $ noted    `T.isInfixOf` present
+
+-- | The Plutus workload calibration: its CSV is written if every run has the generator's
+--   budget summary (test/data/generator/, next to the fixture run's analysis directory),
+--   and the single-run report renders it as an addendum.
+prop_plutus_calibration_renders = withTests 1 $ property $ do
+  (summ, cp, bp) <- fixtureRun
+
+  (written, noSummary, partial, csv, report) <- evalIO $
+    withSystemTempDirectory "locli-test-plutus" $ \dir -> do
+      let noGenerator = dir </> "analysis"
+      createDirectory noGenerator
+      written   <- writeScalingCSV dir ["test/data/analysis"]
+      csv       <- maybe (pure "") (T.readFile . (dir </>)) written
+      noSummary <- writeScalingCSV dir [noGenerator]
+      partial   <- writeScalingCSV dir ["test/data/analysis", noGenerator]
+      report    <- generateTypstReport (dir </> "report-fixture-run.typ") written summ cp bp
+      pure (written, noSummary, partial, csv, report)
+
+  written   === Just "plutus-workload-scaling.csv"
+  noSummary === Nothing
+  partial   === Nothing
+  -- one column, from the fixture's budget summary
+  assertContains "loops per tx,3777" csv
+  assertContains "txns per block,4"  csv
+
+  assertRendered report
+  assertContains "= Addendum: Plutus Workload Calibration" report
+  assertContains "csv(\"plutus-workload-scaling.csv\")" report
+  assertContains "columns: 2" report
 
 -- | Template main_comparison.ede: comparing a run with itself as analysed by locli 2.x,
 --   with and without a Plutus calibration addendum.
