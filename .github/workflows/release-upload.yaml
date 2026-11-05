@@ -127,13 +127,23 @@ jobs:
           sha256sums_filename="cardano-node-${NODE_VERSION}-sha256sums.txt"
           sha256sum cardano-node-*-*-* > "$sha256sums_filename"
       - name: Release
-        uses: input-output-hk/action-gh-release@26994186c0ac3ef5cae75ac16aa32e8153525f77 # v1
-        with:
-          draft: true
-          files: |
-            cardano-node-*-linux-amd64.tar.gz
-            cardano-node-*-linux-arm64.tar.gz
-            cardano-node-*-macos-amd64.tar.gz
-            cardano-node-*-macos-arm64.tar.gz
-            cardano-node-*-sha256sums.txt
+        env:
+          GH_REPO: ${{ github.repository }}
+        run: |
+          if [[ "$GITHUB_REF" != refs/tags/* ]]; then
+            echo "::error::GitHub Releases requires a tag, got $GITHUB_REF"
+            exit 1
+          fi
+          tag="${GITHUB_REF#refs/tags/}"
+          # Reuse an existing release (draft or published) for this tag as is,
+          # otherwise create a draft one.
+          if ! gh release view "$tag" > /dev/null 2>&1; then
+            gh release create "$tag" --draft --verify-tag --title "$tag" --notes ""
+          fi
+          gh release upload "$tag" --clobber \
+            cardano-node-*-linux-amd64.tar.gz \
+            cardano-node-*-linux-arm64.tar.gz \
+            cardano-node-*-macos-amd64.tar.gz \
+            cardano-node-*-macos-arm64.tar.gz \
+            cardano-node-*-sha256sums.txt \
             cardano-node-*-win-amd64.zip

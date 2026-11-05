@@ -18,6 +18,11 @@ jobs:
       with:
         persist-credentials: false
 
+    # TODO: The rwe/actions-hlint-* actions are unmaintained and run on Node.js 12,
+    # which GitHub forces onto a newer runtime with a deprecation warning.  Switch to
+    # the maintained haskell-actions/hlint-setup and haskell-actions/hlint-run once
+    # they have a release that runs on Node.js 24 (as of v2.4.10 they use Node.js 20).
+    # See https://github.com/haskell-actions/hlint-setup/issues/216
     - name: 'Set up HLint'
       uses: rwe/actions-hlint-setup@9f5da5e7cd43663fb7b2e2154a087c17f0471ed1 # v1
       with:
