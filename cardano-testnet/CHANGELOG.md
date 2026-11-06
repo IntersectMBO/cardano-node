@@ -1,5 +1,23 @@
 # Changelog for cardano-testnet
 
+## 11.2.1 -- 2026-11-06
+
+- Bumped `cardano-api` to 11.12 and `cardano-cli` to 11.7.
+  (compatible)
+  [PR 6767](https://github.com/IntersectMBO/cardano-node/pull/6767)
+
+- The `--output-dir` help now gives the real default (`./testnet`) and says the directory must not already contain a testnet.
+  (bugfix)
+  [PR 6752](https://github.com/IntersectMBO/cardano-node/pull/6752)
+
+- Starting a testnet can no longer hang forever while waiting for a node, as `startNode` polls the node process with `getProcessExitCode` and no longer cancels a thread blocked in `waitForProcess`.
+  (bugfix)
+  [PR 6750](https://github.com/IntersectMBO/cardano-node/pull/6750)
+
+- Added `status` command that checks the status of a testnet created with `cardano-testnet`. The output can be either in human readable format or JSON (if the `--json` flag is specified). The library also exports the `Testnet.Status.Types`, `Testnet.Status.Run` and `Testnet.Status.Parsers` modules, `isProcessAlive` from `Testnet.Signal`, `testnetEpochSlots` from `Testnet.Types` and `defaultTestnetDir` from `Testnet.Start.Types`.
+  (feature)
+  [PR 6741](https://github.com/IntersectMBO/cardano-node/pull/6741)
+
 ## 11.2.0 -- 2026-10-27
 
 - Support --prometheus-listen-address and --prometheus-listen-port

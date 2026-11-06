@@ -1,0 +1,9 @@
+pr: 6767
+kind:
+  - release
+description: |
+  Release 11.2.1, a patch release on top of 11.2.0.
+
+  Picks up ouroboros-consensus 5.4, cardano-api 11.12 and cardano-cli 11.7.
+  The new consensus release fixes excessive memory usage while snapshotting
+  ledger states, bringing node memory usage back to 11.0 levels.
