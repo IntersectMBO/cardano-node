@@ -18,6 +18,7 @@ module Cardano.Report
   , Section (sTypstFile, sTitle)
   , summaryReportSection
   , analysesReportSections
+  , insertDeltaRows
   )
 where
 
@@ -274,7 +275,7 @@ renderTableTypst tmpl@TmplTableTypst{..} =
   where
     valCells = case tstVals of
       Left txts     -> map (map cell) txts
-      Right doubles -> map (map cellNumField) (insertDeltaRows tstRowDesc doubles)
+      Right doubles -> map (map cellNumField) (insertDeltaRows doubles)
 
     runIds = if isRight tstVals
              then insertDeltaHeaders (rawCell <$> tstRunIds)
@@ -293,26 +294,27 @@ insertDeltaHeaders (base:rs@(_:_)) =
     extraCols = (: ["Δ", "Δ%"])
 insertDeltaHeaders x = x
 
-insertDeltaRows :: [Text] -> [[NumField]] -> [[NumField]]
-insertDeltaRows rowDescs =
+insertDeltaRows :: [[NumField]] -> [[NumField]]
+insertDeltaRows =
   transpose . map go1 . transpose
   where
     noColoring  = (, NoCol)
 
     go1 []      = error "insertDeltaRows: implementation error - empty row data"
     go1 [r]     = [r]
-    go1 (r:rs)  = r : go (numFieldValue r) rowDescs rs
+    go1 (r:rs)  = r : go (numFieldValue r) rs
 
-    go _ _ [] = []
-    go base (_rowDesc:rds) (x@((val, _), _):xs) =
+    go _ [] = []
+    go base (x@((val, prec), _):xs) =
       let
         absDelta = val - base
         relDelta = if base == 0 then nan else 100 * absDelta / base
+        -- the absolute delta is formatted like the values it's taken from
+        absPrec  = prec <|> Just 3
         (valAbs, valDelta)
-          | abs absDelta < threshold = ((if absDelta < 0.0 then -0.0 else 0.0, Just 3), (if base == 0 then nan else 0.0, Just 0))
-          | otherwise                = ((absDelta, Just 3), (relDelta, Just $ if abs relDelta < 1.0 then 1 else 0))
-      in x : noColoring valAbs : noColoring valDelta : go base rds xs
-    go _ [] _ = error "insertDeltaRows: implementation error - missing row definitions"
+          | abs absDelta < threshold = ((if absDelta < 0.0 then -0.0 else 0.0, absPrec), (if base == 0 then nan else 0.0, Just 0))
+          | otherwise                = ((absDelta, absPrec), (relDelta, Just $ if abs relDelta < 1.0 then 1 else 0))
+      in x : noColoring valAbs : noColoring valDelta : go base xs
 
 
 data TmplSectionTypst

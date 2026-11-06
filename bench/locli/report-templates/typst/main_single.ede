@@ -53,10 +53,9 @@
 = Manifest
 
 #pad(bottom: 10pt,[
-We analyse `{{ base.ver }}` ({{ base.meta.era | toTitle }}), under {{ base.workload }} workload.
+We analyse `{{ base.ver }}` ({{ base.meta.era | toTitle }}), under {{ base.workload }} workload. \
+_NB:_ LO stands for log object, i.e. a trace message emitted by a node.
 ])
-
-#pagebreak()
 
 {% include "import_table.ede" with file = summary %}
 

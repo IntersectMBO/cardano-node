@@ -18,6 +18,7 @@ import           System.IO.Temp (withSystemTempDirectory)
 import           Cardano.Analysis.API
 import           Cardano.Render
 import           Cardano.Report
+import           Cardano.Typst (Coloring (..), renderNumField)
 import           Cardano.Unlog.PlutusBudgetSummary (writeScalingCSV)
 import           Cardano.Util (zeroUTCTime)
 
@@ -64,7 +65,12 @@ prop_single_tables_render = withTests 1 $ property $ do
   (summ, cp, bp) <- fixtureRun
   cp2x <- fixtureClusterPerf2x
 
-  assertRendered =<< evalIO (generateTypstSummary typstCfg anchor (iFields sumFieldsReport) summ)
+  summary <- evalIO (generateTypstSummary typstCfg anchor (iFields sumFieldsReport) summ)
+  assertRendered summary
+  -- one row per manifest package: "<version> @ <commit>"
+  assertContains "[cardano-node]," summary
+  assertContains " \\@ " summary
+  assert . not $ " git]" `T.isInfixOf` summary
   for_ [mtFieldsReport, mtFieldsSnapshots, mtFieldsTxProcessing] $ \fs ->
     assertRendered =<< evalIO (generateTypstCDFs typstCfg anchor (dFields fs) OfOverallDataset cp)
   for_ [bpFieldsControl, bpFieldsForger, bpFieldsPeers, bpFieldsEndToEnd] $ \fs ->
@@ -90,6 +96,7 @@ prop_single_run_report_renders = withTests 1 $ property $ do
       for_ [missing, present] $ \t -> do
         assertRendered t
         assertContains "<export_file_name>" t
+        assertContains "LO stands for log object" t
         assert . not $ "Plutus Workload Calibration" `T.isInfixOf` t
       -- a table file is imported if present, otherwise noted as missing
       for_ tableFiles $ \f -> do
@@ -140,11 +147,27 @@ prop_comparison_report_renders = withTests 1 $ property $ do
 
   plain <- evalIO $ generateTypst "report.typ" Nothing run [run2x]
   assertRendered plain
+  assertContains "LO stands for log object" plain
   assertContains "—" plain
 
   withScaling <- evalIO $ generateTypst "report.typ" (Just "plutus-workload-scaling.csv") run [run2x]
   assertRendered withScaling
   assertContains "plutus-workload-scaling.csv" withScaling
+
+-- | The absolute delta is formatted like the values it is taken from: no spurious
+--   decimals on large counts, no "0.000" for small timings; below the noise threshold it is 0.
+--   Any number of runs, also more than the table has rows.
+prop_comparison_delta_precision = withTests 1 $ property $ do
+  let field v p = ((v, Just p), NoCol)
+      runs      = [ [field 409482.7   8, field 0.00147 5, field 13 5]
+                  , [field 434903.238 8, field 0.00121 5, field 13 5] ]
+      rendered  = map (map renderNumField) $ insertDeltaRows runs
+  rendered === [ ["409483", "0.00147", "13.0"]
+               , ["434903", "0.00121", "13.0"]
+               , ["25421",  "-0.00026", "0.0"]
+               , ["6",      "-18",      "0"] ]
+  -- more runs than the table has rows: per run its values, Δ and Δ%
+  length (insertDeltaRows (replicate 6 [field 1 5, field 2 5])) === 1 + 5 * 3
 
 tests :: IO Bool
 tests =
