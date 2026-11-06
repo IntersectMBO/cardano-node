@@ -524,7 +524,7 @@ instance CDFFields MachPerf p where
       "RTS-reported heap size, MB"
 
     , fGrp' "Live"               "Live"    (DWord64 (rLive.mpResourceCDFs))
-      "RTS live GC dateset"
+      "RTS live GC dataset"
       "RTS-reported GC live data size, MB"
     ]
    <> fBoth "Alloc"  "Alloc" "MB/s"     W5 MBs P0 Lin Free (DWord64 (rAlloc.mpResourceCDFs))

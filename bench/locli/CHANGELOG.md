@@ -10,6 +10,7 @@
 * Fixed namespace drift for several traces, keeping backwards compatibility.
 * Fixed ChainSync server header announcements being recorded twice: the falling edge of `ChainSync.ServerHeader.Update` comes without a `risingEdge` field, not with `false`. Block propagation metrics were unaffected (they use the first announcement).
 * Fixed a Word64 underflow in the per-slot rejected transactions (timeline column `rejd`): the node can report a negative `rejected` count, which is now clamped to 0 before conversion.
+* `Data.CDF`: `cdfAverageVal` of a CDF of CDFs is the average over all its inputs' averages; `cdf` is total on empty input; removed the unused `collapseCDF`. Summary values are rounded to 3 decimals.
 * New test: Parse a fixture file log stream and round-trip it through SQLite.
 * Typst replaces Org mode for all report output; Org mode support is removed entirely (no more Emacs / LaTeX dependency for PDFs).
   - The `render-*` commands' `--typst` output: standalone single-table documents (summary, cluster performance, block propagation sections, profiling data), generated from bundled templates.
