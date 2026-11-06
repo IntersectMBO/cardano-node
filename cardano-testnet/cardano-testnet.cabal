@@ -41,9 +41,9 @@ library
                       , annotated-exception
                       , ansi-terminal
                       , bytestring
-                      , cardano-api ^>= 11.11
+                      , cardano-api ^>= 11.12
                       , cardano-config ^>= 2.2.3
-                      , cardano-cli:{cardano-cli, cardano-cli-test-lib} ^>= 11.6
+                      , cardano-cli:{cardano-cli, cardano-cli-test-lib} ^>= 11.7
                       , cardano-git-rev ^>= 0.2.2
                       , cardano-ledger-alonzo
                       , cardano-ledger-binary
