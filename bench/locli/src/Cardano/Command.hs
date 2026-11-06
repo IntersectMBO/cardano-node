@@ -387,11 +387,20 @@ callComputeSummary =
    err = Left . ("Summary of a run requires " <>)
 
 stateAnchor :: [Text] -> State -> Anchor
-stateAnchor tags State{sFilters, sWhen, sClusterPerf, sChain} =
-  tagsAnchor tags sWhen sFilters
+stateAnchor tags State{sFilters, sWhen, sClusterPerf, sChain, sSummaries} =
+  tagsAnchor tags
+             (maybe sWhen    sumAnalysisTime rerendered)
+             (maybe sFilters sumFilters      rerendered)
              (join ((fmap (head . mpDomainSlots) . head) =<< sClusterPerf) <|>
               (sChain       <&> cDomSlots))
-             (sChain        <&> cDomBlocks)
+             ((sChain       <&> cDomBlocks) <|>
+              (rerendered   <&> sumDomainBlocks))
+ where
+   -- Re-rendering a single run from its analysis results (no chain built from logs):
+   -- the analysis time, filters and block domain are those of its summary.
+   rerendered = case (sChain, sSummaries) of
+     (Nothing, Just [summ]) -> Just summ
+     _                      -> Nothing
 
 sAnchor :: HasCallStack => State -> Anchor
 sAnchor s@State{sMultiSummary=Just summary}

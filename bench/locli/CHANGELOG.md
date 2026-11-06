@@ -11,6 +11,8 @@
 * Fixed ChainSync server header announcements being recorded twice: the falling edge of `ChainSync.ServerHeader.Update` comes without a `risingEdge` field, not with `false`. Block propagation metrics were unaffected (they use the first announcement).
 * Fixed a Word64 underflow in the per-slot rejected transactions (timeline column `rejd`): the node can report a negative `rejected` count, which is now clamped to 0 before conversion.
 * `Data.CDF`: `cdfAverageVal` of a CDF of CDFs is the average over all its inputs' averages; `cdf` is total on empty input; removed the unused `collapseCDF`. Summary values are rounded to 3 decimals.
+* Re-rendering a single run from its analysis results (`read-summaries`, no chain rebuilt) keeps the filters, block domain and analysis time of its summary in the table headers.
+* Summary table: one row per manifest package (`<version> @ <commit>`), shorter labels ("LO": log object, explained in the Manifest section); the Manifest section and its table share one page.
 * Test suite: SQLite round-trip of a real log fixture, reading older analysis results, metric definitions and computation, report rendering, Typst formatting, and every interpreted namespace backed by a real log line.
 * Typst replaces Org mode for all report output; Org mode support is removed entirely (no more Emacs / LaTeX dependency for PDFs).
   - The `render-*` commands' `--typst` output: standalone single-table documents (summary, cluster performance, block propagation sections, profiling data), generated from bundled templates.
@@ -19,6 +21,7 @@
   - `compare` creates its Typst report from `--typst FILE`; the `--ede`, `--template` and `--report` options are gone, as are the dumped template environment and `.ede` files.
   - Removed render formats `--org` and `--org-report`.
   - Data values are escaped in all Typst tables (e.g. `---` no longer renders as an em dash).
+  - Comparison tables: the absolute delta (Δ) is formatted like the values it's taken from (no spurious decimals on large counts, no `0.000` for small timings); comparing more runs than a table has rows no longer aborts.
 * New report sections, on a page of their own after End-to-end propagation (single-run and comparison reports; CLI: `render-clusterperf --snapshots / --tx-processing`):
   - **Ledger Snapshots:** snapshots taken (a count of 0 is highlighted as a warning), write duration, and RTS live data after major GCs during vs. outside snapshot writes.
   - **Transaction Processing:** transactions processed / accepted / rejected, reject ratio, and process / GC / mutator CPU time divided by the transactions processed (in the new unit `ms`). Rejected counts are run totals (processed minus accepted), as the node's per-batch count isn't reliable.

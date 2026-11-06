@@ -132,15 +132,15 @@ instance (KnownCDF f) => TimelineFields (Summary f)  where
       "Number of machines under analysis"
 
    <> fScalar "sumFilters"             W2  Cnt (IInt   $   length.snd.sumFilters)
-      "Number of filters applied"
+      "Filters applied, count"
       ""
 
    <> fScalar "cdfLogObjectsEmitted"   W12 Cnt (IFloat $ cdfAverageVal.cdfLogObjectsEmitted)
-      "Log objects emitted per host"
+      "LO emitted / host"
       ""
 
    <> fScalar "cdfLogObjects"          W12 Cnt (IFloat $ cdfAverageVal.cdfLogObjects)
-      "Log objects analysed per host"
+      "LO analysed / host"
       ""
 
    <> fScalar "cdfRuntime"             W7  Sec (IFloat $ cdfAverageVal.cdfRuntime)
@@ -152,7 +152,7 @@ instance (KnownCDF f) => TimelineFields (Summary f)  where
       ""
 
    <> fScalar "sumLogObjectsTotal"     W12 Cnt (IInt   $ unCount.arityProj cdfMedian.sumLogObjectsTotal)
-      "Total log objects analysed"
+      "LO analysed, total"
       ""
 
    <> fScalar "ddRawCount.sumDomainTime"      W12 Sec (IInt $ arityProj cdfMedian.ddRawCount.sumDomainTime)
@@ -187,16 +187,13 @@ instance (KnownCDF f) => TimelineFields (Summary f)  where
       "Blocks rejected"
       ""
    where
-     pkgCommit pkg = fScalar pkg W7  Ver
-                     (IText $ unCommit.ciCommit.getComponent pkg.manifest.sumMeta)
-                     (pkg <> " git") ""
-     pkgVersion pkg = fScalar pkg W12  Ver
-                     (IText $ unVersion.ciVersion.getComponent pkg.manifest.sumMeta)
-                     (pkg <> " version") ""
-     manifestFields = mconcat . mconcat $
-                       [ manifestPackages <&> pkgVersion
-                       , manifestPackages <&> pkgCommit
-                       ]
+     -- One row per package: "<version> @ <commit, shortened>".
+     pkgVersionCommit pkg = fScalar pkg Wno Ver
+                     (IText $ versionCommit.getComponent pkg.manifest.sumMeta)
+                     pkg ""
+     versionCommit ComponentInfo{ciVersion, ciCommit} =
+       unVersion ciVersion <> " @ " <> unCommit (unsafeShortenCommit 7 ciCommit)
+     manifestFields = mconcat $ manifestPackages <&> pkgVersionCommit
 
 -- fieldJSONOverlay f = (:[]) . tryOverlayFieldDescription f
 
