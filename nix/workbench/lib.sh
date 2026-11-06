@@ -11,14 +11,25 @@ jq_tolist() {
     jq "$exp | join (\" \")" --raw-output "$@"
 }
 
+## Rewrite a JSON file in place.  The file is only written if jq succeeds with
+## a non-empty result, so a failing filter can never truncate it.
 jq_fmutate() {
     local f=$1; shift
     test -f "$f" || { echo '{}' > "$f"; }
-    jq "$@" "$f" | sponge "$f"
+    local out
+    out=$(jq "$@" "$f") ||
+        { msg "jq_fmutate:  jq failed, leaving unchanged:  $f"; return 1; }
+    if test -z "$out"
+    then if test -s "$f"
+         then msg "jq_fmutate:  empty result, leaving unchanged:  $f"; return 1
+         else msg "jq_fmutate:  WARNING: empty file, left as is:  $f"; return 0; fi
+    fi
+    printf '%s\n' "$out" | sponge "$f"
 }
 
+## A JSON object, i.e. not empty, nor malformed.
 jq_check_json() {
-    jq '.' "$1" >/dev/null
+    jq --exit-status 'type == "object"' "$1" >/dev/null
 }
 
 json_compact_prettify()

@@ -343,7 +343,7 @@ EOF
                   run set-current $alt
              elif test -n "$query"
              then return 1
-             else fatal "run $run (at $dir) missing a file:  meta.json"; fi; fi
+             else fatal "run $run (at $dir) has a missing, empty or malformed meta.json"; fi; fi
 
         ## Same file-based dispatch extended to accept the genesis sub-dir
         ## layout in addition to the legacy top-level name. profile.json + a
@@ -880,8 +880,10 @@ run_remote_get() {
     progress "run_remote_get" "tar $(green $remote_tar_cmd)"
 
     local meta=$(ssh $env -- sh -c "'jq . $depl/$rdir/$run/meta.json'")
-    if ! jq . <<<$meta >/dev/null
-    then fail "run_remote_get:  malformed $(yellow meta.json) in $(white $run) on $(white $depl)@$(white env)"; fi
+    ## NB. 'jq .' alone accepts empty input; an empty remote meta.json must not
+    ##     be copied over a local one.
+    if ! jq --exit-status 'type == "object" and has("meta")' <<<"$meta" >/dev/null
+    then fail "run_remote_get:  empty or malformed $(yellow meta.json) in $(white $run) on $(white $depl)@$(white $env)"; fi
 
     ## Minor validation passed, create & populate run with remote data:
     local dir=$global_rundir/$run
@@ -929,9 +931,13 @@ run_remote_get() {
     progress "run | fetch $(white $run)" "batches started, waiting.."
     wait
 
-    progress "run | fetch" "adding manifest"
-    jq_fmutate "$dir"/meta.json '.meta.manifest = $manifest
-    ' --argjson manifest "$(legacy_run_manifest $dir)"
+    ## Same guard as in 'fix-cardano-ops-run-structure': only legacy runs lack a
+    ## manifest; a workbench run's manifest must not be replaced by placeholders.
+    if test -z "$(jq -r '.meta.manifest // empty' "$dir"/meta.json)"
+    then progress "run | fetch" "adding manifest"
+         jq_fmutate "$dir"/meta.json '.meta.manifest = $manifest
+         ' --argjson manifest "$(legacy_run_manifest $dir)"
+    else progress "run | fetch" "manifest present, skipping back-fill"; fi
 }
 
 node_cabal_source_at() {
@@ -958,10 +964,10 @@ legacy_run_manifest() {
     )
     jq '
   { "cardano-node"         : $Node
-  , "cardano-node-branch"  : $NodeBranch
+  , "cardano-node-branch"  : ($ARGS.named.NodeBranch // "unknown")
   , "cardano-node-version" : $NodeApproxVer
   , "cardano-node-status"  : "unknown"
-  , "ouroboros-network"    : $Network
+  , "ouroboros-network"    : ($ARGS.named.Network // "unknown")
   , "cardano-ledger"       : $Ledger
   , "plutus"               : $Plutus
   , "cardano-crypto"       : $Crypto

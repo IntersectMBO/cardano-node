@@ -353,6 +353,8 @@ ciTestBage = Types.Profile {
     , Types.heap_limit = Nothing
     , Types.shutdown_on_slot_synced = Nothing
     , Types.shutdown_on_block_synced = Just 8
+    , Types.snapshot_interval_override = Nothing
+    , Types.slot_offset_override = Nothing
   }
   , Types.generator = Types.Generator {
       Types.tps = 15
