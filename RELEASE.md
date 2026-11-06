@@ -4,8 +4,8 @@ The release process is owned by **Intersect** (the Cardano MBO), which runs a
 weekly Release Office Hours meeting attended by all team leads to give status
 updates and plan upcoming releases.
 
-Code contributions and maintenance come from **IOG**, **Tweag**, and
-**Ensurable Systems**, which also provide rotating release engineers.
+Code contributions and maintenance come from **BlockPQR**, **ICAN**, **IOG**,
+and **Serokell**, which also provide rotating release engineers.
 
 ## Sign-offs
 
@@ -27,10 +27,10 @@ release is promoted to a full release.
 
 | Component | Responsible Team |
 |-----------|-----------------|
-| Ledger | Ledger team (IOG) |
-| Consensus | Consensus team (IOG) |
+| Ledger | Ledger team (BlockPQR) |
+| Consensus | Consensus team (Serokell) |
 | Network | Network team (IOG) |
-| API & CLI | Node/API/CLI team (IOG/Tweag/Ensurable Systems) |
+| API & CLI | Node/API/CLI team (BlockPQR) |
 | Node | Rotating Release Engineer (no permanent owner) |
 
 # Release Cadence
@@ -56,11 +56,22 @@ This is the release process for node releases.
 4. When the full stack is stable, components are released to CHaP bottom-up
    and the Release Engineer replaces source-repository-package (SRP) stanzas
    with the CHaP releases, working up the stack until the node is ready.
-5. SRE deploys the release candidate to preview/preprod networks.
-6. The community is notified of the release candidate and given time to
+   For each new release, including a pre-release, the Release Engineer bumps
+   the `cardano-node` Cabal version and, in the same change, increments the
+   minor block-header protocol version to the next unused integer for that
+   major protocol version. Coordinate across `master` and release branches
+   as described in [Block-header Protocol Version](#block-header-protocol-version).
+5. SRE deploys the release candidate to preview/preprod networks, validates
+   its operation, and advises the Release Engineer when it is ready for
+   tagging.
+6. The Release Engineer ensures the release changes are merged into the
+   target branch (`master` or the maintenance branch) and the required
+   checks pass on the commit being released. They create and push the
+   signed release tag, triggering the artifact upload workflow, which
+   creates a draft GitHub Release if one does not already exist. The
+   Release Engineer asks dev leads to fill in their changelog sections.
+7. The community is notified of the release candidate and given time to
    provide feedback.
-7. The Release Engineer creates a draft GitHub Release and asks dev leads to
-   fill in their changelog sections.
 8. CPC, TSC, Release Engineer, and SRE Lead sign off → the release is
    published as a **GitHub pre-release**.
 9. QA runs the final integration test suite (`cardano-node-tests`).
@@ -76,13 +87,19 @@ This is the release process for node releases.
 This is the release process for node release hot fixes:
 
 1. **Create a hotfix branch**
-   - **Branch naming format**: `release/X.Y.Z` (e.g., for a hotfix on
-     `10.5.0` already released, name it `release/10.5.1`).
-   - **Important**: CI will only run if the branch follows this exact naming
-     convention.
+   - Base the work on the appropriate maintenance branch, named
+     `release/X.Y.x`, such as `release/11.2.x`. If no maintenance branch
+     exists, create one from the prior release tag. The `release/` prefix
+     is required for Hydra to create its jobset automatically.
+   - Open a PR against the maintenance branch and confirm that the required
+     GitHub Actions and Hydra checks run.
 
 2. **Update the version**
    - Bump the Node version in the `cabal` file to reflect the hotfix changes.
+   - In the same change, increment the minor block-header protocol version
+     to the next unused integer for that major protocol version, coordinating
+     across `master` and release branches as described in
+     [Block-header Protocol Version](#block-header-protocol-version).
 
 3. **Follow the standard release process**
    Resume from **Step 5** of the [normal release process](#release-process).
@@ -101,8 +118,8 @@ The bulk of testing happens during integration, at each layer of the stack:
 
 ## Final Integration Tests (post pre-release tag)
 
-Once CPC, TSC, and the Release Engineer have signed off and the pre-release
-tag is cut, the QA team runs the `cardano-node-tests` suite — Python wrappers
+Once CPC, TSC, the Release Engineer, and SRE have signed off and the GitHub
+pre-release is published, the QA team runs the `cardano-node-tests` suite — Python wrappers
 that exercise end-to-end scenarios against the tagged binaries.
 
 ## Performance Testing
@@ -120,7 +137,7 @@ is promoted to full release.
 
 # Rotating Release Engineer Role
 
-The Release Engineer is drawn from IOG, Tweag, or Ensurable Systems
+The Release Engineer is drawn from BlockPQR, ICAN, IOG, or Serokell
 development teams on a rotating basis, with a new engineer assigned from a
 *different* team each release. They serve until the release is fully signed
 off.
@@ -142,7 +159,7 @@ environments. They initiate deployments to developer testnets, public
 testnets, and production systems, and update dashboards and alerts to align
 with new node features.
 
-The [Cardano World book site](https://book.play.dev.cardano.org/) hosts
+The [Cardano Operations book site](https://book.play.dev.cardano.org/) hosts
 configuration files for every release. Full releases appear in the main
 release section; pre-releases have a dedicated pre-release section on the
 site.
@@ -172,6 +189,22 @@ The node uses "pseudo semantic versioning":
 - **Minor** (`Y`) — incremented for each regular release cut from `master`.
 - **Patch** (`Z`) — normally `0`; incremented only for emergency hotfix
   releases branched from a prior tag.
+
+## Block-header Protocol Version
+
+Whenever the `cardano-node` Cabal version is bumped for a new release, including
+a pre-release, also update the minor block-header protocol version in
+`Consensus.cardanoProtocolVersion` in
+[`Cardano.Node.Protocol.Cardano`](cardano-node/src/Cardano/Node/Protocol/Cardano.hs).
+This is separate from the minor component of the Cabal package version.
+
+For each major protocol version, start the minor protocol version at `0` for
+its first release and increment it by one for each subsequent release or
+pre-release. Allocate these values across both `master` and all release
+branches: check previously allocated versions before choosing the next value.
+Do not reset the counter for a new branch or Cabal release series, or reuse a
+major/minor protocol version pair for a different release. Account for both
+the normal and experimental hard-fork paths when updating the value.
 
 ## Pre-release vs Full Release
 
@@ -211,31 +244,63 @@ The previous release's notes are typically used as a starting template.
 
 ## Detailed Changelog Table
 
-`generate-release-changelog-links` generates a table of changelogs for every
-package version in a given `cardano-node` build plan. It reads `GITHUB_TOKEN`
-from the environment (generate one at https://github.com/settings/tokens or
+`generate-release-changelog-links` generates a table of changelogs for
+CHaP-hosted package versions in a given `cardano-node` build plan. It reads
+`GITHUB_TOKEN` from the environment (generate one at https://github.com/settings/tokens or
 run `gh auth token`).
 
-Nix devshell users have the binary available directly:
+Run from the release checkout so the plan describes the version being
+released. Nix devshell users have the binary available directly:
 
 ```shellsession
 $ nix build .#project.x86_64-linux.plan-nix
-$ export GITHUB_TOKEN=$(gh auth token)
+$ export GITHUB_TOKEN="$(gh auth token)"
 $ generate-release-changelog-links -o links.md
 ```
 
 `result/plan.json` is the default plan path. Pass an explicit path as the
 first argument to override it.
 
-Non-nix users can build and run via cabal:
+Without entering the devshell, use `nix run .#generate-release-changelog-links
+-- -o links.md` after generating the plan and setting the token.
+
+Non-Nix users can generate a plan and run via Cabal:
 
 ```shellsession
-$ export GITHUB_TOKEN=$(gh auth token)
-$ cabal run generate-release-changelog-links -- -o links.md
+$ cabal build all --dry-run
+$ cp dist-newstyle/cache/plan.json release-plan.json
+$ export GITHUB_TOKEN="$(gh auth token)"
+$ cabal run generate-release-changelog-links -- -o links.md release-plan.json
 ```
+
+Keep that copy of the node plan: invoking Cabal for the helper can update
+`dist-newstyle/cache/plan.json` for the helper's own build.
 
 For full usage:
 
 ```shellsession
 $ generate-release-changelog-links --help
 ```
+
+# Tagged Artifacts and Publication
+
+After the release changes have been merged into the target branch (`master`
+or the appropriate maintenance branch) and the required checks have passed
+on the commit being released, create and push the signed `X.Y.Z` tag pointing
+to that commit. The `Post Release Upload` workflow waits for Hydra's
+`ci/hydra-build:required` check, retrieves the five platform archives from the
+IOG binary cache, and uploads them with a SHA-256 checksum file to a draft
+GitHub release. It preserves an existing release's metadata if one already
+exists for the tag. The separate `Upload to ghcr.io` workflow publishes the
+container images.
+
+Verify that all archives, checksums, release notes, and required sign-offs are
+present before publishing the draft as a GitHub pre-release. Publishing also
+triggers the release workflows; the asset upload replaces same-name assets,
+so wait for the workflows to finish before treating the downloads as complete.
+
+After publishing a release or pre-release, the Release Engineer notifies SRE
+so they can update the [Cardano Operations book](https://book.play.dev.cardano.org/)
+with the corresponding release information and configuration files. Notify
+SRE again when a pre-release is promoted to a full release so its placement
+in the book can be updated.
