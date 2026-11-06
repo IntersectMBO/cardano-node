@@ -22,7 +22,6 @@ import           Cardano.TxGenerator.UTxO (makeToUTxOList, mkUTxOVariant)
 import           Control.Monad (foldM)
 import           Control.Monad.Trans.State.Strict
 import           Data.Aeson (eitherDecodeFileStrict')
-import           Data.Either (fromRight)
 import           Data.List as List (foldl')
 import           Data.String (fromString)
 import           System.Exit (die)
@@ -30,6 +29,8 @@ import           System.Exit (die)
 import           Paths_tx_generator
 
 
+-- | The era the demo builds transactions in. It must match the era of the
+-- protocol parameters file that 'demo' reads (v10, Conway).
 type DemoEra = ConwayEra
 
 demo :: IO ()
@@ -65,7 +66,7 @@ demo' parametersFile = do
       return newState
 
 signingKey :: SigningKey PaymentKey
-signingKey = fromRight (error "signingKey: parseError") $ parseSigningKeyTE keyData
+signingKey = either (error . show) id $ parseSigningKeyTE keyData
   where
     keyData = TextEnvelope { teType = TextEnvelopeType "GenesisUTxOSigningKey_ed25519"
               , teDescription = fromString "Genesis Initial UTxO Signing Key"
