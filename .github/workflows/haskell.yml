@@ -71,15 +71,16 @@ jobs:
 
     steps:
     - name: Concurrency group
-      run: >
-        echo
-        a+${{ github.event_name }}
-        b+${{ github.workflow_ref }}
-        c+${{ github.job }}
-        d+${{ matrix.ghc }}
-        e+${{ matrix.cabal }}
-        f+${{ matrix.os }}
-        g+${{ (startsWith(github.ref, 'refs/heads/gh-readonly-queue/') && github.run_id) || github.event.pull_request.number || github.ref }}
+      env:
+        GROUP: >
+          a+${{ github.event_name }}
+          b+${{ github.workflow_ref }}
+          c+${{ github.job }}
+          d+${{ matrix.ghc }}
+          e+${{ matrix.cabal }}
+          f+${{ matrix.os }}
+          g+${{ (startsWith(github.ref, 'refs/heads/gh-readonly-queue/') && github.run_id) || github.event.pull_request.number || github.ref }}
+      run: echo "$GROUP"
 
     # The macos-26-arm64 image 20261013 ships Command Line Tools 27 (SDK 27.0)
     # next to Xcode 26.6, whose ld cannot read the SDK 27 .tbd stubs
