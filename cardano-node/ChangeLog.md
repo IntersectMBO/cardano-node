@@ -1,5 +1,9 @@
 # Changelog for cardano-node
 
+## 11.2.1 -- 2026-11-06
+
+- Update bounds: cardano-api-11.12, cardano-cli-11.7, ouroboros-consensus-5.4
+
 ## 11.2.0 -- October 2026
 
 - Standard handles now always use UTF-8, independent of the system code page or
