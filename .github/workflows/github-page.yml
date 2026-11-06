@@ -31,8 +31,8 @@ jobs:
         extra_nix_config: |
           experimental-features = nix-command flakes
           allow-import-from-derivation = true
-          # The substituters (cache.iog.io) come from the flake's nixConfig:
-          accept-flake-config = true
+          extra-substituters = https://cache.iog.io/
+          extra-trusted-public-keys = hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ=
           access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
 
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
