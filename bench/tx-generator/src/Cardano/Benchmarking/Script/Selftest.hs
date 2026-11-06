@@ -28,7 +28,6 @@ import           Prelude
 import qualified Control.Concurrent.STM as STM (atomically, readTVar)
 import           Control.Monad
 import qualified Data.ByteString.Lazy.Char8 as BSL
-import           Data.Either (fromRight)
 import qualified Data.List as List (unwords)
 import           Data.String
 
@@ -93,7 +92,7 @@ testScript protocolFile submitMode =
       $ NtoM splitWallet3 (PayToAddr key doneWallet) 2 2 Nothing Nothing
   ]
   where
-    skey = fromRight (error "could not parse hardcoded signing key") $
+    skey = either (error . show) id $
       parseSigningKeyTE $
         TextEnvelope {
             teType = TextEnvelopeType "GenesisUTxOSigningKey_ed25519"
