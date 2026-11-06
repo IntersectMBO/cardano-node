@@ -1,4 +1,8 @@
-# Changelog for Cardano-submit-api
+# Changelog for cardano-submit-api
+
+## 11.2.1 -- 2026-11-06
+
+- Update bounds: cardano-api-11.12, cardano-cli-11.7
 
 ## 11.2.0 -- 2026-10-27
 

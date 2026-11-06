@@ -1,5 +1,9 @@
 # Changelog for cardano-testnet
 
+## 11.2.1 -- 2026-11-06
+
+- Update bounds: cardano-api-11.12, cardano-cli-11.7
+
 ## 11.2.0 -- 2026-10-27
 
 - Support --prometheus-listen-address and --prometheus-listen-port
