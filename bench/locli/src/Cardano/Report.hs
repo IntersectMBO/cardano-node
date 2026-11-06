@@ -346,7 +346,7 @@ liftTmplSectionTypst tstRunIds tstVals STable{..} =
 extractAsText :: forall f a. (a ~ Summary f, TimelineFields a)
   => (Field ISelect I a -> Bool) -> a -> [Text]
 extractAsText fieldSelr summ =
-  fields' <&> renderScalarLim (Just 32) summ
+  fields' <&> renderSummaryScalar summ
  where
    fields' :: [Field ISelect I a]
    fields' = filter fieldSelr timelineFields
@@ -527,7 +527,20 @@ generateTypstSummary rc anchor fieldSelr summ =
     ["Parameter", "Value"]
     (filter fieldSelr timelineFields <&> \f ->
         [ cell (fShortDesc f)
-        , cell (renderScalarLim (Just 32) summ f) ])
+        , cell (renderSummaryScalar summ f) ])
+
+-- | A summary value for the Typst tables: fractional numbers (incl. durations) are
+--   rounded to 3 decimals by 'renderNumField', as in all other tables; other values
+--   render as in 'renderScalarLim'.
+renderSummaryScalar :: a -> Field ISelect I a -> Text
+renderSummaryScalar summ f@Field{fSelect} =
+  case fSelect of
+    IFloat   g -> num (g summ)
+    IDeltaT  g -> num (realToFrac $ g summ)
+    IDeltaTM g -> smaybe "---" (num . realToFrac) (g summ)
+    _          -> renderScalarLim (Just 32) summ f
+ where
+   num x = renderNumField ((x, Just 3), NoCol)
 
 -- | Profiling data (if the run was profiled): one row per function, sorted by time share.
 generateTypstProfiling :: RenderConfig -> Anchor -> (ProfileEntry (CDF I) -> Bool) -> ProfilingData (CDF I) -> IO Text

@@ -51,7 +51,6 @@ module Data.CDF
   , stdCombine1
   , stdCombine2
   , CDF2
-  , collapseCDF
   , collapseCDFs
   , cdf2OfCDFs
   --
@@ -62,7 +61,6 @@ import Prelude ((!!), show)
 import Cardano.Prelude hiding (head, show)
 
 import Data.SOP.Strict
-import Data.Tuple.Extra (both)
 import Data.Vector qualified as Vec
 import Statistics.Sample qualified as Stat
 
@@ -181,14 +179,13 @@ deriving instance (NFData a, NFData (p a), NFData (p Double)) => NFData (CDF p a
 instance (FromJSON (p a), FromJSON (p Double), FromJSON a) => FromJSON (CDF p a)
 instance (  ToJSON (p a),   ToJSON (p Double),   ToJSON a) => ToJSON   (CDF p a)
 
+-- | The average of a CDF; for a CDF of CDFs, the average over its inputs' averages
+--   (the average of 'cdfAverage', see 'cdf2OfCDFs').
 cdfAverageVal :: (KnownCDF p) => CDF p a -> Double
 cdfAverageVal =
   cdfArity
-    (toDouble . unI . cdfAverage)
-    \x ->
-      let sizes = cdfSize . snd <$> cdfSamples x
-      in
-        weightedAverage (zip sizes $ fmap (toDouble . unI . snd) . cdfSamples $ cdfAverage x)
+    (unI . cdfAverage)
+    (unI . cdfAverage . cdfAverage)
 
 centilesCDF :: CDF p a -> [Centile]
 centilesCDF = fmap fst . cdfSamples
@@ -229,7 +226,8 @@ cdf centiles (sort -> sorted) =
   CDF
   { cdfSize        = size
   , cdfAverage     = I . fromDouble $ Stat.mean doubleVec
-  , cdfMedian      = vecCentile vec size (Centile 0.5)
+  , cdfMedian      = if size == 0 then 0
+                     else vecCentile vec size (Centile 0.5)
   , cdfStddev      = Stat.stdDev doubleVec
   , cdfRange       = Interval mini maxi
   , cdfSamples =
@@ -286,19 +284,21 @@ liftCDFVal x = \case
               , cdfSamples = []
               , .. }
 
+-- | A single value for a centile sample: for a CDF (across hosts), its median.
 unliftCDFVal :: forall a p. Divisible a => CDFIx p -> p a -> a
 unliftCDFVal CDFI (I x) = x
 unliftCDFVal CDF2 CDF{cdfMedian} = (1 :: a) `divide` (1 / toDouble cdfMedian)
 
+-- | As 'unliftCDFVal', with the range, and the median -/+ stddev.
 unliftCDFValExtra :: forall a p. Divisible a => CDFIx p -> p a -> [a]
 unliftCDFValExtra CDFI (I x) = [x]
-unliftCDFValExtra i@CDF2 c@CDF{cdfRange=Interval mi ma, ..} = [ mean
+unliftCDFValExtra i@CDF2 c@CDF{cdfRange=Interval mi ma, ..} = [ median
                                                               , mi
                                                               , ma
-                                                              , mean - stddev
-                                                              , mean + stddev
+                                                              , median - stddev
+                                                              , median + stddev
                                                               ]
- where mean   = unliftCDFVal i c
+ where median = unliftCDFVal i c
        stddev = (1 :: a) `divide` (1 / cdfStddev)
 
 arity :: forall p a b. KnownCDF p => (I a -> b) -> (CDF I a -> b) -> p a -> b
@@ -357,25 +357,6 @@ stdCombine2 cs =
   Combine
   { cCDF = collapseCDFs c
   , ..
-  }
-
-collapseCDF :: ([a] -> b) -> CDF (CDF I) a -> CDF I b
-collapseCDF avg c =
-  CDF
-  { cdfSize    = cdfSize c
-  , cdfAverage = I $ cdfAverageVal c
-  , cdfMedian  = avg [cdfMedian c]
-  , cdfRange   = cdfRange c
-                 & low &&& high
-                 & both (avg . (:[]))
-                 & uncurry Interval
-  , cdfStddev  = cdfStddev c
-  , cdfSamples = zip (cdfSamples c <&> fst)
-                     (cdfSamples c <&>
-                      I
-                      . avg               -- :: a
-                      . fmap  (unI . snd) -- :: [(Int, a)]
-                      . cdfSamples . snd) -- :: [(Centile a)]
   }
 
 listMedian :: Ord a => [a] -> a
