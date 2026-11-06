@@ -18,6 +18,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.type }}-${{ startsWith(github.ref, 'refs/heads/gh-readonly-queue/') && github.ref || github.event.pull_request.number || github.run_id }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest

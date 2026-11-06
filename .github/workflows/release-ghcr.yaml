@@ -15,7 +15,6 @@ on:
 
 permissions:
   contents: read
-  packages: write
 
 env:
   # Only to avoid some repetition
@@ -24,6 +23,8 @@ env:
 
 jobs:
   wait-for-hydra:
+    permissions:
+      checks: read
     name: "Wait for hydra check-runs"
     runs-on: ubuntu-latest
 
@@ -74,6 +75,9 @@ jobs:
 
 
   build:
+    permissions:
+      contents: read
+      packages: write
     needs: [prepare]
     name: "Upload to ghcr.io"
     runs-on: ubuntu-latest
@@ -137,6 +141,9 @@ jobs:
 
 
   create-manifest:
+    permissions:
+      contents: read
+      packages: write
     needs: [prepare, build]
     name: "Create Multi-Arch Manifest"
     runs-on: ubuntu-latest

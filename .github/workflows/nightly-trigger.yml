@@ -5,8 +5,13 @@ on:
   schedule:
     - cron:  '0 5 * * *'
 
+permissions:
+  contents: read
+
 jobs:
   build:
+    permissions:
+      contents: write  # force-push the nightly branch
     runs-on: ubuntu-latest
 
     defaults:

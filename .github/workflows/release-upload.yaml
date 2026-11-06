@@ -20,8 +20,13 @@ env:
   FLAKE_REF: github:${{ github.repository }}/${{ github.ref_name }}
   GH_TOKEN: ${{ github.token }}
 
+permissions:
+  contents: read
+
 jobs:
   wait-for-hydra:
+    permissions:
+      checks: read
     name: "Wait for hydra check-runs"
     runs-on: ubuntu-latest
     steps:
@@ -113,6 +118,8 @@ jobs:
           retention-days: 1
 
   upload-assets:
+    permissions:
+      contents: write  # create/upload to the release
     needs: [pull]
     name: "Upload Assets"
     runs-on: ubuntu-latest

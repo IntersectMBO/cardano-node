@@ -8,8 +8,13 @@ on:
     branches:
       - master
 
+permissions:
+  contents: read
+
 jobs:
   build:
+    permissions:
+      contents: write  # deploy to the gh-pages branch
     runs-on: ubuntu-latest
 
     defaults:

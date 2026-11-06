@@ -4,6 +4,9 @@ on:
   merge_group:
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   actionlint:
     runs-on: ubuntu-latest

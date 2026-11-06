@@ -5,8 +5,14 @@ on:
   schedule:
     - cron: '0 0 * * 0' # runs weekly on Sunday at 00:00
 
+permissions:
+  contents: read
+
 jobs:
   build:
+    permissions:
+      contents: write  # push the update branch
+      pull-requests: write
     runs-on: ubuntu-latest
     steps:
       - name: Install Nix
