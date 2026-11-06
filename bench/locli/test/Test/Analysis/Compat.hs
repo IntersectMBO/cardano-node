@@ -12,6 +12,7 @@ import           Data.Aeson.Key (Key)
 import qualified Data.Aeson.KeyMap as KeyMap
 
 import           Cardano.Analysis.API
+import           Cardano.Analysis.MachPerf (summariseMultiClusterPerf)
 
 import           Hedgehog
 
@@ -26,7 +27,7 @@ clusterPerfFixture = "test/data/analysis/clusterperf.json"
 addedIn3_0 :: [Key]
 addedIn3_0 =
   [ "cdfSnapTaken", "cdfSnapDuration", "cdfLiveMajGcDuring", "cdfLiveMajGcOutside"
-  , "cdfTxsProcessed", "cdfTxsAccepted", "cdfTxsRejected", "cdfTxsRejectRatio"
+  , "cdfTxsProcessed", "cdfTxsAccepted", "cdfTxsRejected", "cdfTxsRejectRatio", "cdfMempoolTxs"
   , "cdfCpuPerTx", "cdfMutPerTx", "cdfGcPerTx"
   ]
 
@@ -58,6 +59,18 @@ prop_clusterPerf_2x_readable = withTests 1 $ property $ do
    cdfSizeOf = \case
      Object c -> KeyMap.lookup "cdfSize" c
      _        -> Nothing
+
+-- | Combining runs (as for variance reports) also works when an older run lacks CDFs:
+--   they come from the runs that have them, and are empty if none has them.
+prop_multiClusterPerf_2x_combinable = withTests 1 $ property $ do
+  o :: KeyMap.KeyMap Value <- evalEither =<< evalIO (eitherDecodeFileStrict clusterPerfFixture)
+  full <- evalEither $ decodeClusterPerf o
+  old  <- evalEither $ decodeClusterPerf (withoutKeys addedIn3_0 o)
+  let combine = fmap unMultiClusterPerf . summariseMultiClusterPerf (nEquicentiles 7)
+  mixed  <- evalEither $ combine [full, old]
+  only2x <- evalEither $ combine [old, old]
+  cdfAverageVal (cdfMempoolTxs mixed) === cdfAverageVal (cdfMempoolTxs full)
+  cdfSize (cdfMempoolTxs only2x) === 0
 
 -- | Leniency is limited to the CDFs: other missing keys still fail.
 prop_clusterPerf_requires_version = withTests 1 $ property $ do

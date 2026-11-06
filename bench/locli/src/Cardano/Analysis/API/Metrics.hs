@@ -455,7 +455,7 @@ mtFieldsSnapshots, mtFieldsTxProcessing :: [FieldName]
 mtFieldsSnapshots =
   [ "cdfSnapTaken", "cdfSnapDuration", "cdfLiveMajGcDuring", "cdfLiveMajGcOutside" ]
 mtFieldsTxProcessing =
-  [ "cdfTxsProcessed", "cdfTxsAccepted", "cdfTxsRejected", "cdfTxsRejectRatio", "cdfCpuPerTx", "cdfGcPerTx", "cdfMutPerTx" ]
+  [ "cdfTxsProcessed", "cdfTxsAccepted", "cdfTxsRejected", "cdfTxsRejectRatio", "cdfMempoolTxs", "cdfCpuPerTx", "cdfGcPerTx", "cdfMutPerTx" ]
 
 instance CDFFields MachPerf p where
   cdfFields =
@@ -590,6 +590,10 @@ instance CDFFields MachPerf p where
    <> fBoth "cdfTxsRejectRatio"   "Txns" "rej/"  W5 Rto P3 Lin R01 (DFloat cdfTxsRejectRatio)
       "Reject ratio"
       "Rejected / processed transactions. Explains differences between raw and per-transaction CPU usage"
+
+   <> fBoth "cdfMempoolTxs"       "Mem"  "pool"  W5 Cnt P0 Lin Free (DWord64 cdfMempoolTxs)
+      "Mempool fill level"
+      "Transactions in the mempool, per analysed slot (time-weighted). Its fill level, not its configured capacity"
 
    <> fBoth "cdfCpuPerTx"         "CPU"  "/tx"   W5 Ms P3 Lin Free (DFloat cdfCpuPerTx)
       "Proc CPU ÷ txns"

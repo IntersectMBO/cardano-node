@@ -182,6 +182,7 @@ data MachPerf f
     , cdfTxsAccepted       :: !(CDF f Word64)
     , cdfTxsRejected       :: !(CDF f Word64)
     , cdfTxsRejectRatio    :: !(CDF f Double)
+    , cdfMempoolTxs        :: !(CDF f Word64)          -- ^ mempool fill level per slot, txs
     , cdfCpuPerTx          :: !(CDF f Double)          -- ^ process CPU ÷ txs processed, ms (not a per-tx cost)
     , cdfMutPerTx          :: !(CDF f Double)          -- ^ RTS mutator CPU ÷ txs processed, ms
     , cdfGcPerTx           :: !(CDF f Double)          -- ^ RTS GC CPU ÷ txs processed, ms
