@@ -15,9 +15,11 @@ import           Control.Exception (SomeException (..), try)
 import           Control.Monad
 import           Data.Aeson (eitherDecodeFileStrict')
 import           Data.Aeson.Encode.Pretty
+import           Data.Bifunctor (first)
 import           Data.Bool (bool)
 import qualified Data.ByteString.Lazy.Char8 as BSL (ByteString, putStrLn)
 import           System.Directory (doesFileExist)
+import           GHC.Stack (HasCallStack, withFrozenCallStack)
 import           System.FilePath
 
 import           Paths_tx_generator
@@ -27,19 +29,12 @@ import           Paths_tx_generator
 -- 1. resolve from 'data/protocol-parameters-v10.json', if not specified (file assumed to exist)
 -- 2. try to resolve from file path
 -- 3. try to resolve file path from within 'data/' directory
-readProtocolParametersOrDie :: Maybe FilePath -> IO ProtocolParameters
-readProtocolParametersOrDie mFile =
-  resolver mFile >>= eitherDecodeFileStrict' >>= either error pure
+readProtocolParametersOrDie :: HasCallStack => Maybe FilePath -> IO ProtocolParameters
+readProtocolParametersOrDie mFile = withFrozenCallStack $
+  resolver mFile >>= eitherDecodeFileStrict' >>= liftEitherError . first TxGenError
   where
     resolver Nothing  = getDataFileName ("data" </> "protocol-parameters-v10.json") >>= resolver . Just
     resolver (Just f) = doesFileExist f >>= bool (getDataFileName $ "data" </> f) (pure f)
-
-summaryAndRedeermerOrDie :: String -> Either TxGenError (PlutusBudgetSummary, PlutusAutoBudget, b) -> (PlutusBudgetSummary, ScriptRedeemer)
-summaryAndRedeermerOrDie scope =
-  either
-    (error . withScope . show)
-    (\(summary, budget, _) -> (summary, autoBudgetRedeemer budget))
-  where withScope s = concat [scope, ": ", s]
 
 summaryAndRedeermerSafe :: String -> Either TxGenError (PlutusBudgetSummary, PlutusAutoBudget, b) -> IO (Maybe (PlutusBudgetSummary, ScriptRedeemer))
 summaryAndRedeermerSafe scope =

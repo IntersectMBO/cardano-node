@@ -190,18 +190,20 @@ executable calibrate-script
   ghc-options:          -Wall
                         -rtsopts
                         "-with-rtsopts=-T"
-                        -Wno-deprecations
 
   build-depends:        base
                       , aeson
                       , aeson-pretty
                       , bytestring
+                      , cardano-api
+                      , cardano-ledger-core
                       , containers
                       , directory
                       , extra
                       , filepath
+                      , microlens
                       , optparse-applicative
-                      , cardano-api
+                      , safe-exceptions
                       , text
                       , tx-generator
 
@@ -222,7 +224,6 @@ test-suite tx-generator-apitest
   ghc-options:          -Wall
                         -rtsopts
                         "-with-rtsopts=-T"
-                        -Wno-deprecations
 
   build-depends:        base
                       , aeson
