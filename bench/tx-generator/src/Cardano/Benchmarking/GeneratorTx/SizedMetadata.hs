@@ -59,7 +59,7 @@ prop_mapCostsDijkstra  = measureMapCosts AsDijkstraEra == assumeMapCosts AsDijks
 assumeMapCosts :: forall era . IsShelleyBasedEra era => AsType era -> [Int]
 assumeMapCosts _proxy = stepFunction [
       (   1 , 0)          -- An empty map of metadata has the same cost as TxMetadataNone.
-    , (   1 , firstEntry) -- Using Metadata costs 37 or 39 bytes  (first map entry).
+    , (   1 , firstEntry) -- First map entry: 37 (Shelley), 39 (Allegra/Mary) or 42 (Alonzo onwards) bytes.
     , (  22 , 2)          -- The next 22 entries cost 2 bytes each.
     , ( 233 , 3)          -- 233 entries at 3 bytes.
     , ( 744 , 4)          -- 744 entries at 4 bytes.
