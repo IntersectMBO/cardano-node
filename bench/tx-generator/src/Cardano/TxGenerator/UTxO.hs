@@ -1,3 +1,4 @@
+{-# LANGUAGE MonoLocalBinds #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -7,13 +8,25 @@ module  Cardano.TxGenerator.UTxO
         where
 
 import           Cardano.Api hiding (txId)
+import           Cardano.Api.Experimental (AnyWitness (..))
+import qualified Cardano.Api.Experimental.Tx as Exp
 
+import           Cardano.Ledger.Api.Tx.Out (dataHashTxOutL, datumTxOutL)
+import           Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import qualified Cardano.Ledger.Coin as L
+import           Cardano.Ledger.Core (mkCoinTxOut)
+import qualified Cardano.Ledger.Core as Ledger (TxOut)
+import qualified Cardano.Ledger.Plutus.Data as Plutus
 import           Cardano.TxGenerator.Fund (Fund (..), FundInEra (..))
+import           Cardano.TxGenerator.Types (TxGenError (..))
 import           Cardano.TxGenerator.Utils (keyAddress)
 
-type ToUTxO era = L.Coin -> (TxOut CtxTx era, TxIx -> TxId -> Fund)
-type ToUTxOList era split = split -> ([TxOut CtxTx era], TxId -> [Fund])
+import           Data.Functor (void)
+
+import           Lens.Micro ((&), (.~))
+
+type ToUTxO era = L.Coin -> (Exp.TxOut (ShelleyLedgerEra era), TxIx -> TxId -> Fund)
+type ToUTxOList era split = split -> ([Exp.TxOut (ShelleyLedgerEra era)], TxId -> [Fund])
 
 
 makeToUTxOList :: [ ToUTxO era ] -> ToUTxOList era [ L.Coin ]
@@ -29,55 +42,63 @@ mkUTxOVariant :: forall era. IsShelleyBasedEra era
   => NetworkId
   -> SigningKey PaymentKey
   -> ToUTxO era
-mkUTxOVariant networkId key value
-  = ( mkTxOut value
-    , mkNewFund value
-    )
- where
-  mkTxOut v = TxOut (keyAddress @era networkId key) (lovelaceToTxOutValue (shelleyBasedEra @era) v) TxOutDatumNone ReferenceScriptNone
-
-  mkNewFund :: L.Coin -> TxIx -> TxId -> Fund
-  mkNewFund val txIx txId = Fund $ InAnyCardanoEra (cardanoEra @era) $ FundInEra {
-      _fundTxIn = TxIn txId txIx
-    , _fundWitness = KeyWitness KeyWitnessForSpending
-    , _fundVal = lovelaceToTxOutValue (shelleyBasedEra @era ) val
-    , _fundSigningKey = Just key
-    }
+mkUTxOVariant networkId key value = shelleyBasedEraConstraints (shelleyBasedEra @era) $
+  let
+    mkTxOut v = Exp.TxOut $ mkCoinTxOut (toShelleyAddr $ keyAddress @era networkId key) v
+    mkNewFund :: L.Coin -> TxIx -> TxId -> Fund
+    mkNewFund val txIx txId = Fund $ InAnyCardanoEra (cardanoEra @era) $ FundInEra {
+        _fundTxIn = TxIn txId txIx
+      , _fundWitness = AnyKeyWitnessPlaceholder
+      , _fundVal = lovelaceToTxOutValue (shelleyBasedEra @era) val
+      , _fundSigningKey = Just key
+      }
+  in (mkTxOut value, mkNewFund value)
 
 -- to be merged with mkUTxOVariant
-mkUTxOScript :: forall era.
-     IsShelleyBasedEra era
+-- | Plutus-locked UTxOs need at least Alonzo.
+-- Alonzo 'TxOut' only has a bare datum hash field ('dataHashTxOutL').
+-- Babbage onwards has the richer 'Datum' field ('datumTxOutL'), which also
+-- supports inline datums.
+-- 'setDatum' below picks the right lens for the concrete era.
+mkUTxOScript :: forall era. IsShelleyBasedEra era
   => NetworkId
   -> (ScriptInAnyLang, ScriptData)
-  -> Witness WitCtxTxIn era
-  -> ToUTxO era
-mkUTxOScript networkId (script, txOutDatum) witness value
-  = ( mkTxOut value
-    , mkNewFund value
-    )
- where
-  plutusScriptAddr = case script of
-    ScriptInAnyLang lang script' ->
-      case scriptLanguageSupportedInEra (shelleyBasedEra @era) lang of
-        Nothing -> error "mkUtxOScript: scriptLanguageSupportedInEra==Nothing"
-        Just{} -> makeShelleyAddressInEra
-                       (shelleyBasedEra @era)
-                       networkId
-                       (PaymentCredentialByScript $ hashScript script')
-                       NoStakeAddress
-
-  mkTxOut v = case forEraMaybeEon (cardanoEra @era) of
-    Nothing -> error "mkUtxOScript: scriptDataSupportedInEra==Nothing"
-    Just tag -> TxOut
-                  plutusScriptAddr
-                  (lovelaceToTxOutValue (shelleyBasedEra @era) v)
-                  (TxOutDatumHash tag $ hashScriptDataBytes $ unsafeHashableScriptData txOutDatum)
-                  ReferenceScriptNone
-
-  mkNewFund :: L.Coin -> TxIx -> TxId -> Fund
-  mkNewFund val txIx txId = Fund $ InAnyCardanoEra (cardanoEra @era) $ FundInEra {
-      _fundTxIn = TxIn txId txIx
-    , _fundWitness = witness
-    , _fundVal = lovelaceToTxOutValue (shelleyBasedEra @era) val
-    , _fundSigningKey = Nothing
-    }
+  -> AnyWitness (ShelleyLedgerEra era)
+  -> Either TxGenError (ToUTxO era)
+mkUTxOScript networkId (script, txOutDatum) witness = shelleyBasedEraConstraints (shelleyBasedEra @era) $ do
+  plutusScriptAddr <- case script of
+    ScriptInAnyLang lang script' -> do
+      void $
+        scriptLanguageSupportedInEra (shelleyBasedEra @era) lang
+          ?! TxGenError ("mkUTxOScript: " ++ show lang ++ " is not supported in " ++ show (shelleyBasedEra @era))
+      pure $
+        makeShelleyAddressInEra
+          (shelleyBasedEra @era)
+          networkId
+          (PaymentCredentialByScript $ hashScript script')
+          NoStakeAddress
+  let
+    dataHash = Plutus.hashData $ toAlonzoData @(ShelleyLedgerEra era) $ unsafeHashableScriptData txOutDatum
+    notSupported = Left $ TxGenError "mkUTxOScript: Plutus scripts are not supported before Alonzo"
+    datumSetter :: Either TxGenError (Ledger.TxOut (ShelleyLedgerEra era) -> Ledger.TxOut (ShelleyLedgerEra era))
+    datumSetter = case shelleyBasedEra @era of
+      ShelleyBasedEraShelley  -> notSupported
+      ShelleyBasedEraAllegra  -> notSupported
+      ShelleyBasedEraMary     -> notSupported
+      ShelleyBasedEraAlonzo   -> pure $ dataHashTxOutL .~ SJust dataHash
+      ShelleyBasedEraBabbage  -> pure $ datumTxOutL .~ Plutus.DatumHash dataHash
+      ShelleyBasedEraConway   -> pure $ datumTxOutL .~ Plutus.DatumHash dataHash
+      ShelleyBasedEraDijkstra -> pure $ datumTxOutL .~ Plutus.DatumHash dataHash
+  setDatum <- datumSetter
+  let
+    mkTxOut :: L.Coin -> Exp.TxOut (ShelleyLedgerEra era)
+    mkTxOut v = Exp.TxOut $
+      mkCoinTxOut (toShelleyAddr plutusScriptAddr) v & setDatum
+    mkNewFund :: L.Coin -> TxIx -> TxId -> Fund
+    mkNewFund val txIx txId = Fund $ InAnyCardanoEra (cardanoEra @era) $ FundInEra {
+        _fundTxIn = TxIn txId txIx
+      , _fundWitness = witness
+      , _fundVal = lovelaceToTxOutValue (shelleyBasedEra @era) val
+      , _fundSigningKey = Nothing
+      }
+  pure $ \value -> (mkTxOut value, mkNewFund value)
