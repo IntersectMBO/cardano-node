@@ -1,0 +1,33 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="GHC.Types.SptEntry.html"><span class="hs-identifier">GHC.Types.SptEntry</span></a></span><span>
+</span><span id="line-2"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="GHC.Types.SptEntry.html#SptEntry"><span class="hs-identifier">SptEntry</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-3"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-4"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Types.Var.html"><span class="hs-identifier">GHC.Types.Var</span></a></span><span>           </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="GHC.Types.Var.html#Id"><span class="hs-identifier">Id</span></a></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.21.2.0-inplace/src/GHC.Fingerprint.Type.html"><span class="hs-identifier">GHC.Fingerprint.Type</span></a></span><span>    </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-identifier">Fingerprint</span></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Utils.Outputable.html"><span class="hs-identifier">GHC.Utils.Outputable</span></a></span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="hs-comment">-- | An entry to be inserted into a module's static pointer table.</span><span>
+</span><span id="line-11"></span><span class="hs-comment">-- See Note [Grand plan for static forms] in &quot;GHC.Iface.Tidy.StaticPtrTable&quot;.</span><span>
+</span><span id="line-12"></span><span class="hs-keyword">data</span><span> </span><span id="SptEntry"><span class="annot"><a href="GHC.Types.SptEntry.html#SptEntry"><span class="hs-identifier hs-var">SptEntry</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="SptEntry"><span class="annot"><a href="GHC.Types.SptEntry.html#SptEntry"><span class="hs-identifier hs-var">SptEntry</span></a></span></span><span> </span><span class="annot"><a href="GHC.Types.Var.html#Id"><span class="hs-identifier hs-type">Id</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Fingerprint</span></span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="GHC.Utils.Outputable.html#Outputable"><span class="hs-identifier hs-type">Outputable</span></a></span><span> </span><span class="annot"><a href="GHC.Types.SptEntry.html#SptEntry"><span class="hs-identifier hs-type">SptEntry</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-15"></span><span>  </span><span id="local-6989586621682539138"><span class="annot"><span class="annottext">ppr :: SptEntry -&gt; SDoc
+</span><a href="#local-6989586621682539138"><span class="hs-identifier hs-var hs-var hs-var">ppr</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Types.SptEntry.html#SptEntry"><span class="hs-identifier hs-type">SptEntry</span></a></span><span> </span><span id="local-6989586621682539140"><span class="annot"><span class="annottext">Id
+</span><a href="#local-6989586621682539140"><span class="hs-identifier hs-var">id</span></a></span></span><span> </span><span id="local-6989586621682539141"><span class="annot"><span class="annottext">Fingerprint
+</span><a href="#local-6989586621682539141"><span class="hs-identifier hs-var">fpr</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Id -&gt; SDoc
+forall a. Outputable a =&gt; a -&gt; SDoc
+</span><a href="GHC.Utils.Outputable.html#ppr"><span class="hs-identifier hs-var">ppr</span></a></span><span> </span><span class="annot"><span class="annottext">Id
+</span><a href="#local-6989586621682539140"><span class="hs-identifier hs-var">id</span></a></span><span> </span><span class="annot"><span class="annottext">SDoc -&gt; SDoc -&gt; SDoc
+forall doc. IsLine doc =&gt; doc -&gt; doc -&gt; doc
+</span><a href="GHC.Utils.Outputable.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">SDoc
+forall doc. IsLine doc =&gt; doc
+</span><a href="GHC.Utils.Outputable.html#colon"><span class="hs-identifier hs-var">colon</span></a></span><span> </span><span class="annot"><span class="annottext">SDoc -&gt; SDoc -&gt; SDoc
+forall doc. IsLine doc =&gt; doc -&gt; doc -&gt; doc
+</span><a href="GHC.Utils.Outputable.html#%3C%2B%3E"><span class="hs-operator hs-var">&lt;+&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Fingerprint -&gt; SDoc
+forall a. Outputable a =&gt; a -&gt; SDoc
+</span><a href="GHC.Utils.Outputable.html#ppr"><span class="hs-identifier hs-var">ppr</span></a></span><span> </span><span class="annot"><span class="annottext">Fingerprint
+</span><a href="#local-6989586621682539141"><span class="hs-identifier hs-var">fpr</span></a></span><span>
+</span><span id="line-16"></span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span></pre></body></html>

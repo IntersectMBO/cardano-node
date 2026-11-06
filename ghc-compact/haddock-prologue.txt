@@ -1,0 +1,12 @@
+This package provides minimal functionality for working with
+"compact regions", which hold a fully evaluated Haskell object graph.
+These regions maintain the invariant that no pointers live inside the struct
+that point outside it, which ensures efficient garbage collection without
+ever reading the structure contents (effectively, it works as a manually
+managed "oldest generation" which is never freed until the whole is
+released).
+Internally, the struct is stored a single contiguous block of memory,
+which allows efficient serialization and deserialization of structs
+for distributed computing.
+This package provides a low-level API; see also the </package/compact
+compact package> which provides a user-facing API.

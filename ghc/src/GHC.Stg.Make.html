@@ -1,0 +1,457 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="GHC.Stg.Make.html"><span class="hs-identifier">GHC.Stg.Make</span></a></span><span>
+</span><span id="line-2"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="GHC.Stg.Make.html#MkStgRhs"><span class="hs-identifier">MkStgRhs</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-3"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Stg.Make.html#mkTopStgRhs"><span class="hs-identifier">mkTopStgRhs</span></a></span><span>
+</span><span id="line-4"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Stg.Make.html#mkStgRhs"><span class="hs-identifier">mkStgRhs</span></a></span><span>
+</span><span id="line-5"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Stg.Make.html#mkStgRhsCon_maybe"><span class="hs-identifier">mkStgRhsCon_maybe</span></a></span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Stg.Make.html#mkTopStgRhsCon_maybe"><span class="hs-identifier">mkTopStgRhsCon_maybe</span></a></span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-8"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Prelude.html"><span class="hs-identifier">GHC.Prelude</span></a></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Unit.Module.html"><span class="hs-identifier">GHC.Unit.Module</span></a></span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Core.DataCon.html"><span class="hs-identifier">GHC.Core.DataCon</span></a></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Core.Type.html"><span class="hs-identifier">GHC.Core.Type</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Core.TyCo.Rep.html#Type"><span class="hs-identifier">Type</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Stg.Syntax.html"><span class="hs-identifier">GHC.Stg.Syntax</span></a></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Stg.Utils.html"><span class="hs-identifier">GHC.Stg.Utils</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Stg.Utils.html#stripStgTicksTop"><span class="hs-identifier">stripStgTicksTop</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Types.Id.html"><span class="hs-identifier">GHC.Types.Id</span></a></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Types.Name.html"><span class="hs-identifier">GHC.Types.Name</span></a></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Types.CostCentre.html"><span class="hs-identifier">GHC.Types.CostCentre</span></a></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Types.Demand.html"><span class="hs-identifier">GHC.Types.Demand</span></a></span><span>    </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="GHC.Types.Demand.html#isAtMostOnceDmd"><span class="hs-identifier">isAtMostOnceDmd</span></a></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Types.Tickish.html"><span class="hs-identifier">GHC.Types.Tickish</span></a></span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span class="hs-comment">-- Represents the RHS of a binding for use with mk(Top)StgRhs and</span><span>
+</span><span id="line-26"></span><span class="hs-comment">-- mk(Top)StgRhsCon_maybe.</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">data</span><span> </span><span id="MkStgRhs"><span class="annot"><a href="GHC.Stg.Make.html#MkStgRhs"><span class="hs-identifier hs-var">MkStgRhs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="MkStgRhs"><span class="annot"><a href="GHC.Stg.Make.html#MkStgRhs"><span class="hs-identifier hs-var">MkStgRhs</span></a></span></span><span>
+</span><span id="line-28"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="rhs_args"><span class="annot"><span class="annottext">MkStgRhs -&gt; [Id]
+</span><a href="GHC.Stg.Make.html#rhs_args"><span class="hs-identifier hs-var hs-var">rhs_args</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="GHC.Types.Var.html#Id"><span class="hs-identifier hs-type">Id</span></a></span><span class="hs-special">]</span><span>     </span><span class="annot"><span class="hs-comment">-- ^ Empty for thunks</span></span><span>
+</span><span id="line-29"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="rhs_expr"><span class="annot"><span class="annottext">MkStgRhs -&gt; StgExpr
+</span><a href="GHC.Stg.Make.html#rhs_expr"><span class="hs-identifier hs-var hs-var">rhs_expr</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Stg.Syntax.html#StgExpr"><span class="hs-identifier hs-type">StgExpr</span></a></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ RHS expression</span></span><span>
+</span><span id="line-30"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="rhs_type"><span class="annot"><span class="annottext">MkStgRhs -&gt; Type
+</span><a href="GHC.Stg.Make.html#rhs_type"><span class="hs-identifier hs-var hs-var">rhs_type</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Core.TyCo.Rep.html#Type"><span class="hs-identifier hs-type">Type</span></a></span><span>     </span><span class="annot"><span class="hs-comment">-- ^ RHS type (only used in the JS backend: layering violation)</span></span><span>
+</span><span id="line-31"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="rhs_is_join"><span class="annot"><span class="annottext">MkStgRhs -&gt; Bool
+</span><a href="GHC.Stg.Make.html#rhs_is_join"><span class="hs-identifier hs-var hs-var">rhs_is_join</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span> </span><span class="annot"><span class="hs-comment">-- ^ Is it a RHS for a join-point?</span></span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-33"></span><span>
+</span><span id="line-34"></span><span>
+</span><span id="line-35"></span><span class="hs-comment">-- Generate a top-level RHS. Any new cost centres generated for CAFs will be</span><span>
+</span><span id="line-36"></span><span class="hs-comment">-- appended to `CollectedCCs` argument.</span><span>
+</span><span id="line-37"></span><span class="annot"><a href="GHC.Stg.Make.html#mkTopStgRhs"><span class="hs-identifier hs-type">mkTopStgRhs</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Unit.Types.html#Module"><span class="hs-identifier hs-type">Module</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Core.DataCon.html#DataCon"><span class="hs-identifier hs-type">DataCon</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="GHC.Stg.Syntax.html#StgArg"><span class="hs-identifier hs-type">StgArg</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span>            </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Unit.Types.html#Module"><span class="hs-identifier hs-type">Module</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Types.CostCentre.html#CollectedCCs"><span class="hs-identifier hs-type">CollectedCCs</span></a></span><span>
+</span><span id="line-39"></span><span>            </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Types.Var.html#Id"><span class="hs-identifier hs-type">Id</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Stg.Make.html#MkStgRhs"><span class="hs-identifier hs-type">MkStgRhs</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Stg.Syntax.html#StgRhs"><span class="hs-identifier hs-type">StgRhs</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Types.CostCentre.html#CollectedCCs"><span class="hs-identifier hs-type">CollectedCCs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span id="mkTopStgRhs"><span class="annot"><span class="annottext">mkTopStgRhs :: (Module -&gt; DataCon -&gt; [StgArg] -&gt; Bool)
+-&gt; Bool
+-&gt; Module
+-&gt; CollectedCCs
+-&gt; Id
+-&gt; MkStgRhs
+-&gt; (StgRhs, CollectedCCs)
+</span><a href="GHC.Stg.Make.html#mkTopStgRhs"><span class="hs-identifier hs-var hs-var">mkTopStgRhs</span></a></span></span><span> </span><span id="local-6989586621682629812"><span class="annot"><span class="annottext">Module -&gt; DataCon -&gt; [StgArg] -&gt; Bool
+</span><a href="#local-6989586621682629812"><span class="hs-identifier hs-var">allow_toplevel_con_app</span></a></span></span><span> </span><span id="local-6989586621682629813"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621682629813"><span class="hs-identifier hs-var">opt_AutoSccsOnIndividualCafs</span></a></span></span><span> </span><span id="local-6989586621682629814"><span class="annot"><span class="annottext">Module
+</span><a href="#local-6989586621682629814"><span class="hs-identifier hs-var">this_mod</span></a></span></span><span> </span><span id="local-6989586621682629815"><span class="annot"><span class="annottext">CollectedCCs
+</span><a href="#local-6989586621682629815"><span class="hs-identifier hs-var">ccs</span></a></span></span><span> </span><span id="local-6989586621682629816"><span class="annot"><span class="annottext">Id
+</span><a href="#local-6989586621682629816"><span class="hs-identifier hs-var">bndr</span></a></span></span><span> </span><span id="local-6989586621682629817"><span class="annot"><span class="annottext">mk_rhs :: MkStgRhs
+</span><a href="#local-6989586621682629817"><span class="hs-identifier hs-var">mk_rhs</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="GHC.Stg.Make.html#MkStgRhs"><span class="hs-identifier hs-type">MkStgRhs</span></a></span><span> </span><span id="local-6989586621682629818"><span class="annot"><span class="annottext">[Id]
+</span><a href="#local-6989586621682629818"><span class="hs-identifier hs-var">bndrs</span></a></span></span><span> </span><span id="local-6989586621682629819"><span class="annot"><span class="annottext">StgExpr
+</span><a href="#local-6989586621682629819"><span class="hs-identifier hs-var">rhs</span></a></span></span><span> </span><span id="local-6989586621682629820"><span class="annot"><span class="annottext">Type
+</span><a href="#local-6989586621682629820"><span class="hs-identifier hs-var">typ</span></a></span></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span>  </span><span class="hs-comment">-- try to make a StgRhsCon first</span><span>
+</span><span id="line-42"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Just</span></span><span> </span><span id="local-6989586621682629821"><span class="annot"><span class="annottext">StgRhs
+</span><a href="#local-6989586621682629821"><span class="hs-identifier hs-var">rhs_con</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">(DataCon -&gt; [StgArg] -&gt; Bool) -&gt; MkStgRhs -&gt; Maybe StgRhs
+</span><a href="GHC.Stg.Make.html#mkTopStgRhsCon_maybe"><span class="hs-identifier hs-var">mkTopStgRhsCon_maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Module -&gt; DataCon -&gt; [StgArg] -&gt; Bool
+</span><a href="#local-6989586621682629812"><span class="hs-identifier hs-var">allow_toplevel_con_app</span></a></span><span> </span><span class="annot"><span class="annottext">Module
+</span><a href="#local-6989586621682629814"><span class="hs-identifier hs-var">this_mod</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">MkStgRhs
+</span><a href="#local-6989586621682629817"><span class="hs-identifier hs-var">mk_rhs</span></a></span><span>
+</span><span id="line-43"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">StgRhs
+</span><a href="#local-6989586621682629821"><span class="hs-identifier hs-var">rhs_con</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">CollectedCCs
+</span><a href="#local-6989586621682629815"><span class="hs-identifier hs-var">ccs</span></a></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-44"></span><span>
+</span><span id="line-45"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool
+</span><span class="hs-identifier hs-var">not</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Id] -&gt; Bool
+forall a. [a] -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Bool
+</span><span class="hs-identifier hs-var">null</span></span><span> </span><span class="annot"><span class="annottext">[Id]
+</span><a href="#local-6989586621682629818"><span class="hs-identifier hs-var">bndrs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-46"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="hs-comment">-- The list of arguments is non-empty, so not CAF</span><span>
+</span><span id="line-47"></span><span>    </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">XRhsClosure 'Vanilla
+-&gt; CostCentreStack
+-&gt; UpdateFlag
+-&gt; [BinderP 'Vanilla]
+-&gt; StgExpr
+-&gt; Type
+-&gt; StgRhs
+forall (pass :: StgPass).
+XRhsClosure pass
+-&gt; CostCentreStack
+-&gt; UpdateFlag
+-&gt; [BinderP pass]
+-&gt; GenStgExpr pass
+-&gt; Type
+-&gt; GenStgRhs pass
+</span><a href="GHC.Stg.Syntax.html#StgRhsClosure"><span class="hs-identifier hs-var">StgRhsClosure</span></a></span><span> </span><span class="annot"><span class="annottext">XRhsClosure 'Vanilla
+NoExtFieldSilent
+</span><a href="GHC.Stg.Syntax.html#noExtFieldSilent"><span class="hs-identifier hs-var">noExtFieldSilent</span></a></span><span>
+</span><span id="line-48"></span><span>                    </span><span class="annot"><span class="annottext">CostCentreStack
+</span><a href="GHC.Types.CostCentre.html#dontCareCCS"><span class="hs-identifier hs-var">dontCareCCS</span></a></span><span>
+</span><span id="line-49"></span><span>                    </span><span class="annot"><span class="annottext">UpdateFlag
+</span><a href="GHC.Stg.Syntax.html#ReEntrant"><span class="hs-identifier hs-var">ReEntrant</span></a></span><span>
+</span><span id="line-50"></span><span>                    </span><span class="annot"><span class="annottext">[Id]
+[BinderP 'Vanilla]
+</span><a href="#local-6989586621682629818"><span class="hs-identifier hs-var">bndrs</span></a></span><span> </span><span class="annot"><span class="annottext">StgExpr
+</span><a href="#local-6989586621682629819"><span class="hs-identifier hs-var">rhs</span></a></span><span> </span><span class="annot"><span class="annottext">Type
+</span><a href="#local-6989586621682629820"><span class="hs-identifier hs-var">typ</span></a></span><span>
+</span><span id="line-51"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">CollectedCCs
+</span><a href="#local-6989586621682629815"><span class="hs-identifier hs-var">ccs</span></a></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-52"></span><span>
+</span><span id="line-53"></span><span>  </span><span class="hs-comment">-- Otherwise it's a CAF, see Note [Cost-centre initialization plan].</span><span>
+</span><span id="line-54"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621682629813"><span class="hs-identifier hs-var">opt_AutoSccsOnIndividualCafs</span></a></span><span>
+</span><span id="line-55"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">XRhsClosure 'Vanilla
+-&gt; CostCentreStack
+-&gt; UpdateFlag
+-&gt; [BinderP 'Vanilla]
+-&gt; StgExpr
+-&gt; Type
+-&gt; StgRhs
+forall (pass :: StgPass).
+XRhsClosure pass
+-&gt; CostCentreStack
+-&gt; UpdateFlag
+-&gt; [BinderP pass]
+-&gt; GenStgExpr pass
+-&gt; Type
+-&gt; GenStgRhs pass
+</span><a href="GHC.Stg.Syntax.html#StgRhsClosure"><span class="hs-identifier hs-var">StgRhsClosure</span></a></span><span> </span><span class="annot"><span class="annottext">XRhsClosure 'Vanilla
+NoExtFieldSilent
+</span><a href="GHC.Stg.Syntax.html#noExtFieldSilent"><span class="hs-identifier hs-var">noExtFieldSilent</span></a></span><span>
+</span><span id="line-56"></span><span>                    </span><span class="annot"><span class="annottext">CostCentreStack
+</span><a href="#local-6989586621682629828"><span class="hs-identifier hs-var">caf_ccs</span></a></span><span>
+</span><span id="line-57"></span><span>                    </span><span class="annot"><span class="annottext">UpdateFlag
+</span><a href="#local-6989586621682629829"><span class="hs-identifier hs-var">upd_flag</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="annot"><span class="annottext">StgExpr
+</span><a href="#local-6989586621682629819"><span class="hs-identifier hs-var">rhs</span></a></span><span> </span><span class="annot"><span class="annottext">Type
+</span><a href="#local-6989586621682629820"><span class="hs-identifier hs-var">typ</span></a></span><span>
+</span><span id="line-58"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">CostCentre -&gt; CostCentreStack -&gt; CollectedCCs -&gt; CollectedCCs
+</span><a href="GHC.Types.CostCentre.html#collectCC"><span class="hs-identifier hs-var">collectCC</span></a></span><span> </span><span class="annot"><span class="annottext">CostCentre
+</span><a href="#local-6989586621682629831"><span class="hs-identifier hs-var">caf_cc</span></a></span><span> </span><span class="annot"><span class="annottext">CostCentreStack
+</span><a href="#local-6989586621682629828"><span class="hs-identifier hs-var">caf_ccs</span></a></span><span> </span><span class="annot"><span class="annottext">CollectedCCs
+</span><a href="#local-6989586621682629815"><span class="hs-identifier hs-var">ccs</span></a></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-59"></span><span>
+</span><span id="line-60"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">otherwise</span></span><span>
+</span><span id="line-61"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">XRhsClosure 'Vanilla
+-&gt; CostCentreStack
+-&gt; UpdateFlag
+-&gt; [BinderP 'Vanilla]
+-&gt; StgExpr
+-&gt; Type
+-&gt; StgRhs
+forall (pass :: StgPass).
+XRhsClosure pass
+-&gt; CostCentreStack
+-&gt; UpdateFlag
+-&gt; [BinderP pass]
+-&gt; GenStgExpr pass
+-&gt; Type
+-&gt; GenStgRhs pass
+</span><a href="GHC.Stg.Syntax.html#StgRhsClosure"><span class="hs-identifier hs-var">StgRhsClosure</span></a></span><span> </span><span class="annot"><span class="annottext">XRhsClosure 'Vanilla
+NoExtFieldSilent
+</span><a href="GHC.Stg.Syntax.html#noExtFieldSilent"><span class="hs-identifier hs-var">noExtFieldSilent</span></a></span><span>
+</span><span id="line-62"></span><span>                    </span><span class="annot"><span class="annottext">CostCentreStack
+</span><a href="#local-6989586621682629832"><span class="hs-identifier hs-var">all_cafs_ccs</span></a></span><span>
+</span><span id="line-63"></span><span>                    </span><span class="annot"><span class="annottext">UpdateFlag
+</span><a href="#local-6989586621682629829"><span class="hs-identifier hs-var">upd_flag</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="annot"><span class="annottext">StgExpr
+</span><a href="#local-6989586621682629819"><span class="hs-identifier hs-var">rhs</span></a></span><span> </span><span class="annot"><span class="annottext">Type
+</span><a href="#local-6989586621682629820"><span class="hs-identifier hs-var">typ</span></a></span><span>
+</span><span id="line-64"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">CollectedCCs
+</span><a href="#local-6989586621682629815"><span class="hs-identifier hs-var">ccs</span></a></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-65"></span><span>
+</span><span id="line-66"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-67"></span><span>    </span><span id="local-6989586621682629829"><span class="annot"><span class="annottext">upd_flag :: UpdateFlag
+</span><a href="#local-6989586621682629829"><span class="hs-identifier hs-var hs-var">upd_flag</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Demand -&gt; Bool
+</span><a href="GHC.Types.Demand.html#isAtMostOnceDmd"><span class="hs-identifier hs-var">isAtMostOnceDmd</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Id -&gt; Demand
+</span><a href="GHC.Types.Id.html#idDemandInfo"><span class="hs-identifier hs-var">idDemandInfo</span></a></span><span> </span><span class="annot"><span class="annottext">Id
+</span><a href="#local-6989586621682629816"><span class="hs-identifier hs-var">bndr</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">UpdateFlag
+</span><a href="GHC.Stg.Syntax.html#SingleEntry"><span class="hs-identifier hs-var">SingleEntry</span></a></span><span>
+</span><span id="line-68"></span><span>             </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">otherwise</span></span><span>                           </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">UpdateFlag
+</span><a href="GHC.Stg.Syntax.html#Updatable"><span class="hs-identifier hs-var">Updatable</span></a></span><span>
+</span><span id="line-69"></span><span>
+</span><span id="line-70"></span><span>    </span><span class="hs-comment">-- CAF cost centres generated for -fcaf-all</span><span>
+</span><span id="line-71"></span><span>    </span><span id="local-6989586621682629831"><span class="annot"><span class="annottext">caf_cc :: CostCentre
+</span><a href="#local-6989586621682629831"><span class="hs-identifier hs-var hs-var">caf_cc</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Id -&gt; Module -&gt; CostCentre
+</span><a href="GHC.Types.CostCentre.html#mkAutoCC"><span class="hs-identifier hs-var">mkAutoCC</span></a></span><span> </span><span class="annot"><span class="annottext">Id
+</span><a href="#local-6989586621682629816"><span class="hs-identifier hs-var">bndr</span></a></span><span> </span><span class="annot"><span class="annottext">Module
+</span><a href="#local-6989586621682629837"><span class="hs-identifier hs-var">modl</span></a></span><span>
+</span><span id="line-72"></span><span>    </span><span id="local-6989586621682629828"><span class="annot"><span class="annottext">caf_ccs :: CostCentreStack
+</span><a href="#local-6989586621682629828"><span class="hs-identifier hs-var hs-var">caf_ccs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">CostCentre -&gt; CostCentreStack
+</span><a href="GHC.Types.CostCentre.html#mkSingletonCCS"><span class="hs-identifier hs-var">mkSingletonCCS</span></a></span><span> </span><span class="annot"><span class="annottext">CostCentre
+</span><a href="#local-6989586621682629831"><span class="hs-identifier hs-var">caf_cc</span></a></span><span>
+</span><span id="line-73"></span><span>           </span><span class="hs-comment">-- careful: the binder might be :Main.main,</span><span>
+</span><span id="line-74"></span><span>           </span><span class="hs-comment">-- which doesn't belong to module mod_name.</span><span>
+</span><span id="line-75"></span><span>           </span><span class="hs-comment">-- bug #249, tests prof001, prof002</span><span>
+</span><span id="line-76"></span><span>    </span><span id="local-6989586621682629837"><span class="annot"><span class="annottext">modl :: Module
+</span><a href="#local-6989586621682629837"><span class="hs-identifier hs-var hs-var">modl</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Just</span></span><span> </span><span id="local-6989586621682629839"><span class="annot"><span class="annottext">Module
+</span><a href="#local-6989586621682629839"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Name -&gt; Maybe Module
+</span><a href="GHC.Types.Name.html#nameModule_maybe"><span class="hs-identifier hs-var">nameModule_maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Id -&gt; Name
+</span><a href="GHC.Types.Id.html#idName"><span class="hs-identifier hs-var">idName</span></a></span><span> </span><span class="annot"><span class="annottext">Id
+</span><a href="#local-6989586621682629816"><span class="hs-identifier hs-var">bndr</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Module
+</span><a href="#local-6989586621682629839"><span class="hs-identifier hs-var">m</span></a></span><span>
+</span><span id="line-77"></span><span>         </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">otherwise</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Module
+</span><a href="#local-6989586621682629814"><span class="hs-identifier hs-var">this_mod</span></a></span><span>
+</span><span id="line-78"></span><span>
+</span><span id="line-79"></span><span>    </span><span class="hs-comment">-- default CAF cost centre</span><span>
+</span><span id="line-80"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">CostCentre
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621682629832"><span class="annot"><span class="annottext">CostCentreStack
+</span><a href="#local-6989586621682629832"><span class="hs-identifier hs-var">all_cafs_ccs</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Module -&gt; (CostCentre, CostCentreStack)
+</span><a href="GHC.Types.CostCentre.html#getAllCAFsCC"><span class="hs-identifier hs-var">getAllCAFsCC</span></a></span><span> </span><span class="annot"><span class="annottext">Module
+</span><a href="#local-6989586621682629814"><span class="hs-identifier hs-var">this_mod</span></a></span><span>
+</span><span id="line-81"></span><span>
+</span><span id="line-82"></span><span class="hs-comment">-- Generate a non-top-level RHS. Cost-centre is always currentCCS,</span><span>
+</span><span id="line-83"></span><span class="hs-comment">-- see Note [Cost-centre initialization plan].</span><span>
+</span><span id="line-84"></span><span class="annot"><a href="GHC.Stg.Make.html#mkStgRhs"><span class="hs-identifier hs-type">mkStgRhs</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Types.Var.html#Id"><span class="hs-identifier hs-type">Id</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Stg.Make.html#MkStgRhs"><span class="hs-identifier hs-type">MkStgRhs</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Stg.Syntax.html#StgRhs"><span class="hs-identifier hs-type">StgRhs</span></a></span><span>
+</span><span id="line-85"></span><span id="mkStgRhs"><span class="annot"><span class="annottext">mkStgRhs :: Id -&gt; MkStgRhs -&gt; StgRhs
+</span><a href="GHC.Stg.Make.html#mkStgRhs"><span class="hs-identifier hs-var hs-var">mkStgRhs</span></a></span></span><span> </span><span id="local-6989586621682629843"><span class="annot"><span class="annottext">Id
+</span><a href="#local-6989586621682629843"><span class="hs-identifier hs-var">bndr</span></a></span></span><span> </span><span id="local-6989586621682629844"><span class="annot"><span class="annottext">mk_rhs :: MkStgRhs
+</span><a href="#local-6989586621682629844"><span class="hs-identifier hs-var">mk_rhs</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="GHC.Stg.Make.html#MkStgRhs"><span class="hs-identifier hs-type">MkStgRhs</span></a></span><span> </span><span id="local-6989586621682629845"><span class="annot"><span class="annottext">[Id]
+</span><a href="#local-6989586621682629845"><span class="hs-identifier hs-var">bndrs</span></a></span></span><span> </span><span id="local-6989586621682629846"><span class="annot"><span class="annottext">StgExpr
+</span><a href="#local-6989586621682629846"><span class="hs-identifier hs-var">rhs</span></a></span></span><span> </span><span id="local-6989586621682629847"><span class="annot"><span class="annottext">Type
+</span><a href="#local-6989586621682629847"><span class="hs-identifier hs-var">typ</span></a></span></span><span> </span><span id="local-6989586621682629848"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621682629848"><span class="hs-identifier hs-var">is_join</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-86"></span><span>  </span><span class="hs-comment">-- try to make a StgRhsCon first</span><span>
+</span><span id="line-87"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Just</span></span><span> </span><span id="local-6989586621682629849"><span class="annot"><span class="annottext">StgRhs
+</span><a href="#local-6989586621682629849"><span class="hs-identifier hs-var">rhs_con</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">MkStgRhs -&gt; Maybe StgRhs
+</span><a href="GHC.Stg.Make.html#mkStgRhsCon_maybe"><span class="hs-identifier hs-var">mkStgRhsCon_maybe</span></a></span><span> </span><span class="annot"><span class="annottext">MkStgRhs
+</span><a href="#local-6989586621682629844"><span class="hs-identifier hs-var">mk_rhs</span></a></span><span>
+</span><span id="line-88"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">StgRhs
+</span><a href="#local-6989586621682629849"><span class="hs-identifier hs-var">rhs_con</span></a></span><span>
+</span><span id="line-89"></span><span>
+</span><span id="line-90"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">otherwise</span></span><span>
+</span><span id="line-91"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">XRhsClosure 'Vanilla
+-&gt; CostCentreStack
+-&gt; UpdateFlag
+-&gt; [BinderP 'Vanilla]
+-&gt; StgExpr
+-&gt; Type
+-&gt; StgRhs
+forall (pass :: StgPass).
+XRhsClosure pass
+-&gt; CostCentreStack
+-&gt; UpdateFlag
+-&gt; [BinderP pass]
+-&gt; GenStgExpr pass
+-&gt; Type
+-&gt; GenStgRhs pass
+</span><a href="GHC.Stg.Syntax.html#StgRhsClosure"><span class="hs-identifier hs-var">StgRhsClosure</span></a></span><span> </span><span class="annot"><span class="annottext">XRhsClosure 'Vanilla
+NoExtFieldSilent
+</span><a href="GHC.Stg.Syntax.html#noExtFieldSilent"><span class="hs-identifier hs-var">noExtFieldSilent</span></a></span><span>
+</span><span id="line-92"></span><span>                  </span><span class="annot"><span class="annottext">CostCentreStack
+</span><a href="GHC.Types.CostCentre.html#currentCCS"><span class="hs-identifier hs-var">currentCCS</span></a></span><span>
+</span><span id="line-93"></span><span>                  </span><span class="annot"><span class="annottext">UpdateFlag
+</span><a href="#local-6989586621682629851"><span class="hs-identifier hs-var">upd_flag</span></a></span><span> </span><span class="annot"><span class="annottext">[Id]
+[BinderP 'Vanilla]
+</span><a href="#local-6989586621682629845"><span class="hs-identifier hs-var">bndrs</span></a></span><span> </span><span class="annot"><span class="annottext">StgExpr
+</span><a href="#local-6989586621682629846"><span class="hs-identifier hs-var">rhs</span></a></span><span> </span><span class="annot"><span class="annottext">Type
+</span><a href="#local-6989586621682629847"><span class="hs-identifier hs-var">typ</span></a></span><span>
+</span><span id="line-94"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-95"></span><span>    </span><span id="local-6989586621682629851"><span class="annot"><span class="annottext">upd_flag :: UpdateFlag
+</span><a href="#local-6989586621682629851"><span class="hs-identifier hs-var hs-var">upd_flag</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621682629848"><span class="hs-identifier hs-var">is_join</span></a></span><span>                             </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">UpdateFlag
+</span><a href="GHC.Stg.Syntax.html#JumpedTo"><span class="hs-identifier hs-var">JumpedTo</span></a></span><span>
+</span><span id="line-96"></span><span>             </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool
+</span><span class="hs-identifier hs-var">not</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Id] -&gt; Bool
+forall a. [a] -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Bool
+</span><span class="hs-identifier hs-var">null</span></span><span> </span><span class="annot"><span class="annottext">[Id]
+</span><a href="#local-6989586621682629845"><span class="hs-identifier hs-var">bndrs</span></a></span><span class="hs-special">)</span><span>                    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">UpdateFlag
+</span><a href="GHC.Stg.Syntax.html#ReEntrant"><span class="hs-identifier hs-var">ReEntrant</span></a></span><span>
+</span><span id="line-97"></span><span>             </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Demand -&gt; Bool
+</span><a href="GHC.Types.Demand.html#isAtMostOnceDmd"><span class="hs-identifier hs-var">isAtMostOnceDmd</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Id -&gt; Demand
+</span><a href="GHC.Types.Id.html#idDemandInfo"><span class="hs-identifier hs-var">idDemandInfo</span></a></span><span> </span><span class="annot"><span class="annottext">Id
+</span><a href="#local-6989586621682629843"><span class="hs-identifier hs-var">bndr</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">UpdateFlag
+</span><a href="GHC.Stg.Syntax.html#SingleEntry"><span class="hs-identifier hs-var">SingleEntry</span></a></span><span>
+</span><span id="line-98"></span><span>             </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">otherwise</span></span><span>                           </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">UpdateFlag
+</span><a href="GHC.Stg.Syntax.html#Updatable"><span class="hs-identifier hs-var">Updatable</span></a></span><span>
+</span><span id="line-99"></span><span>
+</span><span id="line-100"></span><span>  </span><span class="hs-comment">{-
+    SDM: disabled.  Eval/Apply can't handle functions with arity zero very
+    well; and making these into simple non-updatable thunks breaks other
+    assumptions (namely that they will be entered only once).
+
+    upd_flag | isPAP env rhs  = ReEntrant
+             | otherwise      = Updatable
+
+-- Detect thunks which will reduce immediately to PAPs, and make them
+-- non-updatable.  This has several advantages:
+--
+--         - the non-updatable thunk behaves exactly like the PAP,
+--
+--         - the thunk is more efficient to enter, because it is
+--           specialised to the task.
+--
+--         - we save one update frame, one stg_update_PAP, one update
+--           and lots of PAP_enters.
+--
+--         - in the case where the thunk is top-level, we save building
+--           a black hole and furthermore the thunk isn't considered to
+--           be a CAF any more, so it doesn't appear in any SRTs.
+--
+-- We do it here, because the arity information is accurate, and we need
+-- to do it before the SRT pass to save the SRT entries associated with
+-- any top-level PAPs.
+
+isPAP env (StgApp f args) = listLengthCmp args arity == LT -- idArity f &gt; length args
+                              where
+                                 arity = stgArity f (lookupBinding env f)
+isPAP env _               = False
+
+-}</span><span>
+</span><span id="line-133"></span><span>
+</span><span id="line-134"></span><span class="hs-comment">{- ToDo:
+          upd = if isOnceDem dem
+                    then (if isNotTop toplev
+                            then SingleEntry    -- HA!  Paydirt for &quot;dem&quot;
+                            else
+                     (if debugIsOn then trace &quot;WARNING: SE CAFs unsupported, forcing UPD instead&quot; else id) $
+                     Updatable)
+                else Updatable
+        -- For now we forbid SingleEntry CAFs; they tickle the
+        -- ASSERT in rts/Storage.c line 215 at newCAF() re mut_link,
+        -- and I don't understand why.  There's only one SE_CAF (well,
+        -- only one that tickled a great gaping bug in an earlier attempt
+        -- at ClosureInfo.getEntryConvention) in the whole of nofib,
+        -- specifically Main.lvl6 in spectral/cryptarithm2.
+        -- So no great loss.  KSW 2000-07.
+-}</span><span>
+</span><span id="line-150"></span><span>
+</span><span id="line-151"></span><span>
+</span><span id="line-152"></span><span class="annot"><span class="hs-comment">-- | Try to make a non top-level StgRhsCon if appropriate</span></span><span>
+</span><span id="line-153"></span><span class="annot"><a href="GHC.Stg.Make.html#mkStgRhsCon_maybe"><span class="hs-identifier hs-type">mkStgRhsCon_maybe</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Stg.Make.html#MkStgRhs"><span class="hs-identifier hs-type">MkStgRhs</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><a href="GHC.Stg.Syntax.html#StgRhs"><span class="hs-identifier hs-type">StgRhs</span></a></span><span>
+</span><span id="line-154"></span><span id="mkStgRhsCon_maybe"><span class="annot"><span class="annottext">mkStgRhsCon_maybe :: MkStgRhs -&gt; Maybe StgRhs
+</span><a href="GHC.Stg.Make.html#mkStgRhsCon_maybe"><span class="hs-identifier hs-var hs-var">mkStgRhsCon_maybe</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Stg.Make.html#MkStgRhs"><span class="hs-identifier hs-type">MkStgRhs</span></a></span><span> </span><span id="local-6989586621682629853"><span class="annot"><span class="annottext">[Id]
+</span><a href="#local-6989586621682629853"><span class="hs-identifier hs-var">bndrs</span></a></span></span><span> </span><span id="local-6989586621682629854"><span class="annot"><span class="annottext">StgExpr
+</span><a href="#local-6989586621682629854"><span class="hs-identifier hs-var">rhs</span></a></span></span><span> </span><span id="local-6989586621682629855"><span class="annot"><span class="annottext">Type
+</span><a href="#local-6989586621682629855"><span class="hs-identifier hs-var">typ</span></a></span></span><span> </span><span id="local-6989586621682629856"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621682629856"><span class="hs-identifier hs-var">is_join</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-155"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[Id]
+</span><a href="#local-6989586621682629853"><span class="hs-identifier hs-var">bndrs</span></a></span><span>
+</span><span id="line-156"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool
+</span><span class="hs-identifier hs-var">not</span></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621682629856"><span class="hs-identifier hs-var">is_join</span></a></span><span>
+</span><span id="line-157"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span id="local-6989586621682629857"><span class="annot"><span class="annottext">[StgTickish]
+</span><a href="#local-6989586621682629857"><span class="hs-identifier hs-var">ticks</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Stg.Syntax.html#StgConApp"><span class="hs-identifier hs-type">StgConApp</span></a></span><span> </span><span id="local-6989586621682629859"><span class="annot"><span class="annottext">DataCon
+</span><a href="#local-6989586621682629859"><span class="hs-identifier hs-var">con</span></a></span></span><span> </span><span id="local-6989586621682629860"><span class="annot"><span class="annottext">ConstructorNumber
+</span><a href="#local-6989586621682629860"><span class="hs-identifier hs-var">mn</span></a></span></span><span> </span><span id="local-6989586621682629861"><span class="annot"><span class="annottext">[StgArg]
+</span><a href="#local-6989586621682629861"><span class="hs-identifier hs-var">args</span></a></span></span><span> </span><span class="annot"><span class="annottext">[[PrimRep]]
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">(StgTickish -&gt; Bool) -&gt; StgExpr -&gt; ([StgTickish], StgExpr)
+forall (p :: StgPass).
+(StgTickish -&gt; Bool)
+-&gt; GenStgExpr p -&gt; ([StgTickish], GenStgExpr p)
+</span><a href="GHC.Stg.Utils.html#stripStgTicksTop"><span class="hs-identifier hs-var">stripStgTicksTop</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool -&gt; Bool
+</span><span class="hs-identifier hs-var">not</span></span><span> </span><span class="annot"><span class="annottext">(Bool -&gt; Bool) -&gt; (StgTickish -&gt; Bool) -&gt; StgTickish -&gt; Bool
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">StgTickish -&gt; Bool
+forall (pass :: TickishPass). GenTickish pass -&gt; Bool
+</span><a href="GHC.Types.Tickish.html#tickishIsCode"><span class="hs-identifier hs-var">tickishIsCode</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">StgExpr
+</span><a href="#local-6989586621682629854"><span class="hs-identifier hs-var">rhs</span></a></span><span>
+</span><span id="line-158"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">StgRhs -&gt; Maybe StgRhs
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">CostCentreStack
+-&gt; DataCon
+-&gt; ConstructorNumber
+-&gt; [StgTickish]
+-&gt; [StgArg]
+-&gt; Type
+-&gt; StgRhs
+forall (pass :: StgPass).
+CostCentreStack
+-&gt; DataCon
+-&gt; ConstructorNumber
+-&gt; [StgTickish]
+-&gt; [StgArg]
+-&gt; Type
+-&gt; GenStgRhs pass
+</span><a href="GHC.Stg.Syntax.html#StgRhsCon"><span class="hs-identifier hs-var">StgRhsCon</span></a></span><span> </span><span class="annot"><span class="annottext">CostCentreStack
+</span><a href="GHC.Types.CostCentre.html#currentCCS"><span class="hs-identifier hs-var">currentCCS</span></a></span><span> </span><span class="annot"><span class="annottext">DataCon
+</span><a href="#local-6989586621682629859"><span class="hs-identifier hs-var">con</span></a></span><span> </span><span class="annot"><span class="annottext">ConstructorNumber
+</span><a href="#local-6989586621682629860"><span class="hs-identifier hs-var">mn</span></a></span><span> </span><span class="annot"><span class="annottext">[StgTickish]
+</span><a href="#local-6989586621682629857"><span class="hs-identifier hs-var">ticks</span></a></span><span> </span><span class="annot"><span class="annottext">[StgArg]
+</span><a href="#local-6989586621682629861"><span class="hs-identifier hs-var">args</span></a></span><span> </span><span class="annot"><span class="annottext">Type
+</span><a href="#local-6989586621682629855"><span class="hs-identifier hs-var">typ</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-159"></span><span>
+</span><span id="line-160"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">otherwise</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe StgRhs
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span>
+</span><span id="line-161"></span><span>
+</span><span id="line-162"></span><span>
+</span><span id="line-163"></span><span class="annot"><span class="hs-comment">-- | Try to make a top-level StgRhsCon if appropriate</span></span><span>
+</span><span id="line-164"></span><span class="annot"><a href="GHC.Stg.Make.html#mkTopStgRhsCon_maybe"><span class="hs-identifier hs-type">mkTopStgRhsCon_maybe</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Core.DataCon.html#DataCon"><span class="hs-identifier hs-type">DataCon</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="GHC.Stg.Syntax.html#StgArg"><span class="hs-identifier hs-type">StgArg</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Stg.Make.html#MkStgRhs"><span class="hs-identifier hs-type">MkStgRhs</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><a href="GHC.Stg.Syntax.html#StgRhs"><span class="hs-identifier hs-type">StgRhs</span></a></span><span>
+</span><span id="line-165"></span><span id="mkTopStgRhsCon_maybe"><span class="annot"><span class="annottext">mkTopStgRhsCon_maybe :: (DataCon -&gt; [StgArg] -&gt; Bool) -&gt; MkStgRhs -&gt; Maybe StgRhs
+</span><a href="GHC.Stg.Make.html#mkTopStgRhsCon_maybe"><span class="hs-identifier hs-var hs-var">mkTopStgRhsCon_maybe</span></a></span></span><span> </span><span id="local-6989586621682629865"><span class="annot"><span class="annottext">DataCon -&gt; [StgArg] -&gt; Bool
+</span><a href="#local-6989586621682629865"><span class="hs-identifier hs-var">allow_static_con_app</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Stg.Make.html#MkStgRhs"><span class="hs-identifier hs-type">MkStgRhs</span></a></span><span> </span><span id="local-6989586621682629866"><span class="annot"><span class="annottext">[Id]
+</span><a href="#local-6989586621682629866"><span class="hs-identifier hs-var">bndrs</span></a></span></span><span> </span><span id="local-6989586621682629867"><span class="annot"><span class="annottext">StgExpr
+</span><a href="#local-6989586621682629867"><span class="hs-identifier hs-var">rhs</span></a></span></span><span> </span><span id="local-6989586621682629868"><span class="annot"><span class="annottext">Type
+</span><a href="#local-6989586621682629868"><span class="hs-identifier hs-var">typ</span></a></span></span><span> </span><span id="local-6989586621682629869"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621682629869"><span class="hs-identifier hs-var">is_join</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-166"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[Id]
+</span><a href="#local-6989586621682629866"><span class="hs-identifier hs-var">bndrs</span></a></span><span>
+</span><span id="line-167"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool
+</span><span class="hs-identifier hs-var">not</span></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621682629869"><span class="hs-identifier hs-var">is_join</span></a></span><span> </span><span class="hs-comment">-- shouldn't happen at top-level</span><span>
+</span><span id="line-168"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span id="local-6989586621682629870"><span class="annot"><span class="annottext">[StgTickish]
+</span><a href="#local-6989586621682629870"><span class="hs-identifier hs-var">ticks</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Stg.Syntax.html#StgConApp"><span class="hs-identifier hs-type">StgConApp</span></a></span><span> </span><span id="local-6989586621682629871"><span class="annot"><span class="annottext">DataCon
+</span><a href="#local-6989586621682629871"><span class="hs-identifier hs-var">con</span></a></span></span><span> </span><span id="local-6989586621682629872"><span class="annot"><span class="annottext">ConstructorNumber
+</span><a href="#local-6989586621682629872"><span class="hs-identifier hs-var">mn</span></a></span></span><span> </span><span id="local-6989586621682629873"><span class="annot"><span class="annottext">[StgArg]
+</span><a href="#local-6989586621682629873"><span class="hs-identifier hs-var">args</span></a></span></span><span> </span><span class="annot"><span class="annottext">[[PrimRep]]
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">(StgTickish -&gt; Bool) -&gt; StgExpr -&gt; ([StgTickish], StgExpr)
+forall (p :: StgPass).
+(StgTickish -&gt; Bool)
+-&gt; GenStgExpr p -&gt; ([StgTickish], GenStgExpr p)
+</span><a href="GHC.Stg.Utils.html#stripStgTicksTop"><span class="hs-identifier hs-var">stripStgTicksTop</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool -&gt; Bool
+</span><span class="hs-identifier hs-var">not</span></span><span> </span><span class="annot"><span class="annottext">(Bool -&gt; Bool) -&gt; (StgTickish -&gt; Bool) -&gt; StgTickish -&gt; Bool
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">StgTickish -&gt; Bool
+forall (pass :: TickishPass). GenTickish pass -&gt; Bool
+</span><a href="GHC.Types.Tickish.html#tickishIsCode"><span class="hs-identifier hs-var">tickishIsCode</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">StgExpr
+</span><a href="#local-6989586621682629867"><span class="hs-identifier hs-var">rhs</span></a></span><span>
+</span><span id="line-169"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">DataCon -&gt; [StgArg] -&gt; Bool
+</span><a href="#local-6989586621682629865"><span class="hs-identifier hs-var">allow_static_con_app</span></a></span><span> </span><span class="annot"><span class="annottext">DataCon
+</span><a href="#local-6989586621682629871"><span class="hs-identifier hs-var">con</span></a></span><span> </span><span class="annot"><span class="annottext">[StgArg]
+</span><a href="#local-6989586621682629873"><span class="hs-identifier hs-var">args</span></a></span><span>
+</span><span id="line-170"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">StgRhs -&gt; Maybe StgRhs
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">CostCentreStack
+-&gt; DataCon
+-&gt; ConstructorNumber
+-&gt; [StgTickish]
+-&gt; [StgArg]
+-&gt; Type
+-&gt; StgRhs
+forall (pass :: StgPass).
+CostCentreStack
+-&gt; DataCon
+-&gt; ConstructorNumber
+-&gt; [StgTickish]
+-&gt; [StgArg]
+-&gt; Type
+-&gt; GenStgRhs pass
+</span><a href="GHC.Stg.Syntax.html#StgRhsCon"><span class="hs-identifier hs-var">StgRhsCon</span></a></span><span> </span><span class="annot"><span class="annottext">CostCentreStack
+</span><a href="GHC.Types.CostCentre.html#dontCareCCS"><span class="hs-identifier hs-var">dontCareCCS</span></a></span><span> </span><span class="annot"><span class="annottext">DataCon
+</span><a href="#local-6989586621682629871"><span class="hs-identifier hs-var">con</span></a></span><span> </span><span class="annot"><span class="annottext">ConstructorNumber
+</span><a href="#local-6989586621682629872"><span class="hs-identifier hs-var">mn</span></a></span><span> </span><span class="annot"><span class="annottext">[StgTickish]
+</span><a href="#local-6989586621682629870"><span class="hs-identifier hs-var">ticks</span></a></span><span> </span><span class="annot"><span class="annottext">[StgArg]
+</span><a href="#local-6989586621682629873"><span class="hs-identifier hs-var">args</span></a></span><span> </span><span class="annot"><span class="annottext">Type
+</span><a href="#local-6989586621682629868"><span class="hs-identifier hs-var">typ</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-171"></span><span>
+</span><span id="line-172"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">otherwise</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe StgRhs
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span>
+</span><span id="line-173"></span></pre></body></html>

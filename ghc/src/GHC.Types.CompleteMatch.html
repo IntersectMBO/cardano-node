@@ -1,0 +1,167 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE UndecidableInstances #-}</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="annot"><span class="hs-comment">-- | COMPLETE signature</span></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="GHC.Types.CompleteMatch.html"><span class="hs-identifier">GHC.Types.CompleteMatch</span></a></span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="GHC.Types.CompleteMatch.html#CompleteMatchX"><span class="hs-identifier">CompleteMatchX</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Types.CompleteMatch.html#CompleteMatch"><span class="hs-identifier">CompleteMatch</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Types.CompleteMatch.html#CompleteMatches"><span class="hs-identifier">CompleteMatches</span></a></span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Types.CompleteMatch.html#DsCompleteMatch"><span class="hs-identifier">DsCompleteMatch</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Types.CompleteMatch.html#DsCompleteMatches"><span class="hs-identifier">DsCompleteMatches</span></a></span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Types.CompleteMatch.html#mkCompleteMatch"><span class="hs-identifier">mkCompleteMatch</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Types.CompleteMatch.html#vanillaCompleteMatch"><span class="hs-identifier">vanillaCompleteMatch</span></a></span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Types.CompleteMatch.html#completeMatchAppliesAtType"><span class="hs-identifier">completeMatchAppliesAtType</span></a></span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Prelude.html"><span class="hs-identifier">GHC.Prelude</span></a></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Core.TyCo.Rep.html"><span class="hs-identifier">GHC.Core.TyCo.Rep</span></a></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Types.Unique.html"><span class="hs-identifier">GHC.Types.Unique</span></a></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Core.ConLike.html"><span class="hs-identifier">GHC.Core.ConLike</span></a></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Core.TyCon.html"><span class="hs-identifier">GHC.Core.TyCon</span></a></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Core.Type.html"><span class="hs-identifier">GHC.Core.Type</span></a></span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="GHC.Core.Type.html#splitTyConApp_maybe"><span class="hs-identifier">splitTyConApp_maybe</span></a></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Types.Name.html"><span class="hs-identifier">GHC.Types.Name</span></a></span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="GHC.Types.Name.html#Name"><span class="hs-identifier">Name</span></a></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Types.Unique.DSet.html"><span class="hs-identifier">GHC.Types.Unique.DSet</span></a></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Utils.Outputable.html"><span class="hs-identifier">GHC.Utils.Outputable</span></a></span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">type</span><span> </span><span id="CompleteMatch"><span class="annot"><a href="GHC.Types.CompleteMatch.html#CompleteMatch"><span class="hs-identifier hs-var">CompleteMatch</span></a></span></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="GHC.Types.CompleteMatch.html#CompleteMatchX"><span class="hs-identifier hs-type">CompleteMatchX</span></a></span><span> </span><span class="annot"><a href="GHC.Types.Name.html#Name"><span class="hs-identifier hs-type">Name</span></a></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">type</span><span> </span><span id="DsCompleteMatch"><span class="annot"><a href="GHC.Types.CompleteMatch.html#DsCompleteMatch"><span class="hs-identifier hs-var">DsCompleteMatch</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="GHC.Types.CompleteMatch.html#CompleteMatchX"><span class="hs-identifier hs-type">CompleteMatchX</span></a></span><span> </span><span class="annot"><a href="GHC.Core.ConLike.html#ConLike"><span class="hs-identifier hs-type">ConLike</span></a></span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">type</span><span> </span><span id="CompleteMatches"><span class="annot"><a href="GHC.Types.CompleteMatch.html#CompleteMatches"><span class="hs-identifier hs-var">CompleteMatches</span></a></span></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="GHC.Types.CompleteMatch.html#CompleteMatch"><span class="hs-identifier hs-type">CompleteMatch</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-28"></span><span class="hs-keyword">type</span><span> </span><span id="DsCompleteMatches"><span class="annot"><a href="GHC.Types.CompleteMatch.html#DsCompleteMatches"><span class="hs-identifier hs-var">DsCompleteMatches</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="GHC.Types.CompleteMatch.html#DsCompleteMatch"><span class="hs-identifier hs-type">DsCompleteMatch</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span class="hs-comment">-- | A list of conlikes which represents a complete pattern match.</span><span>
+</span><span id="line-31"></span><span class="hs-comment">-- These arise from @COMPLETE@ signatures.</span><span>
+</span><span id="line-32"></span><span class="hs-comment">-- See also Note [Implementation of COMPLETE pragmas].</span><span>
+</span><span id="line-33"></span><span class="hs-keyword">data</span><span> </span><span id="CompleteMatchX"><span class="annot"><a href="GHC.Types.CompleteMatch.html#CompleteMatchX"><span class="hs-identifier hs-var">CompleteMatchX</span></a></span></span><span> </span><span id="local-6989586621682598359"><span class="annot"><a href="#local-6989586621682598359"><span class="hs-identifier hs-type">con</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="CompleteMatch"><span class="annot"><a href="GHC.Types.CompleteMatch.html#CompleteMatch"><span class="hs-identifier hs-var">CompleteMatch</span></a></span></span><span>
+</span><span id="line-34"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="cmConLikes"><span class="annot"><span class="annottext">forall con. CompleteMatchX con -&gt; UniqDSet con
+</span><a href="GHC.Types.CompleteMatch.html#cmConLikes"><span class="hs-identifier hs-var hs-var">cmConLikes</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Types.Unique.DSet.html#UniqDSet"><span class="hs-identifier hs-type">UniqDSet</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682598359"><span class="hs-identifier hs-type">con</span></a></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ The set of constructor names</span></span><span>
+</span><span id="line-35"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="cmResultTyCon"><span class="annot"><span class="annottext">forall con. CompleteMatchX con -&gt; Maybe Name
+</span><a href="GHC.Types.CompleteMatch.html#cmResultTyCon"><span class="hs-identifier hs-var hs-var">cmResultTyCon</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><a href="GHC.Types.Name.html#Name"><span class="hs-identifier hs-type">Name</span></a></span><span> </span><span class="annot"><span class="hs-comment">-- ^ The optional, concrete result TyCon name the set applies to</span></span><span>
+</span><span id="line-36"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-37"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span id="local-6989586621682598413"><span id="local-6989586621682598420"><span class="annot"><span class="annottext">CompleteMatchX con -&gt; CompleteMatchX con -&gt; Bool
+(CompleteMatchX con -&gt; CompleteMatchX con -&gt; Bool)
+-&gt; (CompleteMatchX con -&gt; CompleteMatchX con -&gt; Bool)
+-&gt; Eq (CompleteMatchX con)
+forall con. CompleteMatchX con -&gt; CompleteMatchX con -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: forall con. CompleteMatchX con -&gt; CompleteMatchX con -&gt; Bool
+== :: CompleteMatchX con -&gt; CompleteMatchX con -&gt; Bool
+$c/= :: forall con. CompleteMatchX con -&gt; CompleteMatchX con -&gt; Bool
+/= :: CompleteMatchX con -&gt; CompleteMatchX con -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span id="local-6989586621682598370"><span class="annot"><a href="GHC.Types.CompleteMatch.html#mkCompleteMatch"><span class="hs-identifier hs-type">mkCompleteMatch</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Types.Unique.DSet.html#UniqDSet"><span class="hs-identifier hs-type">UniqDSet</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682598370"><span class="hs-identifier hs-type">con</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><a href="GHC.Types.Name.html#Name"><span class="hs-identifier hs-type">Name</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Types.CompleteMatch.html#CompleteMatchX"><span class="hs-identifier hs-type">CompleteMatchX</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682598370"><span class="hs-identifier hs-type">con</span></a></span></span><span>
+</span><span id="line-40"></span><span id="mkCompleteMatch"><span class="annot"><span class="annottext">mkCompleteMatch :: forall con. UniqDSet con -&gt; Maybe Name -&gt; CompleteMatchX con
+</span><a href="GHC.Types.CompleteMatch.html#mkCompleteMatch"><span class="hs-identifier hs-var hs-var">mkCompleteMatch</span></a></span></span><span> </span><span id="local-6989586621682598425"><span class="annot"><span class="annottext">UniqDSet con
+</span><a href="#local-6989586621682598425"><span class="hs-identifier hs-var">nms</span></a></span></span><span> </span><span id="local-6989586621682598426"><span class="annot"><span class="annottext">Maybe Name
+</span><a href="#local-6989586621682598426"><span class="hs-identifier hs-var">mb_tc</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="GHC.Types.CompleteMatch.html#CompleteMatch"><span class="hs-identifier hs-type">CompleteMatch</span></a></span><span> </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">cmConLikes :: UniqDSet con
+</span><a href="GHC.Types.CompleteMatch.html#cmConLikes"><span class="hs-identifier hs-var">cmConLikes</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">UniqDSet con
+</span><a href="#local-6989586621682598425"><span class="hs-identifier hs-var">nms</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">cmResultTyCon :: Maybe Name
+</span><a href="GHC.Types.CompleteMatch.html#cmResultTyCon"><span class="hs-identifier hs-var">cmResultTyCon</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe Name
+</span><a href="#local-6989586621682598426"><span class="hs-identifier hs-var">mb_tc</span></a></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-41"></span><span>
+</span><span id="line-42"></span><span id="local-6989586621682598372"><span class="annot"><a href="GHC.Types.CompleteMatch.html#vanillaCompleteMatch"><span class="hs-identifier hs-type">vanillaCompleteMatch</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Types.Unique.DSet.html#UniqDSet"><span class="hs-identifier hs-type">UniqDSet</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682598372"><span class="hs-identifier hs-type">con</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Types.CompleteMatch.html#CompleteMatchX"><span class="hs-identifier hs-type">CompleteMatchX</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682598372"><span class="hs-identifier hs-type">con</span></a></span></span><span>
+</span><span id="line-43"></span><span id="vanillaCompleteMatch"><span class="annot"><span class="annottext">vanillaCompleteMatch :: forall con. UniqDSet con -&gt; CompleteMatchX con
+</span><a href="GHC.Types.CompleteMatch.html#vanillaCompleteMatch"><span class="hs-identifier hs-var hs-var">vanillaCompleteMatch</span></a></span></span><span> </span><span id="local-6989586621682598427"><span class="annot"><span class="annottext">UniqDSet con
+</span><a href="#local-6989586621682598427"><span class="hs-identifier hs-var">nms</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">UniqDSet con -&gt; Maybe Name -&gt; CompleteMatchX con
+forall con. UniqDSet con -&gt; Maybe Name -&gt; CompleteMatchX con
+</span><a href="GHC.Types.CompleteMatch.html#mkCompleteMatch"><span class="hs-identifier hs-var">mkCompleteMatch</span></a></span><span> </span><span class="annot"><span class="annottext">UniqDSet con
+</span><a href="#local-6989586621682598427"><span class="hs-identifier hs-var">nms</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Name
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span>
+</span><span id="line-44"></span><span>
+</span><span id="line-45"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621682598379"><span class="annot"><a href="GHC.Utils.Outputable.html#Outputable"><span class="hs-identifier hs-type">Outputable</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682598379"><span class="hs-identifier hs-type">con</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="GHC.Utils.Outputable.html#Outputable"><span class="hs-identifier hs-type">Outputable</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Types.CompleteMatch.html#CompleteMatchX"><span class="hs-identifier hs-type">CompleteMatchX</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682598379"><span class="hs-identifier hs-type">con</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-46"></span><span>  </span><span id="local-6989586621682598442"><span class="annot"><span class="annottext">ppr :: CompleteMatchX con -&gt; SDoc
+</span><a href="#local-6989586621682598442"><span class="hs-identifier hs-var hs-var hs-var">ppr</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Types.CompleteMatch.html#CompleteMatch"><span class="hs-identifier hs-type">CompleteMatch</span></a></span><span> </span><span id="local-6989586621682598444"><span class="annot"><span class="annottext">UniqDSet con
+</span><a href="#local-6989586621682598444"><span class="hs-identifier hs-var">cls</span></a></span></span><span> </span><span id="local-6989586621682598445"><span class="annot"><span class="annottext">Maybe Name
+</span><a href="#local-6989586621682598445"><span class="hs-identifier hs-var">mty</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Maybe Name
+</span><a href="#local-6989586621682598445"><span class="hs-identifier hs-var">mty</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-47"></span><span>    </span><span class="annot"><span class="annottext">Maybe Name
+</span><span class="hs-identifier hs-var">Nothing</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">UniqDSet con -&gt; SDoc
+forall a. Outputable a =&gt; a -&gt; SDoc
+</span><a href="GHC.Utils.Outputable.html#ppr"><span class="hs-identifier hs-var">ppr</span></a></span><span> </span><span class="annot"><span class="annottext">UniqDSet con
+</span><a href="#local-6989586621682598444"><span class="hs-identifier hs-var">cls</span></a></span><span>
+</span><span id="line-48"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">Just</span></span><span> </span><span id="local-6989586621682598446"><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621682598446"><span class="hs-identifier hs-var">ty</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">UniqDSet con -&gt; SDoc
+forall a. Outputable a =&gt; a -&gt; SDoc
+</span><a href="GHC.Utils.Outputable.html#ppr"><span class="hs-identifier hs-var">ppr</span></a></span><span> </span><span class="annot"><span class="annottext">UniqDSet con
+</span><a href="#local-6989586621682598444"><span class="hs-identifier hs-var">cls</span></a></span><span> </span><span class="annot"><span class="annottext">SDoc -&gt; SDoc -&gt; SDoc
+forall doc. IsLine doc =&gt; doc -&gt; doc -&gt; doc
+</span><a href="GHC.Utils.Outputable.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; SDoc
+forall doc. IsLine doc =&gt; String -&gt; doc
+</span><a href="GHC.Utils.Outputable.html#text"><span class="hs-identifier hs-var">text</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;@&quot;</span></span><span> </span><span class="annot"><span class="annottext">SDoc -&gt; SDoc -&gt; SDoc
+forall doc. IsLine doc =&gt; doc -&gt; doc -&gt; doc
+</span><a href="GHC.Utils.Outputable.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">SDoc -&gt; SDoc
+forall doc. IsLine doc =&gt; doc -&gt; doc
+</span><a href="GHC.Utils.Outputable.html#parens"><span class="hs-identifier hs-var">parens</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Name -&gt; SDoc
+forall a. Outputable a =&gt; a -&gt; SDoc
+</span><a href="GHC.Utils.Outputable.html#ppr"><span class="hs-identifier hs-var">ppr</span></a></span><span> </span><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621682598446"><span class="hs-identifier hs-var">ty</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-49"></span><span>
+</span><span id="line-50"></span><span class="hs-comment">-- | Does this 'COMPLETE' set apply at this type?</span><span>
+</span><span id="line-51"></span><span class="hs-comment">--</span><span>
+</span><span id="line-52"></span><span class="hs-comment">-- See the part about &quot;result type constructors&quot; in</span><span>
+</span><span id="line-53"></span><span class="hs-comment">-- Note [Implementation of COMPLETE pragmas] in GHC.HsToCore.Pmc.Solver.</span><span>
+</span><span id="line-54"></span><span id="local-6989586621682598385"><span class="annot"><a href="GHC.Types.CompleteMatch.html#completeMatchAppliesAtType"><span class="hs-identifier hs-type">completeMatchAppliesAtType</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Core.TyCo.Rep.html#Type"><span class="hs-identifier hs-type">Type</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Types.CompleteMatch.html#CompleteMatchX"><span class="hs-identifier hs-type">CompleteMatchX</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682598385"><span class="hs-identifier hs-type">con</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span></span><span>
+</span><span id="line-55"></span><span id="completeMatchAppliesAtType"><span class="annot"><span class="annottext">completeMatchAppliesAtType :: forall con. Type -&gt; CompleteMatchX con -&gt; Bool
+</span><a href="GHC.Types.CompleteMatch.html#completeMatchAppliesAtType"><span class="hs-identifier hs-var hs-var">completeMatchAppliesAtType</span></a></span></span><span> </span><span id="local-6989586621682598459"><span class="annot"><span class="annottext">Type
+</span><a href="#local-6989586621682598459"><span class="hs-identifier hs-var">ty</span></a></span></span><span> </span><span id="local-6989586621682598460"><span class="annot"><span class="annottext">CompleteMatchX con
+</span><a href="#local-6989586621682598460"><span class="hs-identifier hs-var">cm</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall (t :: * -&gt; *) a. Foldable t =&gt; (a -&gt; Bool) -&gt; t a -&gt; Bool
+</span><span class="hs-identifier hs-var">all</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><span class="annottext">Unique -&gt; Bool
+</span><a href="#local-6989586621682598462"><span class="hs-identifier hs-var">ty_matches</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Name -&gt; Unique
+forall a. Uniquable a =&gt; a -&gt; Unique
+</span><a href="GHC.Types.Unique.html#getUnique"><span class="hs-identifier hs-var">getUnique</span></a></span><span> </span><span class="annot"><span class="annottext">(Name -&gt; Unique) -&gt; Maybe Name -&gt; Maybe Unique
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">CompleteMatchX con -&gt; Maybe Name
+forall con. CompleteMatchX con -&gt; Maybe Name
+</span><a href="GHC.Types.CompleteMatch.html#cmResultTyCon"><span class="hs-identifier hs-var">cmResultTyCon</span></a></span><span> </span><span class="annot"><span class="annottext">CompleteMatchX con
+</span><a href="#local-6989586621682598460"><span class="hs-identifier hs-var">cm</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-56"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-57"></span><span>    </span><span class="annot"><a href="#local-6989586621682598462"><span class="hs-identifier hs-type">ty_matches</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Types.Unique.html#Unique"><span class="hs-identifier hs-type">Unique</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span>
+</span><span id="line-58"></span><span>    </span><span id="local-6989586621682598462"><span class="annot"><span class="annottext">ty_matches :: Unique -&gt; Bool
+</span><a href="#local-6989586621682598462"><span class="hs-identifier hs-var hs-var">ty_matches</span></a></span></span><span> </span><span id="local-6989586621682598465"><span class="annot"><span class="annottext">Unique
+</span><a href="#local-6989586621682598465"><span class="hs-identifier hs-var">sig_tc</span></a></span></span><span>
+</span><span id="line-59"></span><span>      </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Just</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621682598466"><span class="annot"><span class="annottext">TyCon
+</span><a href="#local-6989586621682598466"><span class="hs-identifier hs-var">tc</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621682598467"><span class="annot"><span class="annottext">[Type]
+</span><a href="#local-6989586621682598467"><span class="hs-identifier hs-var">_arg_tys</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">HasDebugCallStack =&gt; Type -&gt; Maybe (TyCon, [Type])
+Type -&gt; Maybe (TyCon, [Type])
+</span><a href="GHC.Core.Type.html#splitTyConApp_maybe"><span class="hs-identifier hs-var">splitTyConApp_maybe</span></a></span><span> </span><span class="annot"><span class="annottext">Type
+</span><a href="#local-6989586621682598459"><span class="hs-identifier hs-var">ty</span></a></span><span>
+</span><span id="line-60"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">TyCon
+</span><a href="#local-6989586621682598466"><span class="hs-identifier hs-var">tc</span></a></span><span> </span><span class="annot"><span class="annottext">TyCon -&gt; Unique -&gt; Bool
+forall a. Uniquable a =&gt; a -&gt; Unique -&gt; Bool
+</span><a href="GHC.Types.Unique.html#hasKey"><span class="hs-operator hs-var">`hasKey`</span></a></span><span> </span><span class="annot"><span class="annottext">Unique
+</span><a href="#local-6989586621682598465"><span class="hs-identifier hs-var">sig_tc</span></a></span><span>
+</span><span id="line-61"></span><span>      </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><span class="hs-operator hs-var">||</span></span><span> </span><span class="annot"><span class="annottext">Unique
+</span><a href="#local-6989586621682598465"><span class="hs-identifier hs-var">sig_tc</span></a></span><span> </span><span class="annot"><span class="annottext">Unique -&gt; TyCon -&gt; Bool
+</span><a href="#local-6989586621682598470"><span class="hs-operator hs-var">`is_family_ty_con_of`</span></a></span><span> </span><span class="annot"><span class="annottext">TyCon
+</span><a href="#local-6989586621682598466"><span class="hs-identifier hs-var">tc</span></a></span><span>
+</span><span id="line-62"></span><span>         </span><span class="hs-comment">-- #24326: sig_tc might be the data Family TyCon of the representation</span><span>
+</span><span id="line-63"></span><span>         </span><span class="hs-comment">--         TyCon tc -- this CompleteMatch still applies</span><span>
+</span><span id="line-64"></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span>
+</span><span id="line-65"></span><span>      </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">otherwise</span></span><span>
+</span><span id="line-66"></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span>
+</span><span id="line-67"></span><span>    </span><span id="local-6989586621682598473"><span class="annot"><span class="annottext">Unique
+</span><a href="#local-6989586621682598473"><span class="hs-identifier hs-var">fam_tc</span></a></span></span><span> </span><span id="local-6989586621682598470"><span class="annot"><span class="annottext">is_family_ty_con_of :: Unique -&gt; TyCon -&gt; Bool
+</span><a href="#local-6989586621682598470"><span class="hs-operator hs-var hs-var">`is_family_ty_con_of`</span></a></span></span><span> </span><span id="local-6989586621682598474"><span class="annot"><span class="annottext">TyCon
+</span><a href="#local-6989586621682598474"><span class="hs-identifier hs-var">repr_tc</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-68"></span><span>      </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">(TyCon, [Type]) -&gt; TyCon
+forall a b. (a, b) -&gt; a
+</span><span class="hs-identifier hs-var">fst</span></span><span> </span><span class="annot"><span class="annottext">((TyCon, [Type]) -&gt; TyCon) -&gt; Maybe (TyCon, [Type]) -&gt; Maybe TyCon
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">TyCon -&gt; Maybe (TyCon, [Type])
+</span><a href="GHC.Core.TyCon.html#tyConFamInst_maybe"><span class="hs-identifier hs-var">tyConFamInst_maybe</span></a></span><span> </span><span class="annot"><span class="annottext">TyCon
+</span><a href="#local-6989586621682598474"><span class="hs-identifier hs-var">repr_tc</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-69"></span><span>        </span><span class="annot"><span class="hs-identifier hs-type">Just</span></span><span> </span><span id="local-6989586621682598477"><span class="annot"><span class="annottext">TyCon
+</span><a href="#local-6989586621682598477"><span class="hs-identifier hs-var">tc</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">TyCon
+</span><a href="#local-6989586621682598477"><span class="hs-identifier hs-var">tc</span></a></span><span> </span><span class="annot"><span class="annottext">TyCon -&gt; Unique -&gt; Bool
+forall a. Uniquable a =&gt; a -&gt; Unique -&gt; Bool
+</span><a href="GHC.Types.Unique.html#hasKey"><span class="hs-operator hs-var">`hasKey`</span></a></span><span> </span><span class="annot"><span class="annottext">Unique
+</span><a href="#local-6989586621682598473"><span class="hs-identifier hs-var">fam_tc</span></a></span><span>
+</span><span id="line-70"></span><span>        </span><span class="annot"><span class="annottext">Maybe TyCon
+</span><span class="hs-identifier hs-var">Nothing</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span>
+</span><span id="line-71"></span></pre></body></html>

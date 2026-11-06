@@ -1,0 +1,150 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="GHC.Iface.Warnings.html"><span class="hs-identifier">GHC.Iface.Warnings</span></a></span><span>
+</span><span id="line-2"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="GHC.Iface.Warnings.html#toIfaceWarnings"><span class="hs-identifier">toIfaceWarnings</span></a></span><span>
+</span><span id="line-3"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Iface.Warnings.html#toIfaceWarningTxt"><span class="hs-identifier">toIfaceWarningTxt</span></a></span><span>
+</span><span id="line-4"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-5"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Prelude.html"><span class="hs-identifier">GHC.Prelude</span></a></span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Hs.html"><span class="hs-identifier">GHC.Hs</span></a></span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Iface.Syntax.html"><span class="hs-identifier">GHC.Iface.Syntax</span></a></span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Types.SourceText.html"><span class="hs-identifier">GHC.Types.SourceText</span></a></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Types.SrcLoc.html"><span class="hs-identifier">GHC.Types.SrcLoc</span></a></span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="GHC.Types.SrcLoc.html#unLoc"><span class="hs-identifier">unLoc</span></a></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Unit.Module.Warnings.html"><span class="hs-identifier">GHC.Unit.Module.Warnings</span></a></span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="annot"><a href="GHC.Iface.Warnings.html#toIfaceWarnings"><span class="hs-identifier hs-type">toIfaceWarnings</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Unit.Module.Warnings.html#Warnings"><span class="hs-identifier hs-type">Warnings</span></a></span><span> </span><span class="annot"><a href="GHC.Hs.Extension.html#GhcRn"><span class="hs-identifier hs-type">GhcRn</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Iface.Syntax.html#IfaceWarnings"><span class="hs-identifier hs-type">IfaceWarnings</span></a></span><span>
+</span><span id="line-19"></span><span id="toIfaceWarnings"><span class="annot"><span class="annottext">toIfaceWarnings :: Warnings GhcRn -&gt; IfaceWarnings
+</span><a href="GHC.Iface.Warnings.html#toIfaceWarnings"><span class="hs-identifier hs-var hs-var">toIfaceWarnings</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Unit.Module.Warnings.html#WarnAll"><span class="hs-identifier hs-type">WarnAll</span></a></span><span> </span><span id="local-6989586621682739384"><span class="annot"><span class="annottext">WarningTxt GhcRn
+</span><a href="#local-6989586621682739384"><span class="hs-identifier hs-var">txt</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IfaceWarningTxt -&gt; IfaceWarnings
+</span><a href="GHC.Iface.Syntax.html#IfWarnAll"><span class="hs-identifier hs-var">IfWarnAll</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">WarningTxt GhcRn -&gt; IfaceWarningTxt
+</span><a href="GHC.Iface.Warnings.html#toIfaceWarningTxt"><span class="hs-identifier hs-var">toIfaceWarningTxt</span></a></span><span> </span><span class="annot"><span class="annottext">WarningTxt GhcRn
+</span><a href="#local-6989586621682739384"><span class="hs-identifier hs-var">txt</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span class="annot"><a href="GHC.Iface.Warnings.html#toIfaceWarnings"><span class="hs-identifier hs-var">toIfaceWarnings</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Unit.Module.Warnings.html#WarnSome"><span class="hs-identifier hs-type">WarnSome</span></a></span><span> </span><span id="local-6989586621682739387"><span class="annot"><span class="annottext">DeclWarnOccNames GhcRn
+</span><a href="#local-6989586621682739387"><span class="hs-identifier hs-var">vs</span></a></span></span><span> </span><span id="local-6989586621682739388"><span class="annot"><span class="annottext">ExportWarnNames GhcRn
+</span><a href="#local-6989586621682739388"><span class="hs-identifier hs-var">ds</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[(OccName, IfaceWarningTxt)]
+-&gt; [(IfExtName, IfaceWarningTxt)] -&gt; IfaceWarnings
+</span><a href="GHC.Iface.Syntax.html#IfWarnSome"><span class="hs-identifier hs-var">IfWarnSome</span></a></span><span> </span><span class="annot"><span class="annottext">[(OccName, IfaceWarningTxt)]
+</span><a href="#local-6989586621682739390"><span class="hs-identifier hs-var">vs'</span></a></span><span> </span><span class="annot"><span class="annottext">[(IfExtName, IfaceWarningTxt)]
+</span><a href="#local-6989586621682739391"><span class="hs-identifier hs-var">ds'</span></a></span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-22"></span><span>    </span><span id="local-6989586621682739390"><span class="annot"><span class="annottext">vs' :: [(OccName, IfaceWarningTxt)]
+</span><a href="#local-6989586621682739390"><span class="hs-identifier hs-var hs-var">vs'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">OccName
+</span><a href="#local-6989586621682739392"><span class="hs-identifier hs-var">occ</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">WarningTxt GhcRn -&gt; IfaceWarningTxt
+</span><a href="GHC.Iface.Warnings.html#toIfaceWarningTxt"><span class="hs-identifier hs-var">toIfaceWarningTxt</span></a></span><span> </span><span class="annot"><span class="annottext">WarningTxt GhcRn
+</span><a href="#local-6989586621682739393"><span class="hs-identifier hs-var">txt</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">|</span><span> </span><span class="hs-special">(</span><span id="local-6989586621682739392"><span class="annot"><span class="annottext">OccName
+</span><a href="#local-6989586621682739392"><span class="hs-identifier hs-var">occ</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621682739393"><span class="annot"><span class="annottext">WarningTxt GhcRn
+</span><a href="#local-6989586621682739393"><span class="hs-identifier hs-var">txt</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">DeclWarnOccNames GhcRn
+</span><a href="#local-6989586621682739387"><span class="hs-identifier hs-var">vs</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-23"></span><span>    </span><span id="local-6989586621682739391"><span class="annot"><span class="annottext">ds' :: [(IfExtName, IfaceWarningTxt)]
+</span><a href="#local-6989586621682739391"><span class="hs-identifier hs-var hs-var">ds'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">IfExtName
+</span><a href="#local-6989586621682739394"><span class="hs-identifier hs-var">occ</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">WarningTxt GhcRn -&gt; IfaceWarningTxt
+</span><a href="GHC.Iface.Warnings.html#toIfaceWarningTxt"><span class="hs-identifier hs-var">toIfaceWarningTxt</span></a></span><span> </span><span class="annot"><span class="annottext">WarningTxt GhcRn
+</span><a href="#local-6989586621682739395"><span class="hs-identifier hs-var">txt</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">|</span><span> </span><span class="hs-special">(</span><span id="local-6989586621682739394"><span class="annot"><span class="annottext">IfExtName
+</span><a href="#local-6989586621682739394"><span class="hs-identifier hs-var">occ</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621682739395"><span class="annot"><span class="annottext">WarningTxt GhcRn
+</span><a href="#local-6989586621682739395"><span class="hs-identifier hs-var">txt</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">ExportWarnNames GhcRn
+</span><a href="#local-6989586621682739388"><span class="hs-identifier hs-var">ds</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span class="annot"><a href="GHC.Iface.Warnings.html#toIfaceWarningTxt"><span class="hs-identifier hs-type">toIfaceWarningTxt</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Unit.Module.Warnings.html#WarningTxt"><span class="hs-identifier hs-type">WarningTxt</span></a></span><span> </span><span class="annot"><a href="GHC.Hs.Extension.html#GhcRn"><span class="hs-identifier hs-type">GhcRn</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Iface.Syntax.html#IfaceWarningTxt"><span class="hs-identifier hs-type">IfaceWarningTxt</span></a></span><span>
+</span><span id="line-26"></span><span id="toIfaceWarningTxt"><span class="annot"><span class="annottext">toIfaceWarningTxt :: WarningTxt GhcRn -&gt; IfaceWarningTxt
+</span><a href="GHC.Iface.Warnings.html#toIfaceWarningTxt"><span class="hs-identifier hs-var hs-var">toIfaceWarningTxt</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Unit.Module.Warnings.html#WarningTxt"><span class="hs-identifier hs-type">WarningTxt</span></a></span><span> </span><span id="local-6989586621682739397"><span class="annot"><span class="annottext">Maybe (LocatedE InWarningCategory)
+</span><a href="#local-6989586621682739397"><span class="hs-identifier hs-var">mb_cat</span></a></span></span><span> </span><span id="local-6989586621682739398"><span class="annot"><span class="annottext">SourceText
+</span><a href="#local-6989586621682739398"><span class="hs-identifier hs-var">src</span></a></span></span><span> </span><span id="local-6989586621682739399"><span class="annot"><span class="annottext">[LocatedE (WithHsDocIdentifiers StringLiteral GhcRn)]
+</span><a href="#local-6989586621682739399"><span class="hs-identifier hs-var">strs</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe WarningCategory
+-&gt; SourceText
+-&gt; [(IfaceStringLiteral, [IfExtName])]
+-&gt; IfaceWarningTxt
+</span><a href="GHC.Iface.Syntax.html#IfWarningTxt"><span class="hs-identifier hs-var">IfWarningTxt</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">GenLocated EpaLocation WarningCategory -&gt; WarningCategory
+forall l e. GenLocated l e -&gt; e
+</span><a href="GHC.Types.SrcLoc.html#unLoc"><span class="hs-identifier hs-var">unLoc</span></a></span><span> </span><span class="annot"><span class="annottext">(GenLocated EpaLocation WarningCategory -&gt; WarningCategory)
+-&gt; (LocatedE InWarningCategory
+    -&gt; GenLocated EpaLocation WarningCategory)
+-&gt; LocatedE InWarningCategory
+-&gt; WarningCategory
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">InWarningCategory -&gt; GenLocated EpaLocation WarningCategory
+</span><a href="GHC.Unit.Module.Warnings.html#iwc_wc"><span class="hs-identifier hs-var">iwc_wc</span></a></span><span> </span><span class="annot"><span class="annottext">(InWarningCategory -&gt; GenLocated EpaLocation WarningCategory)
+-&gt; (LocatedE InWarningCategory -&gt; InWarningCategory)
+-&gt; LocatedE InWarningCategory
+-&gt; GenLocated EpaLocation WarningCategory
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">LocatedE InWarningCategory -&gt; InWarningCategory
+forall l e. GenLocated l e -&gt; e
+</span><a href="GHC.Types.SrcLoc.html#unLoc"><span class="hs-identifier hs-var">unLoc</span></a></span><span> </span><span class="annot"><span class="annottext">(LocatedE InWarningCategory -&gt; WarningCategory)
+-&gt; Maybe (LocatedE InWarningCategory) -&gt; Maybe WarningCategory
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Maybe (LocatedE InWarningCategory)
+</span><a href="#local-6989586621682739397"><span class="hs-identifier hs-var">mb_cat</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">SourceText
+</span><a href="#local-6989586621682739398"><span class="hs-identifier hs-var">src</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(LocatedE (WithHsDocIdentifiers StringLiteral GhcRn)
+ -&gt; (IfaceStringLiteral, [IfExtName]))
+-&gt; [LocatedE (WithHsDocIdentifiers StringLiteral GhcRn)]
+-&gt; [(IfaceStringLiteral, [IfExtName])]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><span class="hs-identifier hs-var">map</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">WithHsDocIdentifiers StringLiteral GhcRn
+-&gt; (IfaceStringLiteral, [IfExtName])
+</span><a href="GHC.Iface.Warnings.html#toIfaceStringLiteralWithNames"><span class="hs-identifier hs-var">toIfaceStringLiteralWithNames</span></a></span><span> </span><span class="annot"><span class="annottext">(WithHsDocIdentifiers StringLiteral GhcRn
+ -&gt; (IfaceStringLiteral, [IfExtName]))
+-&gt; (LocatedE (WithHsDocIdentifiers StringLiteral GhcRn)
+    -&gt; WithHsDocIdentifiers StringLiteral GhcRn)
+-&gt; LocatedE (WithHsDocIdentifiers StringLiteral GhcRn)
+-&gt; (IfaceStringLiteral, [IfExtName])
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">LocatedE (WithHsDocIdentifiers StringLiteral GhcRn)
+-&gt; WithHsDocIdentifiers StringLiteral GhcRn
+forall l e. GenLocated l e -&gt; e
+</span><a href="GHC.Types.SrcLoc.html#unLoc"><span class="hs-identifier hs-var">unLoc</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[LocatedE (WithHsDocIdentifiers StringLiteral GhcRn)]
+</span><a href="#local-6989586621682739399"><span class="hs-identifier hs-var">strs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span class="annot"><a href="GHC.Iface.Warnings.html#toIfaceWarningTxt"><span class="hs-identifier hs-var">toIfaceWarningTxt</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Unit.Module.Warnings.html#DeprecatedTxt"><span class="hs-identifier hs-type">DeprecatedTxt</span></a></span><span> </span><span id="local-6989586621682739406"><span class="annot"><span class="annottext">SourceText
+</span><a href="#local-6989586621682739406"><span class="hs-identifier hs-var">src</span></a></span></span><span> </span><span id="local-6989586621682739407"><span class="annot"><span class="annottext">[LocatedE (WithHsDocIdentifiers StringLiteral GhcRn)]
+</span><a href="#local-6989586621682739407"><span class="hs-identifier hs-var">strs</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SourceText
+-&gt; [(IfaceStringLiteral, [IfExtName])] -&gt; IfaceWarningTxt
+</span><a href="GHC.Iface.Syntax.html#IfDeprecatedTxt"><span class="hs-identifier hs-var">IfDeprecatedTxt</span></a></span><span> </span><span class="annot"><span class="annottext">SourceText
+</span><a href="#local-6989586621682739406"><span class="hs-identifier hs-var">src</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(LocatedE (WithHsDocIdentifiers StringLiteral GhcRn)
+ -&gt; (IfaceStringLiteral, [IfExtName]))
+-&gt; [LocatedE (WithHsDocIdentifiers StringLiteral GhcRn)]
+-&gt; [(IfaceStringLiteral, [IfExtName])]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><span class="hs-identifier hs-var">map</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">WithHsDocIdentifiers StringLiteral GhcRn
+-&gt; (IfaceStringLiteral, [IfExtName])
+</span><a href="GHC.Iface.Warnings.html#toIfaceStringLiteralWithNames"><span class="hs-identifier hs-var">toIfaceStringLiteralWithNames</span></a></span><span> </span><span class="annot"><span class="annottext">(WithHsDocIdentifiers StringLiteral GhcRn
+ -&gt; (IfaceStringLiteral, [IfExtName]))
+-&gt; (LocatedE (WithHsDocIdentifiers StringLiteral GhcRn)
+    -&gt; WithHsDocIdentifiers StringLiteral GhcRn)
+-&gt; LocatedE (WithHsDocIdentifiers StringLiteral GhcRn)
+-&gt; (IfaceStringLiteral, [IfExtName])
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">LocatedE (WithHsDocIdentifiers StringLiteral GhcRn)
+-&gt; WithHsDocIdentifiers StringLiteral GhcRn
+forall l e. GenLocated l e -&gt; e
+</span><a href="GHC.Types.SrcLoc.html#unLoc"><span class="hs-identifier hs-var">unLoc</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[LocatedE (WithHsDocIdentifiers StringLiteral GhcRn)]
+</span><a href="#local-6989586621682739407"><span class="hs-identifier hs-var">strs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span class="annot"><a href="GHC.Iface.Warnings.html#toIfaceStringLiteralWithNames"><span class="hs-identifier hs-type">toIfaceStringLiteralWithNames</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Hs.Doc.html#WithHsDocIdentifiers"><span class="hs-identifier hs-type">WithHsDocIdentifiers</span></a></span><span> </span><span class="annot"><a href="GHC.Types.SourceText.html#StringLiteral"><span class="hs-identifier hs-type">StringLiteral</span></a></span><span> </span><span class="annot"><a href="GHC.Hs.Extension.html#GhcRn"><span class="hs-identifier hs-type">GhcRn</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Iface.Syntax.html#IfaceStringLiteral"><span class="hs-identifier hs-type">IfaceStringLiteral</span></a></span><span class="hs-special">,</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="GHC.Iface.Type.html#IfExtName"><span class="hs-identifier hs-type">IfExtName</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span id="toIfaceStringLiteralWithNames"><span class="annot"><span class="annottext">toIfaceStringLiteralWithNames :: WithHsDocIdentifiers StringLiteral GhcRn
+-&gt; (IfaceStringLiteral, [IfExtName])
+</span><a href="GHC.Iface.Warnings.html#toIfaceStringLiteralWithNames"><span class="hs-identifier hs-var hs-var">toIfaceStringLiteralWithNames</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Hs.Doc.html#WithHsDocIdentifiers"><span class="hs-identifier hs-type">WithHsDocIdentifiers</span></a></span><span> </span><span id="local-6989586621682739410"><span class="annot"><span class="annottext">StringLiteral
+</span><a href="#local-6989586621682739410"><span class="hs-identifier hs-var">src</span></a></span></span><span> </span><span id="local-6989586621682739411"><span class="annot"><span class="annottext">[Located (IdP GhcRn)]
+</span><a href="#local-6989586621682739411"><span class="hs-identifier hs-var">names</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">StringLiteral -&gt; IfaceStringLiteral
+</span><a href="GHC.Iface.Warnings.html#toIfaceStringLiteral"><span class="hs-identifier hs-var">toIfaceStringLiteral</span></a></span><span> </span><span class="annot"><span class="annottext">StringLiteral
+</span><a href="#local-6989586621682739410"><span class="hs-identifier hs-var">src</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(GenLocated SrcSpan IfExtName -&gt; IfExtName)
+-&gt; [GenLocated SrcSpan IfExtName] -&gt; [IfExtName]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><span class="hs-identifier hs-var">map</span></span><span> </span><span class="annot"><span class="annottext">GenLocated SrcSpan IfExtName -&gt; IfExtName
+forall l e. GenLocated l e -&gt; e
+</span><a href="GHC.Types.SrcLoc.html#unLoc"><span class="hs-identifier hs-var">unLoc</span></a></span><span> </span><span class="annot"><span class="annottext">[Located (IdP GhcRn)]
+[GenLocated SrcSpan IfExtName]
+</span><a href="#local-6989586621682739411"><span class="hs-identifier hs-var">names</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span>
+</span><span id="line-32"></span><span class="annot"><a href="GHC.Iface.Warnings.html#toIfaceStringLiteral"><span class="hs-identifier hs-type">toIfaceStringLiteral</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Types.SourceText.html#StringLiteral"><span class="hs-identifier hs-type">StringLiteral</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Iface.Syntax.html#IfaceStringLiteral"><span class="hs-identifier hs-type">IfaceStringLiteral</span></a></span><span>
+</span><span id="line-33"></span><span id="toIfaceStringLiteral"><span class="annot"><span class="annottext">toIfaceStringLiteral :: StringLiteral -&gt; IfaceStringLiteral
+</span><a href="GHC.Iface.Warnings.html#toIfaceStringLiteral"><span class="hs-identifier hs-var hs-var">toIfaceStringLiteral</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Types.SourceText.html#StringLiteral"><span class="hs-identifier hs-type">StringLiteral</span></a></span><span> </span><span id="local-6989586621682739414"><span class="annot"><span class="annottext">SourceText
+</span><a href="#local-6989586621682739414"><span class="hs-identifier hs-var">sl</span></a></span></span><span> </span><span id="local-6989586621682739415"><span class="annot"><span class="annottext">FastString
+</span><a href="#local-6989586621682739415"><span class="hs-identifier hs-var">fs</span></a></span></span><span> </span><span class="annot"><span class="annottext">Maybe NoCommentsLocation
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SourceText -&gt; FastString -&gt; IfaceStringLiteral
+</span><a href="GHC.Iface.Syntax.html#IfStringLiteral"><span class="hs-identifier hs-var">IfStringLiteral</span></a></span><span> </span><span class="annot"><span class="annottext">SourceText
+</span><a href="#local-6989586621682739414"><span class="hs-identifier hs-var">sl</span></a></span><span> </span><span class="annot"><span class="annottext">FastString
+</span><a href="#local-6989586621682739415"><span class="hs-identifier hs-var">fs</span></a></span><span>
+</span><span id="line-34"></span><span>
+</span><span id="line-35"></span></pre></body></html>

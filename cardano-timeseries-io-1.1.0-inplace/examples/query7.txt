@@ -1,0 +1,2 @@
+let highBlockUtilization = 42 in
+100.0 * avg (avg_over_time cardano_node_metrics_blockfetchclient_blocksize[now - 6h; now] / 90112) > highBlockUtilization

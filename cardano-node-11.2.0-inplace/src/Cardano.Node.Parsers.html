@@ -1,0 +1,740 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE ApplicativeDo #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE NamedFieldPuns #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-comment">-- | The node's @run@ command line.</span><span>
+</span><span id="line-6"></span><span class="hs-comment">--</span><span>
+</span><span id="line-7"></span><span class="hs-comment">-- The individual option parsers come from @cardano-config@</span><span>
+</span><span id="line-8"></span><span class="hs-comment">-- ('Cardano.Configuration.CliArgs'), which is the one definition of the node's</span><span>
+</span><span id="line-9"></span><span class="hs-comment">-- flags, their metavars and their help text; this module assembles them into a</span><span>
+</span><span id="line-10"></span><span class="hs-comment">-- 'PartialNodeConfiguration' and converts cardano-config's types to the node's</span><span>
+</span><span id="line-11"></span><span class="hs-comment">-- (see 'Cardano.Node.Configuration.CardanoConfigAdapter').</span><span>
+</span><span id="line-12"></span><span class="hs-comment">--</span><span>
+</span><span id="line-13"></span><span class="hs-comment">-- What is still defined here is what cardano-config does not carry:</span><span>
+</span><span id="line-14"></span><span class="hs-comment">--</span><span>
+</span><span id="line-15"></span><span class="hs-comment">--   * the deprecated mempool capacity flags, which cardano-config dropped by</span><span>
+</span><span id="line-16"></span><span class="hs-comment">--     design (the setting belongs in the configuration file);</span><span>
+</span><span id="line-17"></span><span class="hs-comment">--   * the three deprecated aliases, @--delegation-certificate@,</span><span>
+</span><span id="line-18"></span><span class="hs-comment">--     @--signing-key@ and @--non-producing-node@, which cardano-config knows</span><span>
+</span><span id="line-19"></span><span class="hs-comment">--     only by their current spellings.</span><span>
+</span><span id="line-20"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Cardano.Node.Parsers.html"><span class="hs-identifier">Cardano.Node.Parsers</span></a></span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Node.Parsers.html#nodeCLIParser"><span class="hs-identifier">nodeCLIParser</span></a></span><span>
+</span><span id="line-22"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">parseConfigFile</span></span><span>
+</span><span id="line-23"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Node.Parsers.html#parserHelpHeader"><span class="hs-identifier">parserHelpHeader</span></a></span><span>
+</span><span id="line-24"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Node.Parsers.html#parserHelpOptions"><span class="hs-identifier">parserHelpOptions</span></a></span><span>
+</span><span id="line-25"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Node.Parsers.html#renderHelpDoc"><span class="hs-identifier">renderHelpDoc</span></a></span><span>
+</span><span id="line-26"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Cardano.Configuration.CliArgs</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Cfg</span></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Cardano.Configuration.CliArgs</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">parseConfigFile</span></span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Node.Configuration.CardanoConfigAdapter.html"><span class="hs-identifier">Cardano.Node.Configuration.CardanoConfigAdapter</span></a></span><span>
+</span><span id="line-31"></span><span>                   </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Node.Configuration.CardanoConfigAdapter.html#credentialsToProtocolFilepaths"><span class="hs-identifier">credentialsToProtocolFilepaths</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Node.Configuration.CardanoConfigAdapter.html#fromCfgDbPaths"><span class="hs-identifier">fromCfgDbPaths</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Node.Configuration.CardanoConfigAdapter.html#fromCfgGrpcEndpoint"><span class="hs-identifier">fromCfgGrpcEndpoint</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-32"></span><span>                   </span><span class="annot"><a href="Cardano.Node.Configuration.CardanoConfigAdapter.html#fromCfgTracerConnection"><span class="hs-identifier">fromCfgTracerConnection</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Node.Configuration.CardanoConfigAdapter.html#toNodeShutdownOn"><span class="hs-identifier">toNodeShutdownOn</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Node.Configuration.NodeAddress.html"><span class="hs-identifier">Cardano.Node.Configuration.NodeAddress</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.12.4/cardano-api-11.11.0.0-2b3331dc6dc98ac3173caf2f4ff3a5688f9d23b51f3aae2ece070a73dac307dc/share/doc/html/src/Cardano.Api.IO.Internal.Base.html#File"><span class="hs-identifier">File</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-34"></span><span>                   </span><span class="annot"><a href="Cardano.Node.Configuration.NodeAddress.html#NodeHostIPv4Address"><span class="hs-identifier">NodeHostIPv4Address</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Node.Configuration.NodeAddress.html#NodeHostIPv4Address"><span class="hs-identifier">NodeHostIPv4Address</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-35"></span><span>                   </span><span class="annot"><a href="Cardano.Node.Configuration.NodeAddress.html#NodeHostIPv6Address"><span class="hs-identifier">NodeHostIPv6Address</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Node.Configuration.NodeAddress.html#NodeHostIPv6Address"><span class="hs-identifier">NodeHostIPv6Address</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Node.Configuration.POM.html"><span class="hs-identifier">Cardano.Node.Configuration.POM</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Node.Configuration.POM.html#PartialNodeConfiguration"><span class="hs-identifier">PartialNodeConfiguration</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Node.Configuration.POM.html#lastOption"><span class="hs-identifier">lastOption</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Node.Configuration.Socket.html"><span class="hs-identifier">Cardano.Node.Configuration.Socket</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Node.Configuration.Socket.html#SocketConfig"><span class="hs-identifier">SocketConfig</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Node.Handlers.Shutdown.html"><span class="hs-identifier">Cardano.Node.Handlers.Shutdown</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Node.Handlers.Shutdown.html#ShutdownConfig"><span class="hs-identifier">ShutdownConfig</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Node.Handlers.Shutdown.html#ShutdownOn"><span class="hs-identifier">ShutdownOn</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Node.Types.html"><span class="hs-identifier">Cardano.Node.Types</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Node.Types.html#ConfigYamlFilePath"><span class="hs-identifier">ConfigYamlFilePath</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Node.Types.html#ProtocolFilepaths"><span class="hs-identifier">ProtocolFilepaths</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-40"></span><span>                   </span><span class="annot"><a href="Cardano.Node.Types.html#TopologyFile"><span class="hs-identifier">TopologyFile</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.12.4/cardano-rpc-11.5.0.0-872ead75da1bd421584eacc119e9220f2d58ca301c3d091a36d3512bc4a591c4/share/doc/html/src/Cardano.Rpc.Server.Config.html"><span class="hs-identifier">Cardano.Rpc.Server.Config</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.12.4/cardano-rpc-11.5.0.0-872ead75da1bd421584eacc119e9220f2d58ca301c3d091a36d3512bc4a591c4/share/doc/html/src/Cardano.Rpc.Server.Config.html#PartialRpcConfig"><span class="hs-identifier">PartialRpcConfig</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.12.4/cardano-rpc-11.5.0.0-872ead75da1bd421584eacc119e9220f2d58ca301c3d091a36d3512bc4a591c4/share/doc/html/src/Cardano.Rpc.Server.Config.html#RpcConfigF"><span class="hs-identifier">RpcConfigF</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.12.4/ouroboros-consensus-5.2.0.0-dcbc9327e6ccd491cb88d48a667253b292e759fed2552924fbba56c469ef12ba/share/doc/html/src/Ouroboros.Consensus.Ledger.SupportsMempool.html"><span class="hs-identifier">Ouroboros.Consensus.Ledger.SupportsMempool</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.12.4/ouroboros-consensus-5.2.0.0-dcbc9327e6ccd491cb88d48a667253b292e759fed2552924fbba56c469ef12ba/share/doc/html/src/Ouroboros.Consensus.Ledger.SupportsMempool.html#ByteSize32"><span class="hs-identifier">ByteSize32</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.12.4/ouroboros-consensus-5.2.0.0-dcbc9327e6ccd491cb88d48a667253b292e759fed2552924fbba56c469ef12ba/share/doc/html/src/Ouroboros.Consensus.Mempool.html"><span class="hs-identifier">Ouroboros.Consensus.Mempool</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.12.4/ouroboros-consensus-5.2.0.0-dcbc9327e6ccd491cb88d48a667253b292e759fed2552924fbba56c469ef12ba/share/doc/html/src/Ouroboros.Consensus.Mempool.Capacity.html#MempoolCapacityBytesOverride"><span class="hs-identifier">MempoolCapacityBytesOverride</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-44"></span><span>
+</span><span id="line-45"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/base-4.21.2.0-inplace/src/Data.Maybe.html"><span class="hs-identifier">Data.Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Maybe.html#fromMaybe"><span class="hs-identifier">fromMaybe</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-46"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/base-4.21.2.0-inplace/src/Data.Monoid.html"><span class="hs-identifier">Data.Monoid</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Monoid.html#Last"><span class="hs-identifier">Last</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-47"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/base-4.21.2.0-inplace/src/Data.Word.html"><span class="hs-identifier">Data.Word</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Word.html#Word32"><span class="hs-identifier">Word32</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-48"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Options.Applicative</span></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">str</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">switch</span></span><span class="hs-special">)</span><span>
+</span><span id="line-49"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Options.Applicative</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Opt</span></span><span>
+</span><span id="line-50"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Options.Applicative.Help</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">OptI</span></span><span>
+</span><span id="line-51"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Prettyprinter.Internal</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">PP</span></span><span>
+</span><span id="line-52"></span><span>
+</span><span id="line-53"></span><span class="annot"><a href="Cardano.Node.Parsers.html#nodeCLIParser"><span class="hs-identifier hs-type">nodeCLIParser</span></a></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Parser</span></span><span> </span><span class="annot"><a href="Cardano.Node.Configuration.POM.html#PartialNodeConfiguration"><span class="hs-identifier hs-type">PartialNodeConfiguration</span></a></span><span>
+</span><span id="line-54"></span><span id="nodeCLIParser"><span class="annot"><span class="annottext">nodeCLIParser :: Parser PartialNodeConfiguration
+</span><a href="Cardano.Node.Parsers.html#nodeCLIParser"><span class="hs-identifier hs-var hs-var">nodeCLIParser</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Mod CommandFields PartialNodeConfiguration
+-&gt; Parser PartialNodeConfiguration
+forall a. Mod CommandFields a -&gt; Parser a
+</span><span class="hs-identifier hs-var">subparser</span></span><span>
+</span><span id="line-55"></span><span>                </span><span class="hs-special">(</span><span>  </span><span class="annot"><span class="annottext">String -&gt; Mod CommandFields PartialNodeConfiguration
+forall a. String -&gt; Mod CommandFields a
+</span><span class="hs-identifier hs-var">commandGroup</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Run the node&quot;</span></span><span>
+</span><span id="line-56"></span><span>                </span><span class="annot"><span class="annottext">Mod CommandFields PartialNodeConfiguration
+-&gt; Mod CommandFields PartialNodeConfiguration
+-&gt; Mod CommandFields PartialNodeConfiguration
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; Mod CommandFields PartialNodeConfiguration
+forall (f :: * -&gt; *) a. HasMetavar f =&gt; String -&gt; Mod f a
+</span><span class="hs-identifier hs-var">metavar</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;run&quot;</span></span><span>
+</span><span id="line-57"></span><span>                </span><span class="annot"><span class="annottext">Mod CommandFields PartialNodeConfiguration
+-&gt; Mod CommandFields PartialNodeConfiguration
+-&gt; Mod CommandFields PartialNodeConfiguration
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String
+-&gt; ParserInfo PartialNodeConfiguration
+-&gt; Mod CommandFields PartialNodeConfiguration
+forall a. String -&gt; ParserInfo a -&gt; Mod CommandFields a
+</span><span class="hs-identifier hs-var">command</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;run&quot;</span></span><span>
+</span><span id="line-58"></span><span>                     </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Parser PartialNodeConfiguration
+-&gt; InfoMod PartialNodeConfiguration
+-&gt; ParserInfo PartialNodeConfiguration
+forall a. Parser a -&gt; InfoMod a -&gt; ParserInfo a
+</span><span class="hs-identifier hs-var">info</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Parser PartialNodeConfiguration
+</span><a href="Cardano.Node.Parsers.html#nodeRunParser"><span class="hs-identifier hs-var">nodeRunParser</span></a></span><span> </span><span class="annot"><span class="annottext">Parser PartialNodeConfiguration
+-&gt; Parser (PartialNodeConfiguration -&gt; PartialNodeConfiguration)
+-&gt; Parser PartialNodeConfiguration
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f a -&gt; f (a -&gt; b) -&gt; f b
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#%3C%2A%2A%3E"><span class="hs-operator hs-var">&lt;**&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parser (PartialNodeConfiguration -&gt; PartialNodeConfiguration)
+forall a. Parser (a -&gt; a)
+</span><span class="hs-identifier hs-var">helper</span></span><span class="hs-special">)</span><span>
+</span><span id="line-59"></span><span>                           </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; InfoMod PartialNodeConfiguration
+forall a. String -&gt; InfoMod a
+</span><span class="hs-identifier hs-var">progDesc</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Run the node.&quot;</span></span><span> </span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-60"></span><span>                </span><span class="hs-special">)</span><span>
+</span><span id="line-61"></span><span>
+</span><span id="line-62"></span><span class="annot"><a href="Cardano.Node.Parsers.html#nodeRunParser"><span class="hs-identifier hs-type">nodeRunParser</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Parser</span></span><span> </span><span class="annot"><a href="Cardano.Node.Configuration.POM.html#PartialNodeConfiguration"><span class="hs-identifier hs-type">PartialNodeConfiguration</span></a></span><span>
+</span><span id="line-63"></span><span id="nodeRunParser"><span class="annot"><span class="annottext">nodeRunParser :: Parser PartialNodeConfiguration
+</span><a href="Cardano.Node.Parsers.html#nodeRunParser"><span class="hs-identifier hs-var hs-var">nodeRunParser</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-64"></span><span>  </span><span class="hs-comment">-- Filepaths</span><span>
+</span><span id="line-65"></span><span>  </span><span id="local-6989586621680064162"><span class="annot"><span class="annottext">Last String
+</span><a href="#local-6989586621680064162"><span class="hs-identifier hs-var">topFp</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Parser String -&gt; Parser (Last String)
+forall a. Parser a -&gt; Parser (Last a)
+</span><a href="Cardano.Node.Configuration.POM.html#lastOption"><span class="hs-identifier hs-var">lastOption</span></a></span><span> </span><span class="annot"><span class="annottext">Parser String
+</span><span class="hs-identifier hs-var">Cfg.parseTopologyFile</span></span><span>
+</span><span id="line-66"></span><span>  </span><span id="local-6989586621680064164"><span class="annot"><span class="annottext">Last NodeDatabasePaths
+</span><a href="#local-6989586621680064164"><span class="hs-identifier hs-var">dbFp</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Maybe NodeDatabasePaths -&gt; Last NodeDatabasePaths
+forall a. Maybe a -&gt; Last a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Monoid.html#Last"><span class="hs-identifier hs-var">Last</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe NodeDatabasePaths -&gt; Last NodeDatabasePaths)
+-&gt; (Maybe NodeDatabasePaths -&gt; Maybe NodeDatabasePaths)
+-&gt; Maybe NodeDatabasePaths
+-&gt; Last NodeDatabasePaths
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(NodeDatabasePaths -&gt; NodeDatabasePaths)
+-&gt; Maybe NodeDatabasePaths -&gt; Maybe NodeDatabasePaths
+forall a b. (a -&gt; b) -&gt; Maybe a -&gt; Maybe b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">NodeDatabasePaths -&gt; NodeDatabasePaths
+</span><a href="Cardano.Node.Configuration.CardanoConfigAdapter.html#fromCfgDbPaths"><span class="hs-identifier hs-var">fromCfgDbPaths</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe NodeDatabasePaths -&gt; Last NodeDatabasePaths)
+-&gt; Parser (Maybe NodeDatabasePaths)
+-&gt; Parser (Last NodeDatabasePaths)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parser (Maybe NodeDatabasePaths)
+</span><span class="hs-identifier hs-var">Cfg.parseNodeDatabasePaths</span></span><span>
+</span><span id="line-67"></span><span>  </span><span id="local-6989586621680064169"><span class="annot"><span class="annottext">Last Bool
+</span><a href="#local-6989586621680064169"><span class="hs-identifier hs-var">validate</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Parser Bool -&gt; Parser (Last Bool)
+forall a. Parser a -&gt; Parser (Last a)
+</span><a href="Cardano.Node.Configuration.POM.html#lastOption"><span class="hs-identifier hs-var">lastOption</span></a></span><span> </span><span class="annot"><span class="annottext">Parser Bool
+</span><span class="hs-identifier hs-var">Cfg.parseValidateDB</span></span><span>
+</span><span id="line-68"></span><span>  </span><span id="local-6989586621680064171"><span class="annot"><span class="annottext">Last (File Socket 'InOut)
+</span><a href="#local-6989586621680064171"><span class="hs-identifier hs-var">socketFp</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Parser (File Socket 'InOut) -&gt; Parser (Last (File Socket 'InOut))
+forall a. Parser a -&gt; Parser (Last a)
+</span><a href="Cardano.Node.Configuration.POM.html#lastOption"><span class="hs-identifier hs-var">lastOption</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; File Socket 'InOut
+forall content (direction :: FileDirection).
+String -&gt; File content direction
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.12.4/cardano-api-11.11.0.0-2b3331dc6dc98ac3173caf2f4ff3a5688f9d23b51f3aae2ece070a73dac307dc/share/doc/html/src/Cardano.Api.IO.Internal.Base.html#File"><span class="hs-identifier hs-var">File</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; File Socket 'InOut)
+-&gt; Parser String -&gt; Parser (File Socket 'InOut)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parser String
+</span><span class="hs-identifier hs-var">Cfg.parseSocketPath</span></span><span class="hs-special">)</span><span>
+</span><span id="line-69"></span><span>  </span><span id="local-6989586621680064174"><span class="annot"><span class="annottext">Last (HowToConnect, ForwarderMode)
+</span><a href="#local-6989586621680064174"><span class="hs-identifier hs-var">traceForwardSocket</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Parser (HowToConnect, ForwarderMode)
+-&gt; Parser (Last (HowToConnect, ForwarderMode))
+forall a. Parser a -&gt; Parser (Last a)
+</span><a href="Cardano.Node.Configuration.POM.html#lastOption"><span class="hs-identifier hs-var">lastOption</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TracerConnection -&gt; (HowToConnect, ForwarderMode)
+</span><a href="Cardano.Node.Configuration.CardanoConfigAdapter.html#fromCfgTracerConnection"><span class="hs-identifier hs-var">fromCfgTracerConnection</span></a></span><span> </span><span class="annot"><span class="annottext">(TracerConnection -&gt; (HowToConnect, ForwarderMode))
+-&gt; Parser TracerConnection -&gt; Parser (HowToConnect, ForwarderMode)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parser TracerConnection
+</span><span class="hs-identifier hs-var">Cfg.parseTracerSocketMode</span></span><span class="hs-special">)</span><span>
+</span><span id="line-70"></span><span>  </span><span id="local-6989586621680064176"><span class="annot"><span class="annottext">Last String
+</span><a href="#local-6989586621680064176"><span class="hs-identifier hs-var">nodeConfigFp</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Parser String -&gt; Parser (Last String)
+forall a. Parser a -&gt; Parser (Last a)
+</span><a href="Cardano.Node.Configuration.POM.html#lastOption"><span class="hs-identifier hs-var">lastOption</span></a></span><span> </span><span class="annot"><span class="annottext">Parser String
+</span><span class="hs-identifier hs-var">Cfg.parseConfigFile</span></span><span>
+</span><span id="line-71"></span><span>
+</span><span id="line-72"></span><span>  </span><span class="hs-comment">-- Protocol files</span><span>
+</span><span id="line-73"></span><span>  </span><span id="local-6989586621680064177"><span class="annot"><span class="annottext">Credentials
+</span><a href="#local-6989586621680064177"><span class="hs-identifier hs-var">credentials</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Parser Credentials
+</span><span class="hs-identifier hs-var">Cfg.parseCredentials</span></span><span>
+</span><span id="line-74"></span><span>  </span><span id="local-6989586621680064179"><span class="annot"><span class="annottext">Maybe String
+</span><a href="#local-6989586621680064179"><span class="hs-identifier hs-var">deprecatedByronCertFile</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Parser String -&gt; Parser (Maybe String)
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a -&gt; f (Maybe a)
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/base-4.21.2.0-inplace/src/Control.Applicative.html#optional"><span class="hs-identifier hs-var">optional</span></a></span><span> </span><span class="annot"><span class="annottext">Parser String
+</span><a href="Cardano.Node.Parsers.html#parseByronDelegationCertDeprecated"><span class="hs-identifier hs-var">parseByronDelegationCertDeprecated</span></a></span><span>
+</span><span id="line-75"></span><span>  </span><span id="local-6989586621680064182"><span class="annot"><span class="annottext">Maybe String
+</span><a href="#local-6989586621680064182"><span class="hs-identifier hs-var">deprecatedByronKeyFile</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Parser String -&gt; Parser (Maybe String)
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a -&gt; f (Maybe a)
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/base-4.21.2.0-inplace/src/Control.Applicative.html#optional"><span class="hs-identifier hs-var">optional</span></a></span><span> </span><span class="annot"><span class="annottext">Parser String
+</span><a href="Cardano.Node.Parsers.html#parseByronSigningKeyDeprecated"><span class="hs-identifier hs-var">parseByronSigningKeyDeprecated</span></a></span><span>
+</span><span id="line-76"></span><span>  </span><span id="local-6989586621680064184"><span class="annot"><span class="annottext">Last Bool
+</span><a href="#local-6989586621680064184"><span class="hs-identifier hs-var">startAsNonProducingNode</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621680064185"><span class="annot"><span class="annottext">Maybe Bool
+</span><a href="#local-6989586621680064185"><span class="hs-identifier hs-var">depr</span></a></span></span><span> </span><span id="local-6989586621680064186"><span class="annot"><span class="annottext">Maybe Bool
+</span><a href="#local-6989586621680064186"><span class="hs-identifier hs-var">new</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe Bool -&gt; Last Bool
+forall a. Maybe a -&gt; Last a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Monoid.html#Last"><span class="hs-identifier hs-var">Last</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Bool
+</span><a href="#local-6989586621680064185"><span class="hs-identifier hs-var">depr</span></a></span><span> </span><span class="annot"><span class="annottext">Last Bool -&gt; Last Bool -&gt; Last Bool
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Bool -&gt; Last Bool
+forall a. Maybe a -&gt; Last a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Monoid.html#Last"><span class="hs-identifier hs-var">Last</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Bool
+</span><a href="#local-6989586621680064186"><span class="hs-identifier hs-var">new</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-77"></span><span>                         </span><span class="annot"><span class="annottext">(Maybe Bool -&gt; Maybe Bool -&gt; Last Bool)
+-&gt; Parser (Maybe Bool) -&gt; Parser (Maybe Bool -&gt; Last Bool)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parser (Maybe Bool)
+</span><a href="Cardano.Node.Parsers.html#parseStartAsNonProducingNodeDeprecated"><span class="hs-identifier hs-var">parseStartAsNonProducingNodeDeprecated</span></a></span><span>
+</span><span id="line-78"></span><span>                         </span><span class="annot"><span class="annottext">Parser (Maybe Bool -&gt; Last Bool)
+-&gt; Parser (Maybe Bool) -&gt; Parser (Last Bool)
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parser (Maybe Bool)
+</span><span class="hs-identifier hs-var">Cfg.parseStartAsNonProducingNode</span></span><span>
+</span><span id="line-79"></span><span>
+</span><span id="line-80"></span><span>  </span><span class="hs-comment">-- Node Address</span><span>
+</span><span id="line-81"></span><span>  </span><span id="local-6989586621680064189"><span class="annot"><span class="annottext">Last NodeHostIPv4Address
+</span><a href="#local-6989586621680064189"><span class="hs-identifier hs-var">nIPv4Address</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Parser NodeHostIPv4Address -&gt; Parser (Last NodeHostIPv4Address)
+forall a. Parser a -&gt; Parser (Last a)
+</span><a href="Cardano.Node.Configuration.POM.html#lastOption"><span class="hs-identifier hs-var">lastOption</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">IPv4 -&gt; NodeHostIPv4Address
+</span><a href="Cardano.Node.Configuration.NodeAddress.html#NodeHostIPv4Address"><span class="hs-identifier hs-var">NodeHostIPv4Address</span></a></span><span> </span><span class="annot"><span class="annottext">(IPv4 -&gt; NodeHostIPv4Address)
+-&gt; Parser IPv4 -&gt; Parser NodeHostIPv4Address
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parser IPv4
+</span><span class="hs-identifier hs-var">Cfg.parseHostIPv4Addr</span></span><span class="hs-special">)</span><span>
+</span><span id="line-82"></span><span>  </span><span id="local-6989586621680064191"><span class="annot"><span class="annottext">Last NodeHostIPv6Address
+</span><a href="#local-6989586621680064191"><span class="hs-identifier hs-var">nIPv6Address</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Parser NodeHostIPv6Address -&gt; Parser (Last NodeHostIPv6Address)
+forall a. Parser a -&gt; Parser (Last a)
+</span><a href="Cardano.Node.Configuration.POM.html#lastOption"><span class="hs-identifier hs-var">lastOption</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">IPv6 -&gt; NodeHostIPv6Address
+</span><a href="Cardano.Node.Configuration.NodeAddress.html#NodeHostIPv6Address"><span class="hs-identifier hs-var">NodeHostIPv6Address</span></a></span><span> </span><span class="annot"><span class="annottext">(IPv6 -&gt; NodeHostIPv6Address)
+-&gt; Parser IPv6 -&gt; Parser NodeHostIPv6Address
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parser IPv6
+</span><span class="hs-identifier hs-var">Cfg.parseHostIPv6Addr</span></span><span class="hs-special">)</span><span>
+</span><span id="line-83"></span><span>  </span><span id="local-6989586621680064193"><span class="annot"><span class="annottext">Last PortNumber
+</span><a href="#local-6989586621680064193"><span class="hs-identifier hs-var">nPortNumber</span></a></span></span><span>  </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Parser PortNumber -&gt; Parser (Last PortNumber)
+forall a. Parser a -&gt; Parser (Last a)
+</span><a href="Cardano.Node.Configuration.POM.html#lastOption"><span class="hs-identifier hs-var">lastOption</span></a></span><span> </span><span class="annot"><span class="annottext">Parser PortNumber
+</span><span class="hs-identifier hs-var">Cfg.parsePort</span></span><span>
+</span><span id="line-84"></span><span>
+</span><span id="line-85"></span><span>  </span><span class="hs-comment">-- Shutdown</span><span>
+</span><span id="line-86"></span><span>  </span><span id="local-6989586621680064195"><span class="annot"><span class="annottext">Last Fd
+</span><a href="#local-6989586621680064195"><span class="hs-identifier hs-var">shutdownIPC</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Parser Fd -&gt; Parser (Last Fd)
+forall a. Parser a -&gt; Parser (Last a)
+</span><a href="Cardano.Node.Configuration.POM.html#lastOption"><span class="hs-identifier hs-var">lastOption</span></a></span><span> </span><span class="annot"><span class="annottext">Parser Fd
+</span><span class="hs-identifier hs-var">Cfg.parseShutdownIPC</span></span><span>
+</span><span id="line-87"></span><span>  </span><span id="local-6989586621680064197"><span class="annot"><span class="annottext">Last ShutdownOn
+</span><a href="#local-6989586621680064197"><span class="hs-identifier hs-var">shutdownOnLimit</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Parser ShutdownOn -&gt; Parser (Last ShutdownOn)
+forall a. Parser a -&gt; Parser (Last a)
+</span><a href="Cardano.Node.Configuration.POM.html#lastOption"><span class="hs-identifier hs-var">lastOption</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ShutdownOn -&gt; ShutdownOn
+</span><a href="Cardano.Node.Configuration.CardanoConfigAdapter.html#toNodeShutdownOn"><span class="hs-identifier hs-var">toNodeShutdownOn</span></a></span><span> </span><span class="annot"><span class="annottext">(ShutdownOn -&gt; ShutdownOn)
+-&gt; Parser ShutdownOn -&gt; Parser ShutdownOn
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parser ShutdownOn
+</span><span class="hs-identifier hs-var">Cfg.parseShutdownOn</span></span><span class="hs-special">)</span><span>
+</span><span id="line-88"></span><span>
+</span><span id="line-89"></span><span>  </span><span class="hs-comment">-- Hidden options (to be removed eventually)</span><span>
+</span><span id="line-90"></span><span>  </span><span id="local-6989586621680064199"><span class="annot"><span class="annottext">Last MempoolCapacityBytesOverride
+</span><a href="#local-6989586621680064199"><span class="hs-identifier hs-var">maybeMempoolCapacityOverride</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Parser MempoolCapacityBytesOverride
+-&gt; Parser (Last MempoolCapacityBytesOverride)
+forall a. Parser a -&gt; Parser (Last a)
+</span><a href="Cardano.Node.Configuration.POM.html#lastOption"><span class="hs-identifier hs-var">lastOption</span></a></span><span> </span><span class="annot"><span class="annottext">Parser MempoolCapacityBytesOverride
+</span><a href="Cardano.Node.Parsers.html#parseMempoolCapacityOverride"><span class="hs-identifier hs-var">parseMempoolCapacityOverride</span></a></span><span>
+</span><span id="line-91"></span><span>
+</span><span id="line-92"></span><span>  </span><span class="hs-comment">-- gRPC</span><span>
+</span><span id="line-93"></span><span>  </span><span id="local-6989586621680064201"><span class="annot"><span class="annottext">Last Bool
+</span><a href="#local-6989586621680064201"><span class="hs-identifier hs-var">rpcIsEnabled</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Parser Bool -&gt; Parser (Last Bool)
+forall a. Parser a -&gt; Parser (Last a)
+</span><a href="Cardano.Node.Configuration.POM.html#lastOption"><span class="hs-identifier hs-var">lastOption</span></a></span><span> </span><span class="annot"><span class="annottext">Parser Bool
+</span><span class="hs-identifier hs-var">Cfg.parseEnableGrpc</span></span><span>
+</span><span id="line-94"></span><span>  </span><span id="local-6989586621680064203"><span class="annot"><span class="annottext">Last RpcEndpoint
+</span><a href="#local-6989586621680064203"><span class="hs-identifier hs-var">rpcEndpoint</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Parser RpcEndpoint -&gt; Parser (Last RpcEndpoint)
+forall a. Parser a -&gt; Parser (Last a)
+</span><a href="Cardano.Node.Configuration.POM.html#lastOption"><span class="hs-identifier hs-var">lastOption</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">GrpcEndpoint -&gt; RpcEndpoint
+</span><a href="Cardano.Node.Configuration.CardanoConfigAdapter.html#fromCfgGrpcEndpoint"><span class="hs-identifier hs-var">fromCfgGrpcEndpoint</span></a></span><span> </span><span class="annot"><span class="annottext">(GrpcEndpoint -&gt; RpcEndpoint)
+-&gt; Parser GrpcEndpoint -&gt; Parser RpcEndpoint
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parser GrpcEndpoint
+</span><span class="hs-identifier hs-var">Cfg.parseGrpcEndpoint</span></span><span class="hs-special">)</span><span>
+</span><span id="line-95"></span><span>
+</span><span id="line-96"></span><span>  </span><span class="hs-identifier">pure</span><span> </span><span class="hs-operator">$</span><span> </span><span class="annot"><a href="Cardano.Node.Configuration.POM.html#PartialNodeConfiguration"><span class="hs-identifier hs-type">PartialNodeConfiguration</span></a></span><span>
+</span><span id="line-97"></span><span>           </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">pncSocketConfig :: Last SocketConfig
+</span><a href="Cardano.Node.Configuration.POM.html#pncSocketConfig"><span class="hs-identifier hs-var">pncSocketConfig</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-98"></span><span>               </span><span class="annot"><span class="annottext">Maybe SocketConfig -&gt; Last SocketConfig
+forall a. Maybe a -&gt; Last a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Monoid.html#Last"><span class="hs-identifier hs-var">Last</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe SocketConfig -&gt; Last SocketConfig)
+-&gt; (SocketConfig -&gt; Maybe SocketConfig)
+-&gt; SocketConfig
+-&gt; Last SocketConfig
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">SocketConfig -&gt; Maybe SocketConfig
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">(SocketConfig -&gt; Last SocketConfig)
+-&gt; SocketConfig -&gt; Last SocketConfig
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Last NodeHostIPv4Address
+-&gt; Last NodeHostIPv6Address
+-&gt; Last PortNumber
+-&gt; Last (File Socket 'InOut)
+-&gt; SocketConfig
+</span><a href="Cardano.Node.Configuration.Socket.html#SocketConfig"><span class="hs-identifier hs-var">SocketConfig</span></a></span><span>
+</span><span id="line-99"></span><span>                 </span><span class="annot"><span class="annottext">Last NodeHostIPv4Address
+</span><a href="#local-6989586621680064189"><span class="hs-identifier hs-var">nIPv4Address</span></a></span><span>
+</span><span id="line-100"></span><span>                 </span><span class="annot"><span class="annottext">Last NodeHostIPv6Address
+</span><a href="#local-6989586621680064191"><span class="hs-identifier hs-var">nIPv6Address</span></a></span><span>
+</span><span id="line-101"></span><span>                 </span><span class="annot"><span class="annottext">Last PortNumber
+</span><a href="#local-6989586621680064193"><span class="hs-identifier hs-var">nPortNumber</span></a></span><span>
+</span><span id="line-102"></span><span>                 </span><span class="annot"><span class="annottext">Last (File Socket 'InOut)
+</span><a href="#local-6989586621680064171"><span class="hs-identifier hs-var">socketFp</span></a></span><span>
+</span><span id="line-103"></span><span>           </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">pncConfigFile :: Last ConfigYamlFilePath
+</span><a href="Cardano.Node.Configuration.POM.html#pncConfigFile"><span class="hs-identifier hs-var">pncConfigFile</span></a></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; ConfigYamlFilePath
+</span><a href="Cardano.Node.Types.html#ConfigYamlFilePath"><span class="hs-identifier hs-var">ConfigYamlFilePath</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; ConfigYamlFilePath)
+-&gt; Last String -&gt; Last ConfigYamlFilePath
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Last String
+</span><a href="#local-6989586621680064176"><span class="hs-identifier hs-var">nodeConfigFp</span></a></span><span>
+</span><span id="line-104"></span><span>           </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">pncTopologyFile :: Last TopologyFile
+</span><a href="Cardano.Node.Configuration.POM.html#pncTopologyFile"><span class="hs-identifier hs-var">pncTopologyFile</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; TopologyFile
+</span><a href="Cardano.Node.Types.html#TopologyFile"><span class="hs-identifier hs-var">TopologyFile</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; TopologyFile) -&gt; Last String -&gt; Last TopologyFile
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Last String
+</span><a href="#local-6989586621680064162"><span class="hs-identifier hs-var">topFp</span></a></span><span>
+</span><span id="line-105"></span><span>           </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">pncDatabaseFile :: Last NodeDatabasePaths
+</span><a href="Cardano.Node.Configuration.POM.html#pncDatabaseFile"><span class="hs-identifier hs-var">pncDatabaseFile</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Last NodeDatabasePaths
+</span><a href="#local-6989586621680064164"><span class="hs-identifier hs-var">dbFp</span></a></span><span>
+</span><span id="line-106"></span><span>           </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">pncDiffusionMode :: Last DiffusionMode
+</span><a href="Cardano.Node.Configuration.POM.html#pncDiffusionMode"><span class="hs-identifier hs-var">pncDiffusionMode</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Last DiffusionMode
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-107"></span><span>           </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">pncExperimentalProtocolsEnabled :: Last Bool
+</span><a href="Cardano.Node.Configuration.POM.html#pncExperimentalProtocolsEnabled"><span class="hs-identifier hs-var">pncExperimentalProtocolsEnabled</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Last Bool
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-108"></span><span>           </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">pncProtocolFiles :: Last ProtocolFilepaths
+</span><a href="Cardano.Node.Configuration.POM.html#pncProtocolFiles"><span class="hs-identifier hs-var">pncProtocolFiles</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-109"></span><span>               </span><span class="annot"><span class="annottext">Maybe ProtocolFilepaths -&gt; Last ProtocolFilepaths
+forall a. Maybe a -&gt; Last a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Monoid.html#Last"><span class="hs-identifier hs-var">Last</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe ProtocolFilepaths -&gt; Last ProtocolFilepaths)
+-&gt; (ProtocolFilepaths -&gt; Maybe ProtocolFilepaths)
+-&gt; ProtocolFilepaths
+-&gt; Last ProtocolFilepaths
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolFilepaths -&gt; Maybe ProtocolFilepaths
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">(ProtocolFilepaths -&gt; Last ProtocolFilepaths)
+-&gt; ProtocolFilepaths -&gt; Last ProtocolFilepaths
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-110"></span><span>                 </span><span class="annot"><span class="annottext">Maybe String
+-&gt; Maybe String -&gt; ProtocolFilepaths -&gt; ProtocolFilepaths
+</span><a href="Cardano.Node.Parsers.html#withDeprecatedByronCredentials"><span class="hs-identifier hs-var">withDeprecatedByronCredentials</span></a></span><span>
+</span><span id="line-111"></span><span>                   </span><span class="annot"><span class="annottext">Maybe String
+</span><a href="#local-6989586621680064179"><span class="hs-identifier hs-var">deprecatedByronCertFile</span></a></span><span>
+</span><span id="line-112"></span><span>                   </span><span class="annot"><span class="annottext">Maybe String
+</span><a href="#local-6989586621680064182"><span class="hs-identifier hs-var">deprecatedByronKeyFile</span></a></span><span>
+</span><span id="line-113"></span><span>                   </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Credentials -&gt; ProtocolFilepaths
+</span><a href="Cardano.Node.Configuration.CardanoConfigAdapter.html#credentialsToProtocolFilepaths"><span class="hs-identifier hs-var">credentialsToProtocolFilepaths</span></a></span><span> </span><span class="annot"><span class="annottext">Credentials
+</span><a href="#local-6989586621680064177"><span class="hs-identifier hs-var">credentials</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-114"></span><span>           </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">pncValidateDB :: Last Bool
+</span><a href="Cardano.Node.Configuration.POM.html#pncValidateDB"><span class="hs-identifier hs-var">pncValidateDB</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Last Bool
+</span><a href="#local-6989586621680064169"><span class="hs-identifier hs-var">validate</span></a></span><span>
+</span><span id="line-115"></span><span>           </span><span class="hs-special">,</span><span> </span><span class="hs-comment">-- An absent @--shutdown-on-*@ means 'NoShutdown' rather than</span><span>
+</span><span id="line-116"></span><span>             </span><span class="hs-comment">-- &quot;unset&quot;, which is what the node has always resolved it to.</span><span>
+</span><span id="line-117"></span><span>             </span><span class="hs-comment">-- cardano-config's parser has no such fallback, so it is applied</span><span>
+</span><span id="line-118"></span><span>             </span><span class="hs-comment">-- here.</span><span>
+</span><span id="line-119"></span><span>             </span><span class="annot"><span class="annottext">pncShutdownConfig :: Last ShutdownConfig
+</span><a href="Cardano.Node.Configuration.POM.html#pncShutdownConfig"><span class="hs-identifier hs-var">pncShutdownConfig</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-120"></span><span>               </span><span class="annot"><span class="annottext">Maybe ShutdownConfig -&gt; Last ShutdownConfig
+forall a. Maybe a -&gt; Last a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Monoid.html#Last"><span class="hs-identifier hs-var">Last</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe ShutdownConfig -&gt; Last ShutdownConfig)
+-&gt; (ShutdownConfig -&gt; Maybe ShutdownConfig)
+-&gt; ShutdownConfig
+-&gt; Last ShutdownConfig
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ShutdownConfig -&gt; Maybe ShutdownConfig
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">(ShutdownConfig -&gt; Last ShutdownConfig)
+-&gt; ShutdownConfig -&gt; Last ShutdownConfig
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-121"></span><span>                 </span><span class="annot"><span class="annottext">Maybe Fd -&gt; Maybe ShutdownOn -&gt; ShutdownConfig
+</span><a href="Cardano.Node.Handlers.Shutdown.html#ShutdownConfig"><span class="hs-identifier hs-var">ShutdownConfig</span></a></span><span>
+</span><span id="line-122"></span><span>                   </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Last Fd -&gt; Maybe Fd
+forall a. Last a -&gt; Maybe a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Monoid.html#getLast"><span class="hs-identifier hs-var">getLast</span></a></span><span> </span><span class="annot"><span class="annottext">Last Fd
+</span><a href="#local-6989586621680064195"><span class="hs-identifier hs-var">shutdownIPC</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-123"></span><span>                   </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ShutdownOn -&gt; Maybe ShutdownOn
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ShutdownOn -&gt; Maybe ShutdownOn -&gt; ShutdownOn
+forall a. a -&gt; Maybe a -&gt; a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Maybe.html#fromMaybe"><span class="hs-identifier hs-var">fromMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">ShutdownOn
+</span><a href="Cardano.Node.Handlers.Shutdown.html#NoShutdown"><span class="hs-identifier hs-var">NoShutdown</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Last ShutdownOn -&gt; Maybe ShutdownOn
+forall a. Last a -&gt; Maybe a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Monoid.html#getLast"><span class="hs-identifier hs-var">getLast</span></a></span><span> </span><span class="annot"><span class="annottext">Last ShutdownOn
+</span><a href="#local-6989586621680064197"><span class="hs-identifier hs-var">shutdownOnLimit</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-124"></span><span>           </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">pncStartAsNonProducingNode :: Last Bool
+</span><a href="Cardano.Node.Configuration.POM.html#pncStartAsNonProducingNode"><span class="hs-identifier hs-var">pncStartAsNonProducingNode</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Last Bool
+</span><a href="#local-6989586621680064184"><span class="hs-identifier hs-var">startAsNonProducingNode</span></a></span><span>
+</span><span id="line-125"></span><span>           </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">pncProtocolConfig :: Last NodeProtocolConfiguration
+</span><a href="Cardano.Node.Configuration.POM.html#pncProtocolConfig"><span class="hs-identifier hs-var">pncProtocolConfig</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Last NodeProtocolConfiguration
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-126"></span><span>           </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">pncMaxConcurrencyBulkSync :: Last MaxConcurrencyBulkSync
+</span><a href="Cardano.Node.Configuration.POM.html#pncMaxConcurrencyBulkSync"><span class="hs-identifier hs-var">pncMaxConcurrencyBulkSync</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Last MaxConcurrencyBulkSync
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-127"></span><span>           </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">pncMaxConcurrencyDeadline :: Last MaxConcurrencyDeadline
+</span><a href="Cardano.Node.Configuration.POM.html#pncMaxConcurrencyDeadline"><span class="hs-identifier hs-var">pncMaxConcurrencyDeadline</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Last MaxConcurrencyDeadline
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-128"></span><span>           </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">pncTraceForwardSocket :: Last (HowToConnect, ForwarderMode)
+</span><a href="Cardano.Node.Configuration.POM.html#pncTraceForwardSocket"><span class="hs-identifier hs-var">pncTraceForwardSocket</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Last (HowToConnect, ForwarderMode)
+</span><a href="#local-6989586621680064174"><span class="hs-identifier hs-var">traceForwardSocket</span></a></span><span>
+</span><span id="line-129"></span><span>           </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">pncMaybeMempoolCapacityOverride :: Last MempoolCapacityBytesOverride
+</span><a href="Cardano.Node.Configuration.POM.html#pncMaybeMempoolCapacityOverride"><span class="hs-identifier hs-var">pncMaybeMempoolCapacityOverride</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Last MempoolCapacityBytesOverride
+</span><a href="#local-6989586621680064199"><span class="hs-identifier hs-var">maybeMempoolCapacityOverride</span></a></span><span>
+</span><span id="line-130"></span><span>           </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">pncLedgerDbConfig :: Last LedgerDbConfiguration
+</span><a href="Cardano.Node.Configuration.POM.html#pncLedgerDbConfig"><span class="hs-identifier hs-var">pncLedgerDbConfig</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Last LedgerDbConfiguration
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-131"></span><span>           </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">pncProtocolIdleTimeout :: Last DiffTime
+</span><a href="Cardano.Node.Configuration.POM.html#pncProtocolIdleTimeout"><span class="hs-identifier hs-var">pncProtocolIdleTimeout</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Last DiffTime
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-132"></span><span>           </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">pncTimeWaitTimeout :: Last DiffTime
+</span><a href="Cardano.Node.Configuration.POM.html#pncTimeWaitTimeout"><span class="hs-identifier hs-var">pncTimeWaitTimeout</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Last DiffTime
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-133"></span><span>           </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">pncEgressPollInterval :: Last DiffTime
+</span><a href="Cardano.Node.Configuration.POM.html#pncEgressPollInterval"><span class="hs-identifier hs-var">pncEgressPollInterval</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Last DiffTime
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-134"></span><span>           </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">pncChainSyncIdleTimeout :: Last DiffTime
+</span><a href="Cardano.Node.Configuration.POM.html#pncChainSyncIdleTimeout"><span class="hs-identifier hs-var">pncChainSyncIdleTimeout</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Last DiffTime
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-135"></span><span>           </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">pncMempoolTimeoutSoft :: Last DiffTime
+</span><a href="Cardano.Node.Configuration.POM.html#pncMempoolTimeoutSoft"><span class="hs-identifier hs-var">pncMempoolTimeoutSoft</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Last DiffTime
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-136"></span><span>           </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">pncMempoolTimeoutHard :: Last DiffTime
+</span><a href="Cardano.Node.Configuration.POM.html#pncMempoolTimeoutHard"><span class="hs-identifier hs-var">pncMempoolTimeoutHard</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Last DiffTime
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-137"></span><span>           </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">pncMempoolTimeoutCapacity :: Last DiffTime
+</span><a href="Cardano.Node.Configuration.POM.html#pncMempoolTimeoutCapacity"><span class="hs-identifier hs-var">pncMempoolTimeoutCapacity</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Last DiffTime
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-138"></span><span>           </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">pncAcceptedConnectionsLimit :: Last AcceptedConnectionsLimit
+</span><a href="Cardano.Node.Configuration.POM.html#pncAcceptedConnectionsLimit"><span class="hs-identifier hs-var">pncAcceptedConnectionsLimit</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Last AcceptedConnectionsLimit
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-139"></span><span>           </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">pncDeadlineTargetOfRootPeers :: Last Int
+</span><a href="Cardano.Node.Configuration.POM.html#pncDeadlineTargetOfRootPeers"><span class="hs-identifier hs-var">pncDeadlineTargetOfRootPeers</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Last Int
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-140"></span><span>           </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">pncDeadlineTargetOfKnownPeers :: Last Int
+</span><a href="Cardano.Node.Configuration.POM.html#pncDeadlineTargetOfKnownPeers"><span class="hs-identifier hs-var">pncDeadlineTargetOfKnownPeers</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Last Int
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-141"></span><span>           </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">pncDeadlineTargetOfEstablishedPeers :: Last Int
+</span><a href="Cardano.Node.Configuration.POM.html#pncDeadlineTargetOfEstablishedPeers"><span class="hs-identifier hs-var">pncDeadlineTargetOfEstablishedPeers</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Last Int
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-142"></span><span>           </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">pncDeadlineTargetOfActivePeers :: Last Int
+</span><a href="Cardano.Node.Configuration.POM.html#pncDeadlineTargetOfActivePeers"><span class="hs-identifier hs-var">pncDeadlineTargetOfActivePeers</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Last Int
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-143"></span><span>           </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">pncDeadlineTargetOfKnownBigLedgerPeers :: Last Int
+</span><a href="Cardano.Node.Configuration.POM.html#pncDeadlineTargetOfKnownBigLedgerPeers"><span class="hs-identifier hs-var">pncDeadlineTargetOfKnownBigLedgerPeers</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Last Int
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-144"></span><span>           </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">pncDeadlineTargetOfEstablishedBigLedgerPeers :: Last Int
+</span><a href="Cardano.Node.Configuration.POM.html#pncDeadlineTargetOfEstablishedBigLedgerPeers"><span class="hs-identifier hs-var">pncDeadlineTargetOfEstablishedBigLedgerPeers</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Last Int
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-145"></span><span>           </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">pncDeadlineTargetOfActiveBigLedgerPeers :: Last Int
+</span><a href="Cardano.Node.Configuration.POM.html#pncDeadlineTargetOfActiveBigLedgerPeers"><span class="hs-identifier hs-var">pncDeadlineTargetOfActiveBigLedgerPeers</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Last Int
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-146"></span><span>           </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">pncSyncTargetOfRootPeers :: Last Int
+</span><a href="Cardano.Node.Configuration.POM.html#pncSyncTargetOfRootPeers"><span class="hs-identifier hs-var">pncSyncTargetOfRootPeers</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Last Int
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-147"></span><span>           </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">pncSyncTargetOfKnownPeers :: Last Int
+</span><a href="Cardano.Node.Configuration.POM.html#pncSyncTargetOfKnownPeers"><span class="hs-identifier hs-var">pncSyncTargetOfKnownPeers</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Last Int
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-148"></span><span>           </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">pncSyncTargetOfEstablishedPeers :: Last Int
+</span><a href="Cardano.Node.Configuration.POM.html#pncSyncTargetOfEstablishedPeers"><span class="hs-identifier hs-var">pncSyncTargetOfEstablishedPeers</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Last Int
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-149"></span><span>           </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">pncSyncTargetOfActivePeers :: Last Int
+</span><a href="Cardano.Node.Configuration.POM.html#pncSyncTargetOfActivePeers"><span class="hs-identifier hs-var">pncSyncTargetOfActivePeers</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Last Int
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-150"></span><span>           </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">pncSyncTargetOfKnownBigLedgerPeers :: Last Int
+</span><a href="Cardano.Node.Configuration.POM.html#pncSyncTargetOfKnownBigLedgerPeers"><span class="hs-identifier hs-var">pncSyncTargetOfKnownBigLedgerPeers</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Last Int
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-151"></span><span>           </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">pncSyncTargetOfEstablishedBigLedgerPeers :: Last Int
+</span><a href="Cardano.Node.Configuration.POM.html#pncSyncTargetOfEstablishedBigLedgerPeers"><span class="hs-identifier hs-var">pncSyncTargetOfEstablishedBigLedgerPeers</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Last Int
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-152"></span><span>           </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">pncSyncTargetOfActiveBigLedgerPeers :: Last Int
+</span><a href="Cardano.Node.Configuration.POM.html#pncSyncTargetOfActiveBigLedgerPeers"><span class="hs-identifier hs-var">pncSyncTargetOfActiveBigLedgerPeers</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Last Int
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-153"></span><span>           </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">pncMinBigLedgerPeersForTrustedState :: Last NumberOfBigLedgerPeers
+</span><a href="Cardano.Node.Configuration.POM.html#pncMinBigLedgerPeersForTrustedState"><span class="hs-identifier hs-var">pncMinBigLedgerPeersForTrustedState</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Last NumberOfBigLedgerPeers
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-154"></span><span>           </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">pncConsensusMode :: Last ConsensusMode
+</span><a href="Cardano.Node.Configuration.POM.html#pncConsensusMode"><span class="hs-identifier hs-var">pncConsensusMode</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Last ConsensusMode
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-155"></span><span>           </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">pncPeerSharing :: Last PeerSharing
+</span><a href="Cardano.Node.Configuration.POM.html#pncPeerSharing"><span class="hs-identifier hs-var">pncPeerSharing</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Last PeerSharing
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-156"></span><span>           </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">pncGenesisConfigFlags :: Last GenesisConfigFlags
+</span><a href="Cardano.Node.Configuration.POM.html#pncGenesisConfigFlags"><span class="hs-identifier hs-var">pncGenesisConfigFlags</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Last GenesisConfigFlags
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-157"></span><span>           </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">pncResponderCoreAffinityPolicy :: Last ResponderCoreAffinityPolicy
+</span><a href="Cardano.Node.Configuration.POM.html#pncResponderCoreAffinityPolicy"><span class="hs-identifier hs-var">pncResponderCoreAffinityPolicy</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Last ResponderCoreAffinityPolicy
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-158"></span><span>           </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">pncRpcConfig :: PartialRpcConfig
+</span><a href="Cardano.Node.Configuration.POM.html#pncRpcConfig"><span class="hs-identifier hs-var">pncRpcConfig</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-159"></span><span>               </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PartialRpcConfig
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.12.4/cardano-rpc-11.5.0.0-872ead75da1bd421584eacc119e9220f2d58ca301c3d091a36d3512bc4a591c4/share/doc/html/src/Cardano.Rpc.Server.Config.html#PartialRpcConfig"><span class="hs-identifier hs-type">PartialRpcConfig</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-160"></span><span>                 </span><span class="hs-special">{</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.12.4/cardano-rpc-11.5.0.0-872ead75da1bd421584eacc119e9220f2d58ca301c3d091a36d3512bc4a591c4/share/doc/html/src/Cardano.Rpc.Server.Config.html#isEnabled"><span class="hs-identifier hs-var">isEnabled</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621680064201"><span class="hs-identifier hs-type">rpcIsEnabled</span></a></span><span>
+</span><span id="line-161"></span><span>                 </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621680064203"><span class="hs-identifier hs-type hs-var">rpcEndpoint</span></a></span><span>
+</span><span id="line-162"></span><span>                 </span><span class="hs-special">}</span><span>
+</span><span id="line-163"></span><span>           </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">pncTxSubmissionLogicVersion :: Last TxSubmissionLogicVersion
+</span><a href="Cardano.Node.Configuration.POM.html#pncTxSubmissionLogicVersion"><span class="hs-identifier hs-var">pncTxSubmissionLogicVersion</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Last TxSubmissionLogicVersion
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-164"></span><span>           </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">pncTxSubmissionInitDelay :: Last TxSubmissionInitDelay
+</span><a href="Cardano.Node.Configuration.POM.html#pncTxSubmissionInitDelay"><span class="hs-identifier hs-var">pncTxSubmissionInitDelay</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Last TxSubmissionInitDelay
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-165"></span><span>           </span><span class="hs-special">}</span><span>
+</span><span id="line-166"></span><span>
+</span><span id="line-167"></span><span class="hs-comment">-- | Fill the Byron credentials in from the deprecated aliases where</span><span>
+</span><span id="line-168"></span><span class="hs-comment">-- cardano-config's parser, which knows only the current spellings, left a hole.</span><span>
+</span><span id="line-169"></span><span class="annot"><a href="Cardano.Node.Parsers.html#withDeprecatedByronCredentials"><span class="hs-identifier hs-type">withDeprecatedByronCredentials</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-170"></span><span>  </span><span class="annot"><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Node.Types.html#ProtocolFilepaths"><span class="hs-identifier hs-type">ProtocolFilepaths</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Node.Types.html#ProtocolFilepaths"><span class="hs-identifier hs-type">ProtocolFilepaths</span></a></span><span>
+</span><span id="line-171"></span><span id="withDeprecatedByronCredentials"><span class="annot"><span class="annottext">withDeprecatedByronCredentials :: Maybe String
+-&gt; Maybe String -&gt; ProtocolFilepaths -&gt; ProtocolFilepaths
+</span><a href="Cardano.Node.Parsers.html#withDeprecatedByronCredentials"><span class="hs-identifier hs-var hs-var">withDeprecatedByronCredentials</span></a></span></span><span> </span><span id="local-6989586621680064261"><span class="annot"><span class="annottext">Maybe String
+</span><a href="#local-6989586621680064261"><span class="hs-identifier hs-var">cert</span></a></span></span><span> </span><span id="local-6989586621680064262"><span class="annot"><span class="annottext">Maybe String
+</span><a href="#local-6989586621680064262"><span class="hs-identifier hs-var">key</span></a></span></span><span> </span><span id="local-6989586621680064263"><span class="annot"><span class="annottext">ProtocolFilepaths
+</span><a href="#local-6989586621680064263"><span class="hs-identifier hs-var">files</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-172"></span><span>  </span><span class="annot"><span class="annottext">ProtocolFilepaths
+</span><a href="#local-6989586621680064263"><span class="hs-identifier hs-var">files</span></a></span><span>
+</span><span id="line-173"></span><span>    </span><span class="hs-special">{</span><span> </span><span class="annot"><a href="Cardano.Node.Types.html#byronCertFile"><span class="hs-identifier hs-var">byronCertFile</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Cardano.Node.Types.html#byronCertFile"><span class="hs-identifier hs-var">byronCertFile</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680064263"><span class="hs-identifier hs-type">files</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#%3C%7C%3E"><span class="hs-operator hs-type">&lt;|&gt;</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680064261"><span class="hs-identifier hs-type">cert</span></a></span><span>
+</span><span id="line-174"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Node.Types.html#byronKeyFile"><span class="hs-identifier hs-var">byronKeyFile</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Cardano.Node.Types.html#byronKeyFile"><span class="hs-identifier hs-var">byronKeyFile</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680064263"><span class="hs-identifier hs-type">files</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#%3C%7C%3E"><span class="hs-operator hs-type">&lt;|&gt;</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680064262"><span class="hs-identifier hs-type">key</span></a></span><span>
+</span><span id="line-175"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-176"></span><span>
+</span><span id="line-177"></span><span class="annot"><span class="hs-comment">-- | Deprecated alias of @--byron-delegation-certificate@.</span></span><span>
+</span><span id="line-178"></span><span class="annot"><a href="Cardano.Node.Parsers.html#parseByronDelegationCertDeprecated"><span class="hs-identifier hs-type">parseByronDelegationCertDeprecated</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Parser</span></span><span> </span><span class="annot"><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span>
+</span><span id="line-179"></span><span id="parseByronDelegationCertDeprecated"><span class="annot"><span class="annottext">parseByronDelegationCertDeprecated :: Parser String
+</span><a href="Cardano.Node.Parsers.html#parseByronDelegationCertDeprecated"><span class="hs-identifier hs-var hs-var">parseByronDelegationCertDeprecated</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-180"></span><span>  </span><span class="annot"><span class="annottext">Mod OptionFields String -&gt; Parser String
+forall s. IsString s =&gt; Mod OptionFields s -&gt; Parser s
+</span><span class="hs-identifier hs-var">strOption</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; Mod OptionFields String
+forall (f :: * -&gt; *) a. HasName f =&gt; String -&gt; Mod f a
+</span><span class="hs-identifier hs-var">long</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;delegation-certificate&quot;</span></span><span> </span><span class="annot"><span class="annottext">Mod OptionFields String
+-&gt; Mod OptionFields String -&gt; Mod OptionFields String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Mod OptionFields String
+forall (f :: * -&gt; *) a. Mod f a
+</span><span class="hs-identifier hs-var">Opt.internal</span></span><span class="hs-special">)</span><span>
+</span><span id="line-181"></span><span>
+</span><span id="line-182"></span><span class="annot"><span class="hs-comment">-- | Deprecated alias of @--byron-signing-key@.</span></span><span>
+</span><span id="line-183"></span><span class="annot"><a href="Cardano.Node.Parsers.html#parseByronSigningKeyDeprecated"><span class="hs-identifier hs-type">parseByronSigningKeyDeprecated</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Parser</span></span><span> </span><span class="annot"><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span>
+</span><span id="line-184"></span><span id="parseByronSigningKeyDeprecated"><span class="annot"><span class="annottext">parseByronSigningKeyDeprecated :: Parser String
+</span><a href="Cardano.Node.Parsers.html#parseByronSigningKeyDeprecated"><span class="hs-identifier hs-var hs-var">parseByronSigningKeyDeprecated</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-185"></span><span>  </span><span class="annot"><span class="annottext">Mod OptionFields String -&gt; Parser String
+forall s. IsString s =&gt; Mod OptionFields s -&gt; Parser s
+</span><span class="hs-identifier hs-var">strOption</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; Mod OptionFields String
+forall (f :: * -&gt; *) a. HasName f =&gt; String -&gt; Mod f a
+</span><span class="hs-identifier hs-var">long</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;signing-key&quot;</span></span><span> </span><span class="annot"><span class="annottext">Mod OptionFields String
+-&gt; Mod OptionFields String -&gt; Mod OptionFields String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Mod OptionFields String
+forall (f :: * -&gt; *) a. Mod f a
+</span><span class="hs-identifier hs-var">Opt.internal</span></span><span class="hs-special">)</span><span>
+</span><span id="line-186"></span><span>
+</span><span id="line-187"></span><span class="annot"><span class="hs-comment">-- | Deprecated alias of @--start-as-non-producing-node@.</span></span><span>
+</span><span id="line-188"></span><span class="annot"><a href="Cardano.Node.Parsers.html#parseStartAsNonProducingNodeDeprecated"><span class="hs-identifier hs-type">parseStartAsNonProducingNodeDeprecated</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Parser</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-prim-0.13.0-inplace/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-189"></span><span id="parseStartAsNonProducingNodeDeprecated"><span class="annot"><span class="annottext">parseStartAsNonProducingNodeDeprecated :: Parser (Maybe Bool)
+</span><a href="Cardano.Node.Parsers.html#parseStartAsNonProducingNodeDeprecated"><span class="hs-identifier hs-var hs-var">parseStartAsNonProducingNodeDeprecated</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-190"></span><span>  </span><span class="annot"><span class="annottext">Maybe Bool
+-&gt; Maybe Bool -&gt; Mod FlagFields (Maybe Bool) -&gt; Parser (Maybe Bool)
+forall a. a -&gt; a -&gt; Mod FlagFields a -&gt; Parser a
+</span><span class="hs-identifier hs-var">flag</span></span><span> </span><span class="annot"><span class="annottext">Maybe Bool
+forall a. Maybe a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool -&gt; Maybe Bool
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-prim-0.13.0-inplace/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Mod FlagFields (Maybe Bool) -&gt; Parser (Maybe Bool))
+-&gt; Mod FlagFields (Maybe Bool) -&gt; Parser (Maybe Bool)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[Mod FlagFields (Maybe Bool)] -&gt; Mod FlagFields (Maybe Bool)
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#mconcat"><span class="hs-identifier hs-var">mconcat</span></a></span><span>
+</span><span id="line-191"></span><span>    </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">String -&gt; Mod FlagFields (Maybe Bool)
+forall (f :: * -&gt; *) a. HasName f =&gt; String -&gt; Mod f a
+</span><span class="hs-identifier hs-var">long</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;non-producing-node&quot;</span></span><span>
+</span><span id="line-192"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String -&gt; Mod FlagFields (Maybe Bool)
+forall (f :: * -&gt; *) a. String -&gt; Mod f a
+</span><span class="hs-identifier hs-var">help</span></span><span> </span><span class="annot"><span class="annottext">(String -&gt; Mod FlagFields (Maybe Bool))
+-&gt; String -&gt; Mod FlagFields (Maybe Bool)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[String] -&gt; String
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#mconcat"><span class="hs-identifier hs-var">mconcat</span></a></span><span>
+</span><span id="line-193"></span><span>        </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;DEPRECATED, use --start-as-non-producing-node instead. &quot;</span></span><span>
+</span><span id="line-194"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;This option will be removed in one of the future versions of cardano-node.&quot;</span></span><span>
+</span><span id="line-195"></span><span>        </span><span class="hs-special">]</span><span>
+</span><span id="line-196"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Mod FlagFields (Maybe Bool)
+forall (f :: * -&gt; *) a. Mod f a
+</span><span class="hs-identifier hs-var">hidden</span></span><span>
+</span><span id="line-197"></span><span>    </span><span class="hs-special">]</span><span>
+</span><span id="line-198"></span><span>
+</span><span id="line-199"></span><span class="hs-comment">-- | Deprecated, and not carried by cardano-config: the mempool capacity is a</span><span>
+</span><span id="line-200"></span><span class="hs-comment">-- configuration file setting (@MempoolCapacityBytesOverride@).</span><span>
+</span><span id="line-201"></span><span class="annot"><a href="Cardano.Node.Parsers.html#parseMempoolCapacityOverride"><span class="hs-identifier hs-type">parseMempoolCapacityOverride</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Parser</span></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.12.4/ouroboros-consensus-5.2.0.0-dcbc9327e6ccd491cb88d48a667253b292e759fed2552924fbba56c469ef12ba/share/doc/html/src/Ouroboros.Consensus.Mempool.Capacity.html#MempoolCapacityBytesOverride"><span class="hs-identifier hs-type">MempoolCapacityBytesOverride</span></a></span><span>
+</span><span id="line-202"></span><span id="parseMempoolCapacityOverride"><span class="annot"><span class="annottext">parseMempoolCapacityOverride :: Parser MempoolCapacityBytesOverride
+</span><a href="Cardano.Node.Parsers.html#parseMempoolCapacityOverride"><span class="hs-identifier hs-var hs-var">parseMempoolCapacityOverride</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Parser MempoolCapacityBytesOverride
+</span><a href="#local-6989586621680064273"><span class="hs-identifier hs-var">parseOverride</span></a></span><span> </span><span class="annot"><span class="annottext">Parser MempoolCapacityBytesOverride
+-&gt; Parser MempoolCapacityBytesOverride
+-&gt; Parser MempoolCapacityBytesOverride
+forall a. Parser a -&gt; Parser a -&gt; Parser a
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a -&gt; f a -&gt; f a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#%3C%7C%3E"><span class="hs-operator hs-var">&lt;|&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parser MempoolCapacityBytesOverride
+</span><a href="#local-6989586621680064274"><span class="hs-identifier hs-var">parseNoOverride</span></a></span><span>
+</span><span id="line-203"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-204"></span><span>    </span><span class="annot"><a href="#local-6989586621680064273"><span class="hs-identifier hs-type">parseOverride</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Parser</span></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.12.4/ouroboros-consensus-5.2.0.0-dcbc9327e6ccd491cb88d48a667253b292e759fed2552924fbba56c469ef12ba/share/doc/html/src/Ouroboros.Consensus.Mempool.Capacity.html#MempoolCapacityBytesOverride"><span class="hs-identifier hs-type">MempoolCapacityBytesOverride</span></a></span><span>
+</span><span id="line-205"></span><span>    </span><span id="local-6989586621680064273"><span class="annot"><span class="annottext">parseOverride :: Parser MempoolCapacityBytesOverride
+</span><a href="#local-6989586621680064273"><span class="hs-identifier hs-var hs-var">parseOverride</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-206"></span><span>      </span><span class="annot"><span class="annottext">ByteSize32 -&gt; MempoolCapacityBytesOverride
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.12.4/ouroboros-consensus-5.2.0.0-dcbc9327e6ccd491cb88d48a667253b292e759fed2552924fbba56c469ef12ba/share/doc/html/src/Ouroboros.Consensus.Mempool.Capacity.html#MempoolCapacityBytesOverride"><span class="hs-identifier hs-var">MempoolCapacityBytesOverride</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteSize32 -&gt; MempoolCapacityBytesOverride)
+-&gt; (Word32 -&gt; ByteSize32) -&gt; Word32 -&gt; MempoolCapacityBytesOverride
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Word32 -&gt; ByteSize32
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.12.4/ouroboros-consensus-5.2.0.0-dcbc9327e6ccd491cb88d48a667253b292e759fed2552924fbba56c469ef12ba/share/doc/html/src/Ouroboros.Consensus.Ledger.SupportsMempool.html#ByteSize32"><span class="hs-identifier hs-var">ByteSize32</span></a></span><span> </span><span class="annot"><span class="annottext">(Word32 -&gt; MempoolCapacityBytesOverride)
+-&gt; Parser Word32 -&gt; Parser MempoolCapacityBytesOverride
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span>
+</span><span id="line-207"></span><span>        </span><span class="annot"><span class="annottext">ReadM Word32 -&gt; Mod OptionFields Word32 -&gt; Parser Word32
+forall a. ReadM a -&gt; Mod OptionFields a -&gt; Parser a
+</span><span class="hs-identifier hs-var">Opt.option</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a. Read a =&gt; ReadM a
+</span><span class="hs-identifier hs-var">auto</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Word.html#Word32"><span class="hs-identifier hs-type">Word32</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-208"></span><span>          </span><span class="hs-special">(</span><span>  </span><span class="annot"><span class="annottext">String -&gt; Mod OptionFields Word32
+forall (f :: * -&gt; *) a. HasName f =&gt; String -&gt; Mod f a
+</span><span class="hs-identifier hs-var">long</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;mempool-capacity-override&quot;</span></span><span>
+</span><span id="line-209"></span><span>          </span><span class="annot"><span class="annottext">Mod OptionFields Word32
+-&gt; Mod OptionFields Word32 -&gt; Mod OptionFields Word32
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; Mod OptionFields Word32
+forall (f :: * -&gt; *) a. HasMetavar f =&gt; String -&gt; Mod f a
+</span><span class="hs-identifier hs-var">metavar</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;BYTES&quot;</span></span><span>
+</span><span id="line-210"></span><span>          </span><span class="annot"><span class="annottext">Mod OptionFields Word32
+-&gt; Mod OptionFields Word32 -&gt; Mod OptionFields Word32
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; Mod OptionFields Word32
+forall (f :: * -&gt; *) a. String -&gt; Mod f a
+</span><span class="hs-identifier hs-var">help</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;[DEPRECATED: Set it in config file with key MempoolCapacityBytesOverride] The number of bytes&quot;</span></span><span>
+</span><span id="line-211"></span><span>          </span><span class="hs-special">)</span><span>
+</span><span id="line-212"></span><span>    </span><span class="annot"><a href="#local-6989586621680064274"><span class="hs-identifier hs-type">parseNoOverride</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Parser</span></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.12.4/ouroboros-consensus-5.2.0.0-dcbc9327e6ccd491cb88d48a667253b292e759fed2552924fbba56c469ef12ba/share/doc/html/src/Ouroboros.Consensus.Mempool.Capacity.html#MempoolCapacityBytesOverride"><span class="hs-identifier hs-type">MempoolCapacityBytesOverride</span></a></span><span>
+</span><span id="line-213"></span><span>    </span><span id="local-6989586621680064274"><span class="annot"><span class="annottext">parseNoOverride :: Parser MempoolCapacityBytesOverride
+</span><a href="#local-6989586621680064274"><span class="hs-identifier hs-var hs-var">parseNoOverride</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-214"></span><span>      </span><span class="annot"><span class="annottext">MempoolCapacityBytesOverride
+-&gt; Mod FlagFields MempoolCapacityBytesOverride
+-&gt; Parser MempoolCapacityBytesOverride
+forall a. a -&gt; Mod FlagFields a -&gt; Parser a
+</span><span class="hs-identifier hs-var">flag'</span></span><span> </span><span class="annot"><span class="annottext">MempoolCapacityBytesOverride
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.12.4/ouroboros-consensus-5.2.0.0-dcbc9327e6ccd491cb88d48a667253b292e759fed2552924fbba56c469ef12ba/share/doc/html/src/Ouroboros.Consensus.Mempool.Capacity.html#NoMempoolCapacityBytesOverride"><span class="hs-identifier hs-var">NoMempoolCapacityBytesOverride</span></a></span><span>
+</span><span id="line-215"></span><span>        </span><span class="hs-special">(</span><span>  </span><span class="annot"><span class="annottext">String -&gt; Mod FlagFields MempoolCapacityBytesOverride
+forall (f :: * -&gt; *) a. HasName f =&gt; String -&gt; Mod f a
+</span><span class="hs-identifier hs-var">long</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;no-mempool-capacity-override&quot;</span></span><span>
+</span><span id="line-216"></span><span>        </span><span class="annot"><span class="annottext">Mod FlagFields MempoolCapacityBytesOverride
+-&gt; Mod FlagFields MempoolCapacityBytesOverride
+-&gt; Mod FlagFields MempoolCapacityBytesOverride
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; Mod FlagFields MempoolCapacityBytesOverride
+forall (f :: * -&gt; *) a. String -&gt; Mod f a
+</span><span class="hs-identifier hs-var">help</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;[DEPRECATED: Set it in config file] Don't override mempool capacity&quot;</span></span><span>
+</span><span id="line-217"></span><span>        </span><span class="hs-special">)</span><span>
+</span><span id="line-218"></span><span>
+</span><span id="line-219"></span><span class="hs-comment">-- | Produce just the brief help header for a given CLI option parser,</span><span>
+</span><span id="line-220"></span><span class="hs-comment">--   without the options.</span><span>
+</span><span id="line-221"></span><span id="local-6989586621680063997"><span class="annot"><a href="Cardano.Node.Parsers.html#parserHelpHeader"><span class="hs-identifier hs-type">parserHelpHeader</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Opt.Parser</span></span><span> </span><span class="annot"><a href="#local-6989586621680063997"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">OptI.Doc</span></span></span><span>
+</span><span id="line-222"></span><span id="parserHelpHeader"><span class="annot"><span class="annottext">parserHelpHeader :: forall a. String -&gt; Parser a -&gt; Doc
+</span><a href="Cardano.Node.Parsers.html#parserHelpHeader"><span class="hs-identifier hs-var hs-var">parserHelpHeader</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Parser a -&gt; String -&gt; Doc) -&gt; String -&gt; Parser a -&gt; Doc
+forall a b c. (a -&gt; b -&gt; c) -&gt; b -&gt; a -&gt; c
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#flip"><span class="hs-identifier hs-var">flip</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ParserPrefs -&gt; Parser a -&gt; String -&gt; Doc
+forall a. ParserPrefs -&gt; Parser a -&gt; String -&gt; Doc
+</span><span class="hs-identifier hs-var">OptI.parserUsage</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PrefsMod -&gt; ParserPrefs
+</span><span class="hs-identifier hs-var">Opt.prefs</span></span><span> </span><span class="annot"><span class="annottext">PrefsMod
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-223"></span><span>
+</span><span id="line-224"></span><span class="hs-comment">-- | Produce just the options help for a given CLI option parser,</span><span>
+</span><span id="line-225"></span><span class="hs-comment">--   without the header.</span><span>
+</span><span id="line-226"></span><span id="local-6989586621680064007"><span class="annot"><a href="Cardano.Node.Parsers.html#parserHelpOptions"><span class="hs-identifier hs-type">parserHelpOptions</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Opt.Parser</span></span><span> </span><span class="annot"><a href="#local-6989586621680064007"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">OptI.Doc</span></span></span><span>
+</span><span id="line-227"></span><span id="parserHelpOptions"><span class="annot"><span class="annottext">parserHelpOptions :: forall a. Parser a -&gt; Doc
+</span><a href="Cardano.Node.Parsers.html#parserHelpOptions"><span class="hs-identifier hs-var hs-var">parserHelpOptions</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Doc -&gt; Maybe Doc -&gt; Doc
+forall a. a -&gt; Maybe a -&gt; a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Maybe.html#fromMaybe"><span class="hs-identifier hs-var">fromMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">Doc
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe Doc -&gt; Doc) -&gt; (Parser a -&gt; Maybe Doc) -&gt; Parser a -&gt; Doc
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Chunk Doc -&gt; Maybe Doc
+forall a. Chunk a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">OptI.unChunk</span></span><span> </span><span class="annot"><span class="annottext">(Chunk Doc -&gt; Maybe Doc)
+-&gt; (Parser a -&gt; Chunk Doc) -&gt; Parser a -&gt; Maybe Doc
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ParserPrefs -&gt; Parser a -&gt; Chunk Doc
+forall a. ParserPrefs -&gt; Parser a -&gt; Chunk Doc
+</span><span class="hs-identifier hs-var">OptI.fullDesc</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PrefsMod -&gt; ParserPrefs
+</span><span class="hs-identifier hs-var">Opt.prefs</span></span><span> </span><span class="annot"><span class="annottext">PrefsMod
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-228"></span><span>
+</span><span id="line-229"></span><span class="annot"><span class="hs-comment">-- | Render the help pretty document.</span></span><span>
+</span><span id="line-230"></span><span class="annot"><a href="Cardano.Node.Parsers.html#renderHelpDoc"><span class="hs-identifier hs-type">renderHelpDoc</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-prim-0.13.0-inplace/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">OptI.Doc</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-231"></span><span id="renderHelpDoc"><span class="annot"><span class="annottext">renderHelpDoc :: Int -&gt; Doc -&gt; String
+</span><a href="Cardano.Node.Parsers.html#renderHelpDoc"><span class="hs-identifier hs-var hs-var">renderHelpDoc</span></a></span></span><span> </span><span id="local-6989586621680064291"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621680064291"><span class="hs-identifier hs-var">cols</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-232"></span><span>  </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SimpleDocStream AnsiStyle -&gt; ShowS
+forall ann. SimpleDocStream ann -&gt; ShowS
+</span><span class="hs-operator hs-var">`PP.renderShowS`</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;&quot;</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(SimpleDocStream AnsiStyle -&gt; String)
+-&gt; (Doc -&gt; SimpleDocStream AnsiStyle) -&gt; Doc -&gt; String
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">LayoutOptions -&gt; Doc -&gt; SimpleDocStream AnsiStyle
+forall ann. LayoutOptions -&gt; Doc ann -&gt; SimpleDocStream ann
+</span><span class="hs-identifier hs-var">OptI.layoutPretty</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PageWidth -&gt; LayoutOptions
+</span><span class="hs-identifier hs-var">OptI.LayoutOptions</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Double -&gt; PageWidth
+</span><span class="hs-identifier hs-var">OptI.AvailablePerLine</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621680064291"><span class="hs-identifier hs-var">cols</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><span class="hs-number">1.0</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-233"></span></pre></body></html>
