@@ -394,8 +394,8 @@ cardanoTestnet
     privateKeyHex <- case decode (BSL8.pack privateKeyContent) of
       (Just (Object keyMap)) -> case KeyMap.lookup "cborHex" keyMap of
         Just (String privateKey) -> pure (Text.unpack $ Text.drop 4 privateKey)
-        _ -> throwString "Failed to parse PERAS_PRIVATE_KEY: missing cborHex field"
-      _ -> throwString "Failed to parse PERAS_PRIVATE_KEY: skey file is incorrect"
+        _ -> throwString "Failed to parse Peras BLS key: missing cborHex field"
+      _ -> throwString "Failed to parse Peras BLS key: signing key file is incorrect"
     privateKeyBytes <- case B16.decode (BSC.pack privateKeyHex) of
       Left err -> throwString $ "Failed to decode Peras BLS private key for pool " <> poolId <> ": " <> err
       Right bytes -> pure bytes
@@ -405,9 +405,9 @@ cardanoTestnet
     let publicKeyBytes = BLS.rawSerialisePublicKey (BLS.derivePublicKey privateKey)
     pure (i, poolId, privateKeyHex, publicKeyBytes)
 
-  let perasOptionsByIndex :: Map.Map Int (String, String)
+  let perasOptionsByIndex :: Map.Map Int FilePath
       perasOptionsByIndex = Map.fromList
-        [ (i, (poolId, privateKeyHex)) | (i, poolId, privateKeyHex, _) <- perasSpoKeys ]
+        [ (i, tmpAbsPath </> Defaults.defaultSpoColdSKeyFp i) | (i, _, _, _) <- perasSpoKeys ]
 
       perasPublicKeysFile = tmpAbsPath </> "peras-public-keys.json"
 

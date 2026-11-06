@@ -141,13 +141,13 @@ startNode
   -- ^ Testnet magic
   -> Maybe FilePath
   -- ^ Optional custom node binary. 'Nothing' uses the default resolution.
-  -> (FilePath, Maybe (String, String))
-  -- ^ Peras options
+  -> (FilePath, Maybe FilePath)
+   -- ^ Optional Peras public-key file and Shelley BLS signing-key file
   -> [String]
   -- ^ The command to execute to start the node.
   -- @--socket-path@, @--port@, and @--host-addr@ gets added automatically.
   -> ExceptT NodeStartFailure m TestnetNode
-startNode tp node ipv4 port _testnetMagic mNodeBin (perasPublicKeysFile, perasOptions) nodeCmd = GHC.withFrozenCallStack $ do
+startNode tp node ipv4 port _testnetMagic mNodeBin (perasPublicKeysFile, shelleyBLSKeyFile) nodeCmd = GHC.withFrozenCallStack $ do
   let tempBaseAbsPath = makeTmpBaseAbsPath tp
       socketDir = makeSocketDir tp
       logDir = makeLogDir tp
@@ -174,6 +174,7 @@ startNode tp node ipv4 port _testnetMagic mNodeBin (perasPublicKeysFile, perasOp
 
     let socketAbsPath = H.sprocketSystemName sprocket
         completeNodeCmd =  nodeCmd <>
+                             maybe [] (\fp -> ["--shelley-bls-key", fp]) shelleyBLSKeyFile <>
                              [ "--socket-path", H.sprocketArgumentName sprocket
                              , "--port", show port
                              , "--host-addr", showIpv4Address ipv4
@@ -191,16 +192,10 @@ startNode tp node ipv4 port _testnetMagic mNodeBin (perasPublicKeysFile, perasOp
     unless isClosed $
       throwString $ "Port is still in use after " ++ show portWaitTimeout ++ " seconds before starting node: " <> show port
 
-    let perasEnv = case perasOptions of
-          Nothing -> []
-          Just (perasPoolId, perasPrivateKey) ->
-            [ ("PERAS_POOL_ID", perasPoolId)
-            , ("PERAS_PRIVATE_KEY", perasPrivateKey)
-            ]
     let nodeEnv =
           [ ("NODE_ID", node)
           , ("PERAS_PUBLIC_KEY_FILE", perasPublicKeysFile)
-          ] ++ perasEnv
+          ]
     env <- liftIOAnnotated $ overidingInheritedEnvironment nodeEnv
 
     (Just stdIn, _, _, hProcess, _)

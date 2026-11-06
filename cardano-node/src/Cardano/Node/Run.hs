@@ -73,7 +73,8 @@ import           Cardano.Logging.Utils (showT)
 
 import           Ouroboros.Consensus.Cardano.Peras (mkCardanoPerasVoteForging)
 import           Ouroboros.Consensus.Committee.Types (PoolId (..))
-import           Ouroboros.Consensus.Peras.Crypto.BLS.Unsafe (unsafePerasBLSPrivateKeyFromEnv)
+import qualified Ouroboros.Consensus.Committee.Crypto.BLS as PerasBLS
+import qualified Ouroboros.Consensus.Peras.Crypto.BLS as PerasCrypto
 import           Ouroboros.Consensus.Protocol.Praos.Common (PraosCanBeLeader (..))
 import qualified Ouroboros.Consensus.Cardano.Node as CardanoConsensus
 import qualified Ouroboros.Consensus.Config as Consensus
@@ -149,6 +150,10 @@ import           Control.Monad.Trans.Except.Extra (left, hushM)
 import           Control.Monad.Trans.Maybe (MaybeT(runMaybeT, MaybeT), hoistMaybe)
 import           "contra-tracer" Control.Tracer
 import           Data.Bits
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.Base16 as B16
+import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.KeyMap as KeyMap
 import           Data.Bifunctor (first)
 import           Data.Either (partitionEithers)
 import           Data.Functor.Identity (Identity (..))
@@ -438,6 +443,8 @@ handleSimpleNode blockType runP tracers forgingStateVar nc cmdPc networkMagic on
                 (startupTracer tracers)
                 blockType
                 nodeKernel
+                nc
+                True
                 blockForgingStatus
 
               maybeSpawnOnSlotSyncedShutdownHandler
@@ -654,7 +661,17 @@ installSigHUPHandler startupTracer kesAgentTracer forgingStateVar blockType nc c
     (Signals.Catch $ do
       blockForgingStatus <-
         updateBlockForging startupTracer kesAgentTracer forgingStateVar blockType nodeKernel nc
-      updatePerasVoteForging startupTracer blockType nodeKernel blockForgingStatus
+      case blockForgingStatus of
+        BlockForgingUnchanged -> pure ()
+        _ -> do
+          reloadResult <- try @Exception.SomeException $
+            rncConfiguration <$> buildNodeConfiguration SkipCrossCheck cmdPc
+          case reloadResult of
+            Left err ->
+              traceWith startupTracer . PerasVoteForgingUpdate . PerasVoteForgingRetainedAfterError $
+                Exception.displayException err
+            Right reloadedNc ->
+              updatePerasVoteForging startupTracer blockType nodeKernel reloadedNc False blockForgingStatus
       updateTopologyConfiguration startupTracer nc localRootsVar publicRootsVar
                                   useLedgerVar useBootstrapPeersVar ledgerPeerSnapshotPathVar
       void $ updateLedgerPeerSnapshot
@@ -755,9 +772,11 @@ updatePerasVoteForging
      Tracer IO (StartupTrace blk)
   -> Api.BlockType blk
   -> NodeKernel IO RemoteAddress (ConnectionId LocalAddress) blk
+  -> NodeConfiguration
+  -> Bool
   -> BlockForgingStatus blk
   -> IO ()
-updatePerasVoteForging startupTracer blockType nodeKernel blockForgingStatus = do
+updatePerasVoteForging startupTracer blockType nodeKernel nc failOnKeyError blockForgingStatus = do
   case blockForgingStatus of
     BlockForgingUnchanged ->
       pure ()
@@ -773,26 +792,41 @@ updatePerasVoteForging startupTracer blockType nodeKernel blockForgingStatus = d
           case poolIdFromProtocolInfoArgs args of
             Nothing -> do
               setPerasVoteForging nodeKernel Nothing
-              tracePerasVoteForgingUpdate PerasVoteForgingCleared
+              tracePerasVoteForgingUpdate $ case length credentials of
+                0 -> PerasVoteForgingCleared
+                n -> PerasVoteForgingAmbiguousCredentials n
             Just poolId -> do
-              case perasPrivateKey of
-                Left err ->
-                  tracePerasVoteForgingUpdate (PerasVoteForgingRetainedAfterError (show err))
-                Right privateKey -> do
-                  let voteForging = mkCardanoPerasVoteForging poolId privateKey
-                  setPerasVoteForging nodeKernel (Just voteForging)
-                  tracePerasVoteForgingUpdate PerasVoteForgingInstalled
+              case shelleyBLSKeyFile (ncProtocolFiles nc) of
+                Nothing -> do
+                  setPerasVoteForging nodeKernel Nothing
+                  tracePerasVoteForgingUpdate PerasVoteForgingCleared
+                Just keyFile -> do
+                  ePrivateKey <- readPerasBLSPrivateKey keyFile
+                  case ePrivateKey of
+                    Left err -> if failOnKeyError
+                      then Exception.throwIO (FatalError (showT err))
+                      else tracePerasVoteForgingUpdate (PerasVoteForgingRetainedAfterError err)
+                    Right privateKey -> do
+                      let voteForging = mkCardanoPerasVoteForging poolId privateKey
+                      setPerasVoteForging nodeKernel (Just voteForging)
+                      tracePerasVoteForgingUpdate PerasVoteForgingInstalled
         _ -> do
           setPerasVoteForging nodeKernel Nothing
           tracePerasVoteForgingUpdate PerasVoteForgingDisabledUnsupported
 
-    perasPrivateKey =
-      unsafePerasBLSPrivateKeyFromEnv
-
     poolIdFromProtocolInfoArgs (Api.ProtocolInfoArgsCardano _ params) =
-      case shelleyBasedLeaderCredentials (CardanoConsensus.shelleyBasedProtocolParams params) of
-        [credential] -> Just (poolIdFromShelleyLeaderCredentials credential)
-        _ -> Nothing
+      let credentials = shelleyBasedLeaderCredentials (CardanoConsensus.shelleyBasedProtocolParams params)
+       in case credentials of
+            [credential] -> Just (poolIdFromShelleyLeaderCredentials credential)
+            _ -> Nothing
+
+    credentials = case blockType of
+      Api.CardanoBlockType ->
+        case blockForgingStatus of
+          BlockForgingEnabled (Api.ProtocolInfoArgsCardano _ params) ->
+            shelleyBasedLeaderCredentials (CardanoConsensus.shelleyBasedProtocolParams params)
+          _ -> []
+      _ -> []
 
     poolIdFromShelleyLeaderCredentials =
       PoolId
@@ -803,6 +837,29 @@ updatePerasVoteForging startupTracer blockType nodeKernel blockForgingStatus = d
 
     tracePerasVoteForgingUpdate =
       traceWith startupTracer . PerasVoteForgingUpdate
+
+readPerasBLSPrivateKey :: FilePath -> IO (Either String PerasCrypto.PerasPrivateKey)
+readPerasBLSPrivateKey fp = do
+  content <- try @IOException (BS.readFile fp)
+  pure $ do
+    bytes <- either (Left . ("Could not read Peras BLS private key file " <> fp <> ": " <>) . show) Right content
+    envelope <- either (const (Left $ "Could not parse Peras BLS private key file " <> fp)) Right
+                  (Aeson.eitherDecodeStrict' bytes :: Either String Aeson.Value)
+    cborHex <- case envelope of
+      Aeson.Object obj -> case (KeyMap.lookup "type" obj, KeyMap.lookup "cborHex" obj) of
+        (Just (Aeson.String _), Just (Aeson.String hex)) -> Right hex
+        (_, Nothing) -> Left $ "Peras BLS private key file " <> fp <> " has no cborHex field"
+        (Nothing, _) -> Left $ "Peras BLS private key file " <> fp <> " has no type field"
+        _ -> Left $ "Peras BLS private key file " <> fp <> " has invalid text envelope fields"
+      _ -> Left $ "Peras BLS private key file " <> fp <> " is not a text envelope"
+    serialized <- either (const (Left $ "Invalid cborHex in Peras BLS private key file " <> fp)) Right
+                    (B16.decode (Text.encodeUtf8 cborHex))
+    rawKey <- case serialized of
+      bytes | BS.length bytes == 34 && BS.take 2 bytes == BS.pack [0x58, 0x20] -> Right (BS.drop 2 bytes)
+      _ -> Left $ "Invalid CBOR byte-string encoding in Peras BLS private key file " <> fp
+    privateKey <- maybe (Left $ "Invalid Peras BLS private key in file " <> fp) Right
+      (PerasBLS.rawDeserialisePrivateKey "TESTNET" rawKey)
+    pure $ PerasCrypto.PerasPrivateKey privateKey
 
 #ifdef UNIX
 updateTopologyConfiguration :: Tracer IO (StartupTrace blk)

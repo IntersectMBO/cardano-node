@@ -233,8 +233,9 @@ data PartialNodeConfiguration
        , pncConfigFile      :: !(Last ConfigYamlFilePath)
        , pncTopologyFile    :: !(Last TopologyFile)
        , pncDatabaseFile    :: !(Last NodeDatabasePaths)
-         -- | pncProtocolFiles can only be supplied with command line arguments.
+         -- | Protocol credentials can be supplied on the command line.
        , pncProtocolFiles   :: !(Last ProtocolFilepaths)
+       , pncShelleyBLSKeyFile :: !(Last (Maybe FilePath))
        , pncValidateDB      :: !(Last Bool)
        , pncShutdownConfig  :: !(Last ShutdownConfig)
 
@@ -317,6 +318,7 @@ instance AdjustFilePaths PartialNodeConfiguration where
   adjustFilePaths f x =
     x { pncProtocolConfig = adjustFilePaths f (pncProtocolConfig x)
       , pncSocketConfig   = adjustFilePaths f (pncSocketConfig x)
+      , pncShelleyBLSKeyFile = fmap (fmap f) (pncShelleyBLSKeyFile x)
       }
 
 instance Semigroup PartialNodeConfiguration where
@@ -330,6 +332,7 @@ instance FromJSON PartialNodeConfiguration where
       -- Node parameters, not protocol-specific
       pncSocketPath <- Last <$> v .:? "SocketPath"
       pncDatabaseFile <- Last <$> v .:? "DatabasePath"
+      pncShelleyBLSKeyFile <- Last <$> v .:? "ShelleyBLSKeyFile"
       pncDiffusionMode
         <- Last . fmap getDiffusionMode <$> v .:? "DiffusionMode"
       pncExperimentalProtocolsEnabled <- fmap Last $ do
@@ -434,6 +437,7 @@ instance FromJSON PartialNodeConfiguration where
            , pncTopologyFile = mempty
            , pncDatabaseFile
            , pncProtocolFiles = mempty
+           , pncShelleyBLSKeyFile
            , pncValidateDB = mempty
            , pncShutdownConfig = mempty
            , pncStartAsNonProducingNode
@@ -769,7 +773,8 @@ defaultPartialNodeConfiguration =
     , pncDiffusionMode = Last $ Just InitiatorAndResponderDiffusionMode
     , pncExperimentalProtocolsEnabled = Last $ Just False
     , pncTopologyFile = Last . Just $ TopologyFile "configuration/cardano/mainnet-topology.json"
-    , pncProtocolFiles = Last . Just $ ProtocolFilepaths Nothing Nothing Nothing Nothing Nothing Nothing
+    , pncProtocolFiles = Last . Just $ ProtocolFilepaths Nothing Nothing Nothing Nothing Nothing Nothing Nothing
+    , pncShelleyBLSKeyFile = mempty
     , pncValidateDB = Last $ Just False
     , pncShutdownConfig = Last . Just $ ShutdownConfig Nothing Nothing
     , pncStartAsNonProducingNode = Last $ Just False
@@ -859,6 +864,7 @@ makeNodeConfiguration pnc = do
   startAsNonProducingNode <- lastToEither "Missing StartAsNonProducingNode" $ pncStartAsNonProducingNode pnc
   protocolConfig <- lastToEither "Missing ProtocolConfig" $ pncProtocolConfig pnc
   protocolFiles <- lastToEither "Missing ProtocolFiles" $ pncProtocolFiles pnc
+  let configuredShelleyBLSKeyFile = getLast (pncShelleyBLSKeyFile pnc) >>= id
   diffusionMode <- lastToEither "Missing DiffusionMode" $ pncDiffusionMode pnc
   shutdownConfig <- lastToEither "Missing ShutdownConfig" $ pncShutdownConfig pnc
   socketConfig <- lastToEither "Missing SocketConfig" $ pncSocketConfig pnc
@@ -1003,6 +1009,8 @@ makeNodeConfiguration pnc = do
              , ncTopologyFile = topologyFile
              , ncDatabaseFile = databaseFile
              , ncProtocolFiles = protocolFiles
+                 { shelleyBLSKeyFile = shelleyBLSKeyFile protocolFiles
+                     <|> configuredShelleyBLSKeyFile }
              , ncValidateDB = validateDB
              , ncShutdownConfig = shutdownConfig
              , ncStartAsNonProducingNode = startAsNonProducingNode

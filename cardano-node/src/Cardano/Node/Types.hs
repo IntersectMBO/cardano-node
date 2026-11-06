@@ -177,12 +177,13 @@ data KESSource
 data ProtocolFilepaths =
      ProtocolFilepaths {
        byronCertFile        :: !(Maybe FilePath)
-     , byronKeyFile         :: !(Maybe FilePath)
-     , shelleyKESSource     :: !(Maybe KESSource)
-     , shelleyVRFFile       :: !(Maybe FilePath)
-     , shelleyCertFile      :: !(Maybe FilePath)
-     , shelleyBulkCredsFile :: !(Maybe FilePath)
-     } deriving (Eq, Show)
+      , byronKeyFile         :: !(Maybe FilePath)
+      , shelleyKESSource     :: !(Maybe KESSource)
+      , shelleyVRFFile       :: !(Maybe FilePath)
+      , shelleyCertFile      :: !(Maybe FilePath)
+      , shelleyBulkCredsFile :: !(Maybe FilePath)
+      , shelleyBLSKeyFile    :: !(Maybe FilePath)
+      } deriving (Eq, Show)
 
 -- | If any of the 'ProtocolFilepath` is given `PeerSharing` option will be
 -- disabled by default.
@@ -194,7 +195,8 @@ hasProtocolFile ProtocolFilepaths {
     shelleyKESSource,
     shelleyVRFFile,
     shelleyCertFile,
-    shelleyBulkCredsFile
+    shelleyBulkCredsFile,
+    shelleyBLSKeyFile
   }
   =  isJust byronCertFile
   || isJust byronKeyFile
@@ -202,6 +204,7 @@ hasProtocolFile ProtocolFilepaths {
   || isJust shelleyVRFFile
   || isJust shelleyCertFile
   || isJust shelleyBulkCredsFile
+  || isJust shelleyBLSKeyFile
 
 newtype GenesisHash = GenesisHash (Crypto.Hash Crypto.Blake2b_256 ByteString)
   deriving newtype (Eq, Show, ToJSON, FromJSON)

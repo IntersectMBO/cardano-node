@@ -74,6 +74,7 @@ mkNodeConfig configFp_
                  , shelleyVRFFile = Just ""
                  , shelleyCertFile = Just ""
                  , shelleyBulkCredsFile = Just ""
+                  , shelleyBLSKeyFile = Nothing
                  }
                , pncValidateDB = Last $ Just False
                , pncShutdownConfig = Last $ Just $ ShutdownConfig Nothing Nothing

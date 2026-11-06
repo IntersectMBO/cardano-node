@@ -2,6 +2,12 @@
 
 ## Next version
 
+- Add Shelley-scoped BLS credentials via `--shelley-bls-key` or the
+  configuration key `ShelleyBLSKeyFile` (relative paths are resolved
+  against the configuration file). The key must use the existing `5820` CBOR
+  byte-string text-envelope payload. Initial key-load errors now fail startup;
+  reload errors retain the installed Peras forger.
+
 - `slotsMissed_int` no longer counts the slots that elapse while block forging
   is disabled. While forging is off there is no forging thread, hence no
   leadership check events at all, so `Forge.Stats` kept the last slot it had

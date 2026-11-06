@@ -111,6 +111,7 @@ cardanoConfigToPartialNodeConfiguration cfg =
       , pncStartAsNonProducingNode = Last (Just (runIdentity (Cfg.startAsNonProducingNode protoCfg)))
       , pncProtocolConfig = Last (Just (nodeProtocolConfigurationFromCardanoConfig cfg))
       , pncProtocolFiles = Last (Just (credentialsToProtocolFilepaths (Cfg.credentials cfg)))
+      , pncShelleyBLSKeyFile = Last (Just Nothing)
       , pncExperimentalProtocolsEnabled = Last (Just (runIdentity (Cfg.experimentalProtocolsEnabled netCfg)))
       , pncMempoolTimeoutSoft = Last (Just (runIdentity (Cfg.mempoolTimeoutSoft mempCfg)))
       , pncMempoolTimeoutHard = Last (Just (runIdentity (Cfg.mempoolTimeoutHard mempCfg)))
@@ -348,6 +349,7 @@ credentialsToProtocolFilepaths c =
     , shelleyVRFFile = strictMaybeToMaybe (Cfg.shelleyVRFKey c)
     , shelleyCertFile = strictMaybeToMaybe (Cfg.shelleyOperationalCertificate c)
     , shelleyBulkCredsFile = strictMaybeToMaybe (Cfg.bulkCredentialsFile c)
+    , shelleyBLSKeyFile = Nothing
     }
  where
   fromCfgKES (Cfg.KESKeyFilePath fp) = KESKeyFilePath fp

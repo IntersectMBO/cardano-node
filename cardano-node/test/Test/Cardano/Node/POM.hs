@@ -152,6 +152,7 @@ testPartialYamlConfig =
     , pncTopologyFile = mempty
     , pncDatabaseFile = mempty
     , pncProtocolFiles = mempty
+    , pncShelleyBLSKeyFile = mempty
     , pncValidateDB = mempty
     , pncMaybeMempoolCapacityOverride = mempty
     , pncProtocolIdleTimeout = mempty
@@ -200,7 +201,8 @@ testPartialCliConfig =
     , pncDatabaseFile = mempty
     , pncDiffusionMode = mempty
     , pncExperimentalProtocolsEnabled = Last $ Just True
-    , pncProtocolFiles = Last . Just $ ProtocolFilepaths Nothing Nothing Nothing Nothing Nothing Nothing
+    , pncProtocolFiles = Last . Just $ ProtocolFilepaths Nothing Nothing Nothing Nothing Nothing Nothing Nothing
+    , pncShelleyBLSKeyFile = mempty
     , pncValidateDB = Last $ Just True
     , pncProtocolConfig = mempty
     , pncMaxConcurrencyBulkSync = mempty
@@ -251,7 +253,7 @@ eExpectedConfig = do
     , ncConfigFile = ConfigYamlFilePath "configuration/cardano/mainnet-config.json"
     , ncTopologyFile = TopologyFile "configuration/cardano/mainnet-topology.json"
     , ncDatabaseFile = OnePathForAllDbs "mainnet/db/"
-    , ncProtocolFiles = ProtocolFilepaths Nothing Nothing Nothing Nothing Nothing Nothing
+    , ncProtocolFiles = ProtocolFilepaths Nothing Nothing Nothing Nothing Nothing Nothing Nothing
     , ncValidateDB = True
     , ncProtocolConfig = testNodeProtocolConfiguration
     , ncDiffusionMode = InitiatorAndResponderDiffusionMode
@@ -414,6 +416,24 @@ prop_mithrilSnapshotPolicy_POM =
     config :: PartialNodeConfiguration <- evalEither $ eitherDecode json
     getLast (pncLedgerDbConfig config) ===
       Just (LedgerDbConfiguration mithrilSnapshotPolicyArgs DefaultQueryBatchSize V2InMemory noDeprecatedOptions)
+
+prop_shelleyBLSKeyFile_POM :: Property
+prop_shelleyBLSKeyFile_POM =
+  H.propertyOnce $ do
+    config :: PartialNodeConfiguration <- evalEither $ eitherDecode
+      ("{ " <> dummyRequiredValues <> ", \"ShelleyBLSKeyFile\": \"keys/shelley.skey\" }")
+    getLast (pncShelleyBLSKeyFile config) === Just (Just "keys/shelley.skey")
+
+prop_shelleyBLSKeyFileCliOverridesYaml :: Property
+prop_shelleyBLSKeyFileCliOverridesYaml =
+  H.propertyOnce $ do
+    let yamlConfig = testPartialYamlConfig
+          { pncShelleyBLSKeyFile = Last (Just (Just "keys/from-yaml.skey")) }
+        cliConfig = testPartialCliConfig
+          { pncShelleyBLSKeyFile = Last (Just (Just "keys/from-cli.skey")) }
+    NodeConfiguration{ncProtocolFiles} <- evalEither $ makeNodeConfiguration
+      (defaultPartialNodeConfiguration <> yamlConfig <> cliConfig)
+    shelleyBLSKeyFile ncProtocolFiles === Just "keys/from-cli.skey"
 
 dummyRequiredValues :: LBS.ByteString
 dummyRequiredValues = mconcat
