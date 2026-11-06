@@ -1,0 +1,6 @@
+description: 'Release 11.2.1: batch changelog fragments and synchronize the package
+  version with cardano-node.'
+kind:
+- release
+pr: 6766
+project: cardano-submit-api
