@@ -13,7 +13,7 @@ executable generate-release-changelog-links
   main-is:          Main.hs
   hs-source-dirs:   .
   default-language: Haskell2010
-  ghc-options:      -Wall -Wextra -Wcompat -O2 -flate-specialise -optl-s -threaded -rtsopts "-with-rtsopts=-A64m -I0"
+  ghc-options:      -Wall -Wextra -Wcompat -O2 -flate-specialise -threaded -rtsopts "-with-rtsopts=-A64m -I0"
   default-extensions:
     BlockArguments
     DataKinds
@@ -23,13 +23,13 @@ executable generate-release-changelog-links
     RecordWildCards
     ScopedTypeVariables
   build-depends:
-    , base
+    , base           < 4.23
     , aeson
     , bytestring
     , cabal-plan
     , case-insensitive
     , containers
-    , github         ^>= 0.29
+    , github         ^>= 0.30
     , http-client
     , http-types
     , network-uri
