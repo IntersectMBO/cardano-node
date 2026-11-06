@@ -4,6 +4,9 @@ on:
   pull_request: # Required for workflows to be able to be approved from forks
   merge_group:
 
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest

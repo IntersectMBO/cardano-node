@@ -28,9 +28,10 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - uses: cachix/install-nix-action@b97f05dcb019ddea06450a50ef6203d2fdc19fee # v31
+      - uses: cachix/install-nix-action@8aa03977d8d733052d78f4e008a241fd1dbf36b3 # v31.10.6
         with:
           extra_nix_config: |
-            accept-flake-config = true
+            extra-substituters = https://cache.iog.io/
+            extra-trusted-public-keys = hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ=
 
       - uses: input-output-hk/cardano-dev/actions/herald-validate@9106b37910e40be00cda65051922d6ef939fa67a # herald-validate-0.0.1.1

@@ -4,6 +4,9 @@ on:
   merge_group:
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   actionlint:
     runs-on: ubuntu-latest
@@ -16,13 +19,13 @@ jobs:
       # its own shellcheck. This will also make sure that this pipeline runs using
       # the same shellcheck as the ones in Nix shells of developers.
       - name: Install Nix
-        uses: cachix/install-nix-action@b97f05dcb019ddea06450a50ef6203d2fdc19fee # v31
+        uses: cachix/install-nix-action@8aa03977d8d733052d78f4e008a241fd1dbf36b3 # v31.10.6
         with:
           extra_nix_config: |
             extra-trusted-public-keys = hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ=
             extra-substituters = https://cache.iog.io/
       # Make the Nix environment available to next steps
-      - uses: rrbutani/use-nix-shell-action@f97339023a09121113e5a58ad88fe0e9fde3406b # v1
+      - uses: rrbutani/use-nix-shell-action@59a52b2b9bbfe3cc0e7deb8f9059abe37a439edf # v1.1.0
         with:
           flakes: nixpkgs#shellcheck,nixpkgs#actionlint
 

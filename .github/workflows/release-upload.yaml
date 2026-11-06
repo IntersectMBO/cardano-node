@@ -20,8 +20,13 @@ env:
   FLAKE_REF: github:${{ github.repository }}/${{ github.ref_name }}
   GH_TOKEN: ${{ github.token }}
 
+permissions:
+  contents: read
+
 jobs:
   wait-for-hydra:
+    permissions:
+      checks: read
     name: "Wait for hydra check-runs"
     runs-on: ubuntu-latest
     steps:
@@ -59,7 +64,7 @@ jobs:
       node_version: ${{ steps.cardano-node-version.outputs.VERSION }}
     steps:
       - name: Install Nix with good defaults
-        uses: cachix/install-nix-action@b97f05dcb019ddea06450a50ef6203d2fdc19fee # v31
+        uses: cachix/install-nix-action@8aa03977d8d733052d78f4e008a241fd1dbf36b3 # v31.10.6
         with:
           extra_nix_config: |
             extra-trusted-public-keys = hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ=
@@ -113,6 +118,8 @@ jobs:
           retention-days: 1
 
   upload-assets:
+    permissions:
+      contents: write  # create/upload to the release
     needs: [pull]
     name: "Upload Assets"
     runs-on: ubuntu-latest

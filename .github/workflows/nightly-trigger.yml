@@ -5,8 +5,13 @@ on:
   schedule:
     - cron:  '0 5 * * *'
 
+permissions:
+  contents: read
+
 jobs:
   build:
+    permissions:
+      contents: write  # force-push the nightly branch
     runs-on: ubuntu-latest
 
     defaults:
@@ -24,9 +29,7 @@ jobs:
         git push origin nightly --force
 
     - name: Invoke workflow
-      uses: input-output-hk/workflow-dispatch@be1256a3797d8bbe96bdbdf65dbf9cc8dc48e9eb # v1
-      with:
-        workflow: .github/workflows/haskell.yml
-        ref: nightly
-        token: ${{ secrets.MACHINE_TOKEN }}
-        inputs: '{ "reason": "nightly", "tests": "all" }'
+      env:
+        GH_TOKEN: ${{ secrets.MACHINE_TOKEN }}
+        GH_REPO: ${{ github.repository }}
+      run: gh workflow run haskell.yml --ref nightly -f reason=nightly -f tests=all

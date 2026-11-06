@@ -8,8 +8,13 @@ on:
     branches:
       - master
 
+permissions:
+  contents: read
+
 jobs:
   build:
+    permissions:
+      contents: write  # deploy to the gh-pages branch
     runs-on: ubuntu-latest
 
     defaults:
@@ -18,7 +23,7 @@ jobs:
 
     steps:
     - name: Install Nix
-      uses: cachix/install-nix-action@b97f05dcb019ddea06450a50ef6203d2fdc19fee # v31
+      uses: cachix/install-nix-action@8aa03977d8d733052d78f4e008a241fd1dbf36b3 # v31.10.6
       with:
         # Use last stable nixos channel and the same nix as in channel:
         nix_path: nixpkgs=channel:nixos-24.05
@@ -26,8 +31,8 @@ jobs:
         extra_nix_config: |
           experimental-features = nix-command flakes
           allow-import-from-derivation = true
-          # The substituters (cache.iog.io) come from the flake's nixConfig:
-          accept-flake-config = true
+          extra-substituters = https://cache.iog.io/
+          extra-trusted-public-keys = hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ=
           access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
 
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -36,7 +41,7 @@ jobs:
 
     # The `.#haddock` shell (see flake.nix) provides a GHC whose haddock does not
     # panic on `type data` declarations (GHC issue #25739): GHC 9.6.7's does.
-    - uses: rrbutani/use-nix-shell-action@59a52b2b9bbfe3cc0e7deb8f9059abe37a439edf # v1
+    - uses: rrbutani/use-nix-shell-action@59a52b2b9bbfe3cc0e7deb8f9059abe37a439edf # v1.1.0
       with:
         devShell: .#haddock
 

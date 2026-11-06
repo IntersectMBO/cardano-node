@@ -15,7 +15,6 @@ on:
 
 permissions:
   contents: read
-  packages: write
 
 env:
   # Only to avoid some repetition
@@ -24,6 +23,8 @@ env:
 
 jobs:
   wait-for-hydra:
+    permissions:
+      checks: read
     name: "Wait for hydra check-runs"
     runs-on: ubuntu-latest
 
@@ -57,7 +58,7 @@ jobs:
 
     steps:
       - name: Install Nix
-        uses: cachix/install-nix-action@b97f05dcb019ddea06450a50ef6203d2fdc19fee # v31
+        uses: cachix/install-nix-action@8aa03977d8d733052d78f4e008a241fd1dbf36b3 # v31.10.6
 
       - name: Display flake metadata
         id: flake-metadata
@@ -74,6 +75,9 @@ jobs:
 
 
   build:
+    permissions:
+      contents: read
+      packages: write
     needs: [prepare]
     name: "Upload to ghcr.io"
     runs-on: ubuntu-latest
@@ -94,7 +98,7 @@ jobs:
 
     steps:
       - name: Install Nix
-        uses: cachix/install-nix-action@b97f05dcb019ddea06450a50ef6203d2fdc19fee # v31
+        uses: cachix/install-nix-action@8aa03977d8d733052d78f4e008a241fd1dbf36b3 # v31.10.6
         with:
           extra_nix_config: |
             extra-trusted-public-keys = hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ=
@@ -137,13 +141,16 @@ jobs:
 
 
   create-manifest:
+    permissions:
+      contents: read
+      packages: write
     needs: [prepare, build]
     name: "Create Multi-Arch Manifest"
     runs-on: ubuntu-latest
 
     steps:
       - name: Install Nix
-        uses: cachix/install-nix-action@b97f05dcb019ddea06450a50ef6203d2fdc19fee # v31
+        uses: cachix/install-nix-action@8aa03977d8d733052d78f4e008a241fd1dbf36b3 # v31.10.6
 
       # Regctl simplifies obtaining multi-arch digests
       - name: Install Nix Profile Commands

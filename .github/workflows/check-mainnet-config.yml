@@ -18,7 +18,7 @@ jobs:
     steps:
 
     - name: Install Nix
-      uses: cachix/install-nix-action@b97f05dcb019ddea06450a50ef6203d2fdc19fee # v31
+      uses: cachix/install-nix-action@8aa03977d8d733052d78f4e008a241fd1dbf36b3 # v31.10.6
       with:
         # Use last stable nixos channel and the same nix as in channel:
         nix_path: nixpkgs=channel:nixos-24.05

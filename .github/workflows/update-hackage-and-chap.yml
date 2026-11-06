@@ -5,12 +5,18 @@ on:
   schedule:
     - cron: '0 0 * * 0' # runs weekly on Sunday at 00:00
 
+permissions:
+  contents: read
+
 jobs:
   build:
+    permissions:
+      contents: write  # push the update branch
+      pull-requests: write
     runs-on: ubuntu-latest
     steps:
       - name: Install Nix
-        uses: cachix/install-nix-action@b97f05dcb019ddea06450a50ef6203d2fdc19fee # v31
+        uses: cachix/install-nix-action@8aa03977d8d733052d78f4e008a241fd1dbf36b3 # v31.10.6
         with:
           # Use last stable nixos channel and the same nix as in channel:
           nix_path: nixpkgs=channel:nixos-24.05
@@ -27,7 +33,7 @@ jobs:
           persist-credentials: false
 
       - name: Update flake.lock
-        uses: DeterminateSystems/update-flake-lock@dec3bc3c9b11c3b9d547f47dfb579b91a6051603 # v19
+        uses: DeterminateSystems/update-flake-lock@da03c0f078bc4b2c37ee4f7e072d34bf8f188bb3 # v29
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           inputs: hackageNix CHaP
