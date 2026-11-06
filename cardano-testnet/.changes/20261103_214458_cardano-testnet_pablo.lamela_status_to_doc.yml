@@ -1,6 +1,0 @@
-description: Now `cardano-testnet` uses the `Doc` type to generate the output of the
-  status command when using human readable format.
-kind:
-- refactoring
-pr: 6757
-project: cardano-testnet
