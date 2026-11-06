@@ -71,6 +71,12 @@ prop_single_tables_render = withTests 1 $ property $ do
   assertContains "[cardano-node]," summary
   assertContains " \\@ " summary
   assert . not $ " git]" `T.isInfixOf` summary
+  -- averages: whole numbers without decimals (all hosts agree), fractional ones with 3
+  assertContains "[Final UTxO size],                [43225]" summary
+  assertContains "[40219.167]" summary
+  -- no LedgerMetrics evidence (or an older run's summary): not available
+  summaryNoUtxo <- evalIO (generateTypstSummary typstCfg anchor (iFields sumFieldsReport) summ { cdfUtxoFinal = zeroCDF })
+  assertContains "[Final UTxO size],                    [—]" summaryNoUtxo
   for_ [mtFieldsReport, mtFieldsSnapshots, mtFieldsTxProcessing] $ \fs ->
     assertRendered =<< evalIO (generateTypstCDFs typstCfg anchor (dFields fs) OfOverallDataset cp)
   for_ [bpFieldsControl, bpFieldsForger, bpFieldsPeers, bpFieldsEndToEnd] $ \fs ->

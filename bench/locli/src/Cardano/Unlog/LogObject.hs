@@ -96,6 +96,8 @@ data HostLogs a
     , hlProfile        :: [ProfileEntry I]
     , hlRawFirstAt     :: Maybe UTCTime
     , hlRawLastAt      :: Maybe UTCTime
+    , hlRawLastUTxOSize :: Maybe Word64  -- ^ UTxO size of the last LedgerMetrics
+    , hlLoadedCount    :: Maybe Int  -- ^ log objects loaded, i.e. the length of 'hlLogs'' list
     }
   deriving (Generic, Functor, NFData)
 

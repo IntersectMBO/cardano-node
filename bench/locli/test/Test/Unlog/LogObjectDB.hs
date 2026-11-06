@@ -4,18 +4,23 @@ module Test.Unlog.LogObjectDB where
 
 import           Cardano.Prelude
 
-import           Cardano.Unlog.BackendDB (selectAll)
+import           Cardano.Analysis.API.Ground (LogObjectSource (..))
+import           Cardano.Unlog.BackendDB (LoadLogObjects (..), getLastUTxOSize, prepareDB, runLiftLogObjectsDB, selectAll)
 import           Cardano.Unlog.BackendFile (readLogObjectStream)
 import           Cardano.Unlog.LogObject
 import           Cardano.Unlog.LogObjectDB
 import           Cardano.Util (zeroUTCTime)
 
-import           Data.Time.Clock (NominalDiffTime, diffUTCTime)
+import           Data.Time.Clock (NominalDiffTime, addUTCTime, diffUTCTime)
 import qualified Data.Aeson as AE
+import qualified Data.Aeson.KeyMap as KeyMap
 import qualified Data.Aeson.Types as AE (parseEither)
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.Set as Set (difference, empty, fromList, notMember)
+import qualified Data.Map.Strict as Map
 import qualified Data.Text.Short as ST
+import           System.FilePath ((</>))
+import           System.IO.Temp (withSystemTempDirectory)
 
 import           Database.Sqlite.Easy
 
@@ -83,6 +88,65 @@ prop_LogObject_sqlite_roundtrip = withTests 1 $ property $ do
   for_ (zip persistable readBack) $ \(orig, back) -> do
     loBody back === loBody orig
     assert $ abs (diffUTCTime (loAt back) (loAt orig)) <= maxClockDrift
+
+-- The final UTxO size comes from the DB: the UTxO size of the latest LedgerMetrics by
+-- timestamp, not by insertion order. Earlier LedgerMetrics with other UTxO sizes,
+-- written first and last, must not be picked.
+prop_last_utxo_size_from_db = withTests 1 $ property $ do
+  logObjects <- evalIO $ readLogObjectStream fixtureFile False Nothing
+  let metrics = [ (loAt, lo, loUtxoSize) | lo@LogObject{loAt, loBody = LOLedgerMetrics{loUtxoSize}} <- logObjects ]
+  (latestAt, latest, latestUtxo) <- maybe failure pure . lastMay $ sortBy (comparing (\(at, _, _) -> at)) metrics
+  let earlier h = latest { loAt   = addUTCTime (- (3600 * fromIntegral h)) latestAt
+                         , loBody = (loBody latest) { loUtxoSize = latestUtxo + h } }
+
+  (noMetrics, lastUtxo) <- evalIO $ withDb ":memory:" $ do
+    mapM_ run createSchema
+    none <- getLastUTxOSize
+    mapM_ (mapM_ runSqlRunnable . logObjectToSql) (earlier 1 : logObjects <> [earlier 2])
+    (none,) <$> getLastUTxOSize
+
+  noMetrics === Nothing
+  lastUtxo  === Just latestUtxo
+
+-- Loading a host's DB (as `unlog-db` does) provides what the summary would otherwise
+-- take from a pass over all of the host's log objects: their count, and the last UTxO size.
+prop_loadHostLogsDB_counts_and_last_utxo = withTests 1 $ property $ do
+  logObjects <- evalIO $ readLogObjectStream fixtureFile False Nothing
+  let persistable = filter (isJust . logObjectToSql) logObjects
+      lastUtxo    = lastMay [ u | LogObject{loBody = LOLedgerMetrics{loUtxoSize = u}} <- logObjects ]
+
+  hl <- evalEither =<< evalIO (withSystemTempDirectory "locli-test-db" $ \dir -> runExceptT $ do
+    let db = dir </> "node-1.sqlite3"
+    prepareDB "node-1" [fixtureFile] db
+    rl <- runLiftLogObjectsDB LoadLogObjectsAll RunLogs
+            { rlHostLogs = Map.singleton "node-1" (emptyHostLogs (LogObjectSourceSQLite db))
+            , rlFilterDate = zeroUTCTime }
+    maybe (throwError "no host") pure . head . Map.elems $ rlHostLogs rl)
+
+  hlLoadedCount hl     === Just (length persistable)
+  hlLoadedCount hl     === Just (length (snd (hlLogs hl)))
+  hlRawLastUTxOSize hl === lastUtxo
+  assert $ isJust lastUtxo
+ where
+   emptyHostLogs src = HostLogs
+     { hlRawLogfiles = [], hlRawLines = 0, hlRawTraceFreqs = mempty, hlLogs = (src, ())
+     , hlProfile = [], hlRawFirstAt = Nothing, hlRawLastAt = Nothing
+     , hlRawLastUTxOSize = Nothing, hlLoadedCount = Nothing }
+
+-- Log manifests as written before these fields existed (and by the file backend) read
+-- them as not available.
+prop_hostLogs_without_db_fields_readable = withTests 1 $ property $ do
+  let hl = HostLogs { hlRawLogfiles = ["node-1.json"], hlRawLines = 1, hlRawTraceFreqs = mempty
+                    , hlLogs = (LogObjectSourceOther "node-1.json", ()), hlProfile = []
+                    , hlRawFirstAt = Nothing, hlRawLastAt = Nothing
+                    , hlRawLastUTxOSize = Just 1, hlLoadedCount = Just 1 }
+  obj <- case AE.toJSON hl of
+    AE.Object o -> pure o
+    _           -> failure
+  back :: HostLogs () <- evalEither . AE.parseEither AE.parseJSON . AE.Object $
+    foldr KeyMap.delete obj ["hlRawLastUTxOSize", "hlLoadedCount"]
+  hlRawLastUTxOSize back === Nothing
+  hlLoadedCount back     === Nothing
 
 -- This property ensures every namespace `locli` interprets is backed by a
 -- real log line in the fixture, so an interpreter can't be added or renamed

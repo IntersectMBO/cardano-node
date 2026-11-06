@@ -24,8 +24,9 @@
   - Comparison tables: the absolute delta (Δ) is formatted like the values it's taken from (no spurious decimals on large counts, no `0.000` for small timings); comparing more runs than a table has rows no longer aborts.
 * New report sections, on a page of their own after End-to-end propagation (single-run and comparison reports; CLI: `render-clusterperf --snapshots / --tx-processing`):
   - **Ledger Snapshots:** snapshots taken (a count of 0 is highlighted as a warning), write duration, and RTS live data after major GCs during vs. outside snapshot writes.
-  - **Transaction Processing:** transactions processed / accepted / rejected, reject ratio, and process / GC / mutator CPU time divided by the transactions processed (in the new unit `ms`). Rejected counts are run totals (processed minus accepted), as the node's per-batch count isn't reliable.
-* Reading analysis results is lenient towards CDFs missing from `clusterperf.json` (e.g. written by an older locli): they read as empty, and reports show them as not available (`—`), so older runs can still be compared against.
+  - **Transaction Processing:** transactions processed / accepted / rejected, reject ratio, mempool fill level (per analysed slot), and process / GC / mutator CPU time divided by the transactions processed (in the new unit `ms`). Rejected counts are run totals (processed minus accepted), as the node's per-batch count isn't reliable.
+* New summary row **Final UTxO size**, averaged over hosts: constant by benchmark design, so a fractional value indicates a problem. Whole-number summary averages render without decimals.
+* Analysis results of an older locli still read: metrics they lack show as `—`, also when compared or combined with newer runs.
 
 ## 2.4 -- Jul 2026
 

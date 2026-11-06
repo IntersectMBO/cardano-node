@@ -53,6 +53,7 @@ module Data.CDF
   , CDF2
   , collapseCDFs
   , cdf2OfCDFs
+  , nonEmptyCDFs
   --
   , module Data.SOP.Strict
   ) where
@@ -395,6 +396,18 @@ collapseCDFs Combine{..} xs = do
        xxs@((c, _):(fmap fst -> cs)) -> if any (/= c) cs
                                         then Left xxs
                                         else Right (c, snd <$> xxs)
+
+-- | For sample-based metrics, a host without samples (e.g. no major GC outside snapshot writes)
+--   would pull the unweighted average of averages towards 0: combine only the non-empty CDFs,
+--   unless all of them are empty. Across runs, this also keeps the analysis of a run that
+--   lacks a metric (by an older locli; read as an empty CDF) from failing the combination.
+--   If all are empty, one of them stands for all: empty CDFs may differ in their sampling
+--   (a computed one has centiles, one missing from an older analysis has none), which
+--   'cdf2OfCDFs' rejects.
+nonEmptyCDFs :: [CDF p a] -> [CDF p a]
+nonEmptyCDFs xs = case filter ((> 0) . cdfSize) xs of
+  [] -> take 1 xs
+  ys -> ys
 
 -- | Polymorphic, but practically speaking, intended for either:
 --    1. given a ([I]     -> CDF I) function, and a list of (CDF I),       produce a CDF (CDF I), or

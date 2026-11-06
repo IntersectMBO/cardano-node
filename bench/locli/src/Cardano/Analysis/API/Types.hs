@@ -58,6 +58,7 @@ data Summary f where
     , cdfLogObjects          :: !(CDF f Int)
     , cdfRuntime             :: !(CDF f NominalDiffTime)
     , cdfLogLineRate         :: !(CDF f Double)
+    , cdfUtxoFinal           :: !(CDF f Word64)  -- ^ per host: UTxO size of its last LedgerMetrics
     } -> Summary f
   deriving (Generic)
 
@@ -65,7 +66,11 @@ type SummaryOne   = Summary I
 type MultiSummary = Summary (CDF I)
 data SomeSummary  = forall f. KnownCDF f => SomeSummary (Summary f)
 
-deriving instance (forall a. FromJSON a => FromJSON (f a)) => FromJSON (Summary f)
+-- | Lenient on missing CDFs, as 'MachPerf'.
+instance (forall a. FromJSON a => FromJSON (f a), forall a. ToJSON a => ToJSON (f a), KnownCDF f)
+         => FromJSON (Summary f) where
+  parseJSON = AE.withObject "Summary" $
+    AE.genericParseJSON AE.defaultOptions . AE.Object . withEmptyCDFs (Proxy @(Summary f)) (Proxy @f)
 deriving instance (forall a.   ToJSON a =>   ToJSON (f a)) =>   ToJSON (Summary f)
 deriving instance (forall a.   NFData a =>   NFData (f a)) =>   NFData (Summary f)
 deriving instance (forall a.     Show a =>     Show (f a)) =>     Show (Summary f)
@@ -182,6 +187,7 @@ data MachPerf f
     , cdfTxsAccepted       :: !(CDF f Word64)
     , cdfTxsRejected       :: !(CDF f Word64)
     , cdfTxsRejectRatio    :: !(CDF f Double)
+    , cdfMempoolTxs        :: !(CDF f Word64)          -- ^ mempool fill level per slot, txs
     , cdfCpuPerTx          :: !(CDF f Double)          -- ^ process CPU ÷ txs processed, ms (not a per-tx cost)
     , cdfMutPerTx          :: !(CDF f Double)          -- ^ RTS mutator CPU ÷ txs processed, ms
     , cdfGcPerTx           :: !(CDF f Double)          -- ^ RTS GC CPU ÷ txs processed, ms
@@ -398,15 +404,19 @@ data SelProxy (s :: k) (f :: Type -> Type) a = SelProxy
 --   e.g. by an older locli) decodes as an empty CDF -- size 0, i.e. no data -- which reports render
 --   as not available. CDF fields are identified by locli's naming convention: their record
 --   selectors start with "cdf". Anything else missing still fails decoding.
+withEmptyCDFs :: forall r f. (GSelectors (Rep r), forall a. ToJSON a => ToJSON (f a), KnownCDF f)
+              => Proxy r -> Proxy f -> AE.Object -> AE.Object
+withEmptyCDFs pr _ o =
+  o <> KeyMap.fromList [ (k, emptyCDF) | k <- cdfKeys, not (k `KeyMap.member` o) ]
+ where
+   cdfKeys  = filter ("cdf" `T.isPrefixOf`) (recordSelectors pr) <&> Key.fromText
+   emptyCDF = AE.toJSON (zeroCDF :: CDF f Double)
+
 instance ( forall a. FromJSON a => FromJSON (f a), FromJSON (CDFList f (DataDomain I SlotNo))
          , forall a. ToJSON a => ToJSON (f a), KnownCDF f)
          => FromJSON (MachPerf f) where
-  parseJSON = AE.withObject "MachPerf" $ \o ->
-    AE.genericParseJSON AE.defaultOptions . AE.Object $
-      o <> KeyMap.fromList [ (k, emptyCDF) | k <- cdfKeys, not (k `KeyMap.member` o) ]
-   where
-     cdfKeys = filter ("cdf" `T.isPrefixOf`) (recordSelectors (Proxy @(MachPerf f))) <&> Key.fromText
-     emptyCDF = AE.toJSON (zeroCDF :: CDF f Double)
+  parseJSON = AE.withObject "MachPerf" $
+    AE.genericParseJSON AE.defaultOptions . AE.Object . withEmptyCDFs (Proxy @(MachPerf f)) (Proxy @f)
 
 deriving instance (forall a.   ToJSON a =>   ToJSON (f a),   ToJSON (CDFList f (DataDomain I SlotNo))) =>   ToJSON (MachPerf f)
 deriving instance (forall a.   NFData a =>   NFData (f a),   NFData (CDFList f (DataDomain I SlotNo))) =>   NFData (MachPerf f)

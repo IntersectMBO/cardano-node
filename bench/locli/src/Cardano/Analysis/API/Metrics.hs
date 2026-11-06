@@ -43,7 +43,7 @@ sumFieldsReport =
   , "ghc_version"
   ] ++ (FieldName <$> manifestPackages) ++
   [ "era"
-  , "delegators", "utxo", "dreps"
+  , "delegators", "utxo", "cdfUtxoFinal", "dreps"
   , "add_tx_size", "inputs_per_tx", "outputs_per_tx" , "tps", "tx_count"
   , "plutusScript"
   , "sumHosts", "sumLogObjectsTotal"
@@ -96,6 +96,10 @@ instance (KnownCDF f) => TimelineFields (Summary f)  where
    <> fScalar "utxo"                   W12 Cnt (IWord64 $           utxo.sumGenesisSpec)
       "Stuffed UTxO size"
       "Extra UTxO set entries (from genesis)"
+
+   <> fScalar "cdfUtxoFinal"           W12 Cnt (IFloat $ avgOrNaN.cdfUtxoFinal)
+      "Final UTxO size"
+      "UTxO set size at the end of the run: each host's last LedgerMetrics, averaged over hosts. Constant by benchmark design, so a fractional value indicates a problem"
 
    <> fScalar "dreps"                  W12 Cnt (IWord64 $          dreps.sumGenesisSpec)
       "DRep count"
@@ -194,6 +198,8 @@ instance (KnownCDF f) => TimelineFields (Summary f)  where
      versionCommit ComponentInfo{ciVersion, ciCommit} =
        unVersion ciVersion <> " @ " <> unCommit (unsafeShortenCommit 7 ciCommit)
      manifestFields = mconcat $ manifestPackages <&> pkgVersionCommit
+     -- No samples: not available (an empty CDF's average reads 0).
+     avgOrNaN c = if cdfSize c == 0 then 0 / 0 else cdfAverageVal c
 
 -- fieldJSONOverlay f = (:[]) . tryOverlayFieldDescription f
 
@@ -455,7 +461,7 @@ mtFieldsSnapshots, mtFieldsTxProcessing :: [FieldName]
 mtFieldsSnapshots =
   [ "cdfSnapTaken", "cdfSnapDuration", "cdfLiveMajGcDuring", "cdfLiveMajGcOutside" ]
 mtFieldsTxProcessing =
-  [ "cdfTxsProcessed", "cdfTxsAccepted", "cdfTxsRejected", "cdfTxsRejectRatio", "cdfCpuPerTx", "cdfGcPerTx", "cdfMutPerTx" ]
+  [ "cdfTxsProcessed", "cdfTxsAccepted", "cdfTxsRejected", "cdfTxsRejectRatio", "cdfMempoolTxs", "cdfCpuPerTx", "cdfGcPerTx", "cdfMutPerTx" ]
 
 instance CDFFields MachPerf p where
   cdfFields =
@@ -590,6 +596,10 @@ instance CDFFields MachPerf p where
    <> fBoth "cdfTxsRejectRatio"   "Txns" "rej/"  W5 Rto P3 Lin R01 (DFloat cdfTxsRejectRatio)
       "Reject ratio"
       "Rejected / processed transactions. Explains differences between raw and per-transaction CPU usage"
+
+   <> fBoth "cdfMempoolTxs"       "Mem"  "pool"  W5 Cnt P0 Lin Free (DWord64 cdfMempoolTxs)
+      "Mempool fill level"
+      "Transactions in the mempool, per analysed slot (time-weighted). Its fill level, not its configured capacity"
 
    <> fBoth "cdfCpuPerTx"         "CPU"  "/tx"   W5 Ms P3 Lin Free (DFloat cdfCpuPerTx)
       "Proc CPU ÷ txns"

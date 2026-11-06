@@ -12,6 +12,8 @@ import           Data.Aeson.Key (Key)
 import qualified Data.Aeson.KeyMap as KeyMap
 
 import           Cardano.Analysis.API
+import           Cardano.Analysis.MachPerf (summariseMultiClusterPerf)
+import           Cardano.Analysis.Summary (summariseMultiSummary)
 
 import           Hedgehog
 
@@ -26,7 +28,7 @@ clusterPerfFixture = "test/data/analysis/clusterperf.json"
 addedIn3_0 :: [Key]
 addedIn3_0 =
   [ "cdfSnapTaken", "cdfSnapDuration", "cdfLiveMajGcDuring", "cdfLiveMajGcOutside"
-  , "cdfTxsProcessed", "cdfTxsAccepted", "cdfTxsRejected", "cdfTxsRejectRatio"
+  , "cdfTxsProcessed", "cdfTxsAccepted", "cdfTxsRejected", "cdfTxsRejectRatio", "cdfMempoolTxs"
   , "cdfCpuPerTx", "cdfMutPerTx", "cdfGcPerTx"
   ]
 
@@ -58,6 +60,49 @@ prop_clusterPerf_2x_readable = withTests 1 $ property $ do
    cdfSizeOf = \case
      Object c -> KeyMap.lookup "cdfSize" c
      _        -> Nothing
+
+-- | Combining runs (as for variance reports) also works when an older run lacks CDFs:
+--   they come from the runs that have them, and are empty if none has them.
+prop_multiClusterPerf_2x_combinable = withTests 1 $ property $ do
+  o :: KeyMap.KeyMap Value <- evalEither =<< evalIO (eitherDecodeFileStrict clusterPerfFixture)
+  full <- evalEither $ decodeClusterPerf o
+  old  <- evalEither $ decodeClusterPerf (withoutKeys addedIn3_0 o)
+  let combine = fmap unMultiClusterPerf . summariseMultiClusterPerf (nEquicentiles 7)
+  mixed  <- evalEither $ combine [full, old]
+  only2x <- evalEither $ combine [old, old]
+  cdfAverageVal (cdfMempoolTxs mixed) === cdfAverageVal (cdfMempoolTxs full)
+  cdfSize (cdfMempoolTxs only2x) === 0
+
+-- | Real summary of a locli 3.0 analysis.
+summaryFixture :: FilePath
+summaryFixture = "test/data/analysis/summary.json"
+
+-- | The keys 'Summary' gained in locli 3.0 (fixed history, as 'addedIn3_0').
+summaryAddedIn3_0 :: [Key]
+summaryAddedIn3_0 = [ "cdfUtxoFinal" ]
+
+decodeSummary :: KeyMap.KeyMap Value -> Either [Char] SummaryOne
+decodeSummary = eitherDecode . encode . Object
+
+-- | A summary as written by locli 2.x is read like the cluster performance results:
+--   the new CDFs empty, the rest unchanged; and the multi-run summary takes them from
+--   the runs that have them.
+prop_summary_2x_readable = withTests 1 $ property $ do
+  o :: KeyMap.KeyMap Value <- evalEither =<< evalIO (eitherDecodeFileStrict summaryFixture)
+  filter (not . (`KeyMap.member` o)) summaryAddedIn3_0 === []
+
+  full <- evalEither $ decodeSummary o
+  old  <- evalEither $ decodeSummary (withoutKeys summaryAddedIn3_0 o)
+  cdfSize (cdfUtxoFinal old) === 0
+  withoutKeys summaryAddedIn3_0 (asObject old) === withoutKeys summaryAddedIn3_0 (asObject full)
+
+  mixed <- evalEither . first (show @_ @Text) $ summariseMultiSummary (sumAnalysisTime full) (nEquicentiles 7) [full, old]
+  cdfAverageVal (cdfUtxoFinal mixed) === cdfAverageVal (cdfUtxoFinal full)
+ where
+   asObject :: SummaryOne -> KeyMap.KeyMap Value
+   asObject x = case toJSON x of
+     Object o -> o
+     _        -> KeyMap.empty
 
 -- | Leniency is limited to the CDFs: other missing keys still fail.
 prop_clusterPerf_requires_version = withTests 1 $ property $ do

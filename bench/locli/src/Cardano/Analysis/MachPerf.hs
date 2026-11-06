@@ -604,6 +604,7 @@ slotStatsMachPerf run (f, slots) =
     , cdfTxsAccepted       = dist [txsAccepted]
     , cdfTxsRejected       = dist [txsRejected]
     , cdfTxsRejectRatio    = dist [perProcessedTx (fromIntegral txsRejected)]
+    , cdfMempoolTxs        = dist (slMempoolTxs <$> slots)
     , cdfCpuPerTx          = dist [cpuMsPerTx rCentiCpu]
     , cdfMutPerTx          = dist [cpuMsPerTx rCentiMut]
     , cdfGcPerTx           = dist [cpuMsPerTx rCentiGC]
@@ -662,14 +663,6 @@ slotStatsMachPerf run (f, slots) =
 
 -- * 5. Multi-machine & multi-run summaries:
 --
--- | For sample-based metrics, a host without samples (e.g. no major GC outside snapshot writes)
---   would pull the unweighted average of averages towards 0: combine only the non-empty CDFs,
---   unless all of them are empty.
-nonEmptyCDFs :: [CDF p a] -> [CDF p a]
-nonEmptyCDFs xs = case filter ((> 0) . cdfSize) xs of
-  [] -> xs
-  ys -> ys
-
 summariseClusterPerf :: [Centile] -> [MachPerfOne] -> Either CDFError ClusterPerf
 summariseClusterPerf _ [] = error "Asked to summarise empty list of MachPerfOne"
 summariseClusterPerf centiles mps@(headline:_) = do
@@ -695,6 +688,7 @@ summariseClusterPerf centiles mps@(headline:_) = do
   cdfTxsAccepted       <- cdf2OfCDFs comb $ mps <&> cdfTxsAccepted
   cdfTxsRejected       <- cdf2OfCDFs comb $ mps <&> cdfTxsRejected
   cdfTxsRejectRatio    <- cdf2OfCDFs comb $ mps <&> cdfTxsRejectRatio
+  cdfMempoolTxs        <- cdf2OfCDFs comb $ mps <&> cdfMempoolTxs
   cdfCpuPerTx          <- cdf2OfCDFs comb $ mps <&> cdfCpuPerTx
   cdfMutPerTx          <- cdf2OfCDFs comb $ mps <&> cdfMutPerTx
   cdfGcPerTx           <- cdf2OfCDFs comb $ mps <&> cdfGcPerTx
@@ -719,31 +713,32 @@ summariseClusterPerf centiles mps@(headline:_) = do
 summariseMultiClusterPerf :: [Centile] -> [ClusterPerf] -> Either CDFError MultiClusterPerf
 summariseMultiClusterPerf _ [] = error "Asked to summarise empty list of MachPerfOne"
 summariseMultiClusterPerf centiles mps@(headline:_) = do
-  cdfHostSlots         <- cdf2OfCDFs comb $ mps <&> cdfHostSlots
-  cdfStarts            <- cdf2OfCDFs comb $ mps <&> cdfStarts
-  cdfLeads             <- cdf2OfCDFs comb $ mps <&> cdfLeads
-  cdfUtxo              <- cdf2OfCDFs comb $ mps <&> cdfUtxo
-  cdfDensity           <- cdf2OfCDFs comb $ mps <&> cdfDensity
-  cdfStarted           <- cdf2OfCDFs comb $ mps <&> cdfStarted
-  cdfBlkCtx            <- cdf2OfCDFs comb $ mps <&> cdfBlkCtx
-  cdfLgrState          <- cdf2OfCDFs comb $ mps <&> cdfLgrState
-  cdfLgrView           <- cdf2OfCDFs comb $ mps <&> cdfLgrView
-  cdfLeading           <- cdf2OfCDFs comb $ mps <&> cdfLeading
-  cdfBlockGap          <- cdf2OfCDFs comb $ mps <&> cdfBlockGap
-  cdfSpanLensCpu       <- cdf2OfCDFs comb $ mps <&> cdfSpanLensCpu
-  cdfSpanLensCpuEpoch  <- cdf2OfCDFs comb $ mps <&> cdfSpanLensCpuEpoch
-  cdfSpanLensCpuRwd    <- cdf2OfCDFs comb $ mps <&> cdfSpanLensCpuRwd
-  cdfSnapTaken         <- cdf2OfCDFs comb $ mps <&> cdfSnapTaken
+  cdfHostSlots         <- cdf2OfCDFs comb $ nonEmptyCDFs $ mps <&> cdfHostSlots
+  cdfStarts            <- cdf2OfCDFs comb $ nonEmptyCDFs $ mps <&> cdfStarts
+  cdfLeads             <- cdf2OfCDFs comb $ nonEmptyCDFs $ mps <&> cdfLeads
+  cdfUtxo              <- cdf2OfCDFs comb $ nonEmptyCDFs $ mps <&> cdfUtxo
+  cdfDensity           <- cdf2OfCDFs comb $ nonEmptyCDFs $ mps <&> cdfDensity
+  cdfStarted           <- cdf2OfCDFs comb $ nonEmptyCDFs $ mps <&> cdfStarted
+  cdfBlkCtx            <- cdf2OfCDFs comb $ nonEmptyCDFs $ mps <&> cdfBlkCtx
+  cdfLgrState          <- cdf2OfCDFs comb $ nonEmptyCDFs $ mps <&> cdfLgrState
+  cdfLgrView           <- cdf2OfCDFs comb $ nonEmptyCDFs $ mps <&> cdfLgrView
+  cdfLeading           <- cdf2OfCDFs comb $ nonEmptyCDFs $ mps <&> cdfLeading
+  cdfBlockGap          <- cdf2OfCDFs comb $ nonEmptyCDFs $ mps <&> cdfBlockGap
+  cdfSpanLensCpu       <- cdf2OfCDFs comb $ nonEmptyCDFs $ mps <&> cdfSpanLensCpu
+  cdfSpanLensCpuEpoch  <- cdf2OfCDFs comb $ nonEmptyCDFs $ mps <&> cdfSpanLensCpuEpoch
+  cdfSpanLensCpuRwd    <- cdf2OfCDFs comb $ nonEmptyCDFs $ mps <&> cdfSpanLensCpuRwd
+  cdfSnapTaken         <- cdf2OfCDFs comb $ nonEmptyCDFs $ mps <&> cdfSnapTaken
   cdfSnapDuration      <- cdf2OfCDFs comb $ nonEmptyCDFs $ mps <&> cdfSnapDuration
   cdfLiveMajGcDuring   <- cdf2OfCDFs comb $ nonEmptyCDFs $ mps <&> cdfLiveMajGcDuring
   cdfLiveMajGcOutside  <- cdf2OfCDFs comb $ nonEmptyCDFs $ mps <&> cdfLiveMajGcOutside
-  cdfTxsProcessed      <- cdf2OfCDFs comb $ mps <&> cdfTxsProcessed
-  cdfTxsAccepted       <- cdf2OfCDFs comb $ mps <&> cdfTxsAccepted
-  cdfTxsRejected       <- cdf2OfCDFs comb $ mps <&> cdfTxsRejected
-  cdfTxsRejectRatio    <- cdf2OfCDFs comb $ mps <&> cdfTxsRejectRatio
-  cdfCpuPerTx          <- cdf2OfCDFs comb $ mps <&> cdfCpuPerTx
-  cdfMutPerTx          <- cdf2OfCDFs comb $ mps <&> cdfMutPerTx
-  cdfGcPerTx           <- cdf2OfCDFs comb $ mps <&> cdfGcPerTx
+  cdfTxsProcessed      <- cdf2OfCDFs comb $ nonEmptyCDFs $ mps <&> cdfTxsProcessed
+  cdfTxsAccepted       <- cdf2OfCDFs comb $ nonEmptyCDFs $ mps <&> cdfTxsAccepted
+  cdfTxsRejected       <- cdf2OfCDFs comb $ nonEmptyCDFs $ mps <&> cdfTxsRejected
+  cdfTxsRejectRatio    <- cdf2OfCDFs comb $ nonEmptyCDFs $ mps <&> cdfTxsRejectRatio
+  cdfMempoolTxs        <- cdf2OfCDFs comb $ nonEmptyCDFs $ mps <&> cdfMempoolTxs
+  cdfCpuPerTx          <- cdf2OfCDFs comb $ nonEmptyCDFs $ mps <&> cdfCpuPerTx
+  cdfMutPerTx          <- cdf2OfCDFs comb $ nonEmptyCDFs $ mps <&> cdfMutPerTx
+  cdfGcPerTx           <- cdf2OfCDFs comb $ nonEmptyCDFs $ mps <&> cdfGcPerTx
   mpResourceCDFs       <- sequence $ traverse (identity . mpResourceCDFs) mps <&>
     \case
       [] -> Left CDFEmptyDataset

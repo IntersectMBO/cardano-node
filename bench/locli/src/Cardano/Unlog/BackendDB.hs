@@ -8,6 +8,7 @@ module Cardano.Unlog.BackendDB
 
        -- specific SQLite queries or statements
        , getSummary
+       , getLastUTxOSize
        , getTraceFreqs
        , selectAll
        , sqlGetEvent
@@ -37,6 +38,7 @@ import           Data.Maybe
 import qualified Data.Text.Short as ShortText (unpack)
 import           Data.Time.Clock (UTCTime, getCurrentTime)
 import           Data.Time.Format.ISO8601
+import           Data.Word (Word64)
 import           GHC.Conc (numCapabilities)
 import           System.Directory (removeFile)
 
@@ -189,6 +191,12 @@ getSummary =
   fromSqlDataWithArgs . head
     <$> run "SELECT * FROM summary"
 
+-- | The UTxO size of the host's last LedgerMetrics, if any.
+getLastUTxOSize :: SQLite (Maybe Word64)
+getLastUTxOSize =
+  fmap fromSqlData . (listToMaybe <=< listToMaybe)
+    <$> run "SELECT utxo_size FROM ledgermetrics ORDER BY at DESC LIMIT 1"
+
 getTraceFreqs :: SQLite TraceFreqs
 getTraceFreqs =
   ML.fromList . map fromSqlDataPair
@@ -204,17 +212,22 @@ loadHostLogsDB loadMode HostLogs{..} =
         _ <- run createLMetricsIfNotExists
 
         summary@SummaryDB{..} <- getSummary
+        lastUTxOSize          <- getLastUTxOSize
         traceFreqs            <- if loadTraceFreqs loadMode
                                    then getTraceFreqs
                                    else pure hlRawTraceFreqs
         rows                  <- maybe (pure []) run (loadQuery loadMode)
 
-        let rows'             = map (loadConvert loadMode summary) rows
+        -- Count while the rows are at hand; forced, so the count doesn't keep them alive.
+        let !loadedCount      = length rows
+            rows'             = map (loadConvert loadMode summary) rows
 
         pure $ HostLogs
           { hlRawTraceFreqs   = traceFreqs
           , hlRawFirstAt      = Just sdbFirstAt
           , hlRawLastAt       = Just sdbLastAt
+          , hlRawLastUTxOSize = lastUTxOSize
+          , hlLoadedCount     = loadedCount <$ loadQuery loadMode  -- Nothing if the load mode runs no query
           , hlRawLines        = sdbLines
           , hlLogs            = (log, rows')
           , ..

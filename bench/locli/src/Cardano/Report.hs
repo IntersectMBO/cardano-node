@@ -532,12 +532,16 @@ generateTypstSummary rc anchor fieldSelr summ =
         , cell (renderSummaryScalar summ f) ])
 
 -- | A summary value for the Typst tables: fractional numbers (incl. durations) are
---   rounded to 3 decimals by 'renderNumField', as in all other tables; other values
---   render as in 'renderScalarLim'.
+--   rounded to 3 decimals by 'renderNumField', as in all other tables; whole-number
+--   averages render without decimals, so a fractional one stands out (e.g. hosts
+--   disagreeing on a value that should be equal); other values render as in 'renderScalarLim'.
 renderSummaryScalar :: a -> Field ISelect I a -> Text
 renderSummaryScalar summ f@Field{fSelect} =
   case fSelect of
-    IFloat   g -> num (g summ)
+    IFloat   g -> let x = g summ
+                  in if x == fromIntegral @Integer (round x)
+                     then renderNumField ((x, Just 0), NoCol)
+                     else num x
     IDeltaT  g -> num (realToFrac $ g summ)
     IDeltaTM g -> smaybe "---" (num . realToFrac) (g summ)
     _          -> renderScalarLim (Just 32) summ f
