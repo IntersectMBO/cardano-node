@@ -9,11 +9,9 @@ license:       Apache-2.0
 author:        IOHK
 maintainer:    operations@iohk.io
 
-executable generate-release-changelog-links
-  main-is:          Main.hs
-  hs-source-dirs:   .
+common shared
   default-language: Haskell2010
-  ghc-options:      -Wall -Wextra -Wcompat -O2 -flate-specialise -threaded -rtsopts "-with-rtsopts=-A64m -I0"
+  ghc-options:      -Wall -Wextra -Wcompat -O2 -flate-specialise
   default-extensions:
     BlockArguments
     DataKinds
@@ -37,3 +35,17 @@ executable generate-release-changelog-links
     , req
     , text
     , uri-encode
+
+executable generate-release-changelog-links
+  import:           shared
+  main-is:          Main.hs
+  hs-source-dirs:   .
+  ghc-options:      -threaded -rtsopts "-with-rtsopts=-A64m -I0"
+
+test-suite release-changelog-tests
+  import:           shared
+  type:             exitcode-stdio-1.0
+  main-is:          Tests.hs
+  hs-source-dirs:   test .
+  other-modules:    Main
+  ghc-options:      -main-is Tests

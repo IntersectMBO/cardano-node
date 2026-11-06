@@ -1,4 +1,4 @@
-module Main (main) where
+module Main (main, parseCHaPEntry, redirectPathSegments, CHaPEntry (..)) where
 
 import           Control.Monad (guard)
 import           Data.Aeson
@@ -41,10 +41,9 @@ main = do
       Nothing -> die "GITHUB_TOKEN environment variable is not set"
       Just t  -> pure $ GitHubAccessToken (Text.encodeUtf8 (Text.pack t))
 
-  packagesMap <- getCHaPPackagesMap
-
   hPutStrLn stderr $ "Reading Cabal plan from " <> show planJsonFilePath
   versions <- selectPackageVersion planJsonFilePath
+  packagesMap <- getCHaPPackagesMap
 
   changelogPaths <-
     concat
@@ -195,8 +194,7 @@ data CHaPEntry = CHaPEntry
 
 findChangelogFromGitHub
   :: GitHubAccessToken -> CHaPEntry -> IO (Maybe (Text, Text))
-findChangelogFromGitHub accessToken c@CHaPEntry{..} = do
-  print c
+findChangelogFromGitHub accessToken CHaPEntry{..} = do
   let query = changelogLookupGitHub
                 entryGitHubOwner entryGitHubRepo
                 entrySubdir entryGitHubRevision
@@ -210,9 +208,7 @@ findChangelogFromGitHub accessToken c@CHaPEntry{..} = do
           Nothing ->
             die "findChangelogFromGitHub: HTTP 302 with no location header"
           Just redirectLocation -> do
-            let loc = URIE.decodeText
-                        $ Text.dropEnd 2
-                        $ Text.decodeUtf8 redirectLocation
+            let loc = Text.decodeUtf8 redirectLocation
             newQuery <- case query of
               GitHub.Query _ queryString -> do
                 segs <- generateRedirectPathSegments loc
@@ -246,13 +242,20 @@ findChangelogFromGitHub accessToken c@CHaPEntry{..} = do
 
 generateRedirectPathSegments :: Text -> IO [Text]
 generateRedirectPathSegments url =
+  either die pure (redirectPathSegments url)
+
+-- Decode each path component after splitting: decoding the whole URL first
+-- would turn an escaped slash into a separator. The original request already
+-- carries its query parameters (including the package's pinned revision).
+redirectPathSegments :: Text -> Either Text [Text]
+redirectPathSegments url =
   case URI.parseURI (Text.unpack url) of
     Just uri ->
-      let segs = map Text.pack $ URI.pathSegments uri
+      let segs = map (URIE.decodeText . Text.pack) $ URI.pathSegments uri
       in if null segs
-         then die $ "No path segments in URL: " <> url
-         else return segs
-    Nothing -> die $ "Invalid URL: " <> url
+         then Left $ "No path segments in URL: " <> url
+         else Right segs
+    Nothing -> Left $ "Invalid URL: " <> url
 
 changelogLookupGitHub
   :: GitHub.Name GitHub.Owner
