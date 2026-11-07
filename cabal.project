@@ -32,6 +32,7 @@ package acts
   flags: -finitary
 
 packages:
+  scripts/generate-release-changelog-links
   cardano-node
   cardano-node-capi
   cardano-node-chairman
@@ -98,6 +99,7 @@ if impl(ghc >= 9.14)
   allow-newer:
     -- base < 4.22
     , bytestring-trie:base
+    , cabal-plan:base
     , cborg:base
     , cborg-json:base
     , compact:base
@@ -111,6 +113,7 @@ if impl(ghc >= 9.14)
     , safe-wild-cards:template-haskell
     , serdoc-core:template-haskell
     -- containers < 0.8
+    , cabal-plan:containers
     , canonical-json:containers
     , cborg:containers
     , dependent-map:containers
