@@ -39,6 +39,7 @@ runTxSubmitWebapi :: TxSubmitNodeParams -> IO ()
 runTxSubmitWebapi tsnp = do
     tracingConfig <- readConfigurationWithDefault (FromFile (unConfigFile tspConfigFile)) defaultTraceConfig
     (trce, registrySample) <- mkTraceDispatcher tracingConfig
+    traceWith trce ApplicationDeprecated
     Async.withAsync
       (runTxSubmitServer trce tspWebserverConfig tspProtocol tspNetworkId tspSocketPath)
       $ \txSubmitServer ->
