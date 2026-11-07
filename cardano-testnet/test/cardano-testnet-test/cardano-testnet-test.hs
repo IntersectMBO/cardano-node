@@ -20,6 +20,12 @@ import qualified Cardano.Testnet.Test.Cli.Transaction
 import qualified Cardano.Testnet.Test.Cli.Transaction.BuildEstimate
 import qualified Cardano.Testnet.Test.Cli.Transaction.RegisterDeregisterStakeAddress
 import qualified Cardano.Testnet.Test.Cli.Transaction.WithdrawalReward
+import qualified Cardano.Testnet.Test.Dijkstra.DirectDeposits as Dijkstra
+import qualified Cardano.Testnet.Test.Dijkstra.Governance as Dijkstra
+import qualified Cardano.Testnet.Test.Dijkstra.NestedTransaction
+import qualified Cardano.Testnet.Test.Dijkstra.Scripts as Dijkstra
+import qualified Cardano.Testnet.Test.Dijkstra.Staking as Dijkstra
+import qualified Cardano.Testnet.Test.Dijkstra.TopLevelGuards as Dijkstra
 import qualified Cardano.Testnet.Test.DumpConfig
 import qualified Cardano.Testnet.Test.EnableTracer
 import qualified Cardano.Testnet.Test.FoldEpochState
@@ -35,6 +41,7 @@ import qualified Cardano.Testnet.Test.Gov.TreasuryDonation as Gov
 import qualified Cardano.Testnet.Test.Gov.TreasuryWithdrawal as Gov
 import qualified Cardano.Testnet.Test.MainnetParams
 import qualified Cardano.Testnet.Test.Manifest
+import qualified Cardano.Testnet.Test.Node.DijkstraEra
 import qualified Cardano.Testnet.Test.Node.Shutdown
 import qualified Cardano.Testnet.Test.Parser
 import qualified Cardano.Testnet.Test.Rpc.EraSummary
@@ -149,6 +156,32 @@ tests = do
         , T.testGroup "Cardano-testnet"
           [ ignoreOnWindows "Produces blocks" Cardano.Testnet.Test.RunTestnet.hprop_run_testnet
           , ignoreOnMacAndWindows "Enable Tracer" Cardano.Testnet.Test.EnableTracer.hprop_enable_tracer
+          , ignoreOnWindows "Hard fork to Dijkstra" Cardano.Testnet.Test.Node.DijkstraEra.hprop_hardfork_to_dijkstra
+          , ignoreOnWindows "Nested transaction swap" Cardano.Testnet.Test.Dijkstra.NestedTransaction.hprop_nested_transaction_swap
+          , ignoreOnWindows "Dijkstra sub-transaction guards" Dijkstra.hprop_sub_transaction_guards
+          , ignoreOnWindows "Dijkstra sub-transaction Plutus V4" Dijkstra.hprop_sub_transaction_plutus_v4
+          , ignoreOnWindows "Dijkstra top-level Plutus V4 mint and spend (direct)" Dijkstra.hprop_top_level_plutus_v4
+          , ignoreOnWindows "Dijkstra top-level Plutus V4 mint and spend (reference)" Dijkstra.hprop_top_level_plutus_v4_reference
+          , ignoreOnWindows "Dijkstra sub-transaction staking" Dijkstra.hprop_sub_transaction_staking
+          , ignoreOnWindows "Dijkstra direct deposits build-raw" (Dijkstra.hprop_direct_deposits_top_level Dijkstra.Raw)
+          , ignoreOnWindows "Dijkstra direct deposits build" (Dijkstra.hprop_direct_deposits_top_level Dijkstra.Online)
+          , ignoreOnWindows "Dijkstra direct deposits build-estimate" (Dijkstra.hprop_direct_deposits_top_level Dijkstra.Estimate)
+          , ignoreOnWindows "Dijkstra direct deposits nested" Dijkstra.hprop_direct_deposits_nested
+          , ignoreOnWindows "Dijkstra direct deposits withdrawal (direct)" (Dijkstra.hprop_direct_deposits_withdraw False)
+          , ignoreOnWindows "Dijkstra direct deposits withdrawal (reference)" (Dijkstra.hprop_direct_deposits_withdraw True)
+          , ignoreOnWindows "Dijkstra direct deposits rejected (top-level)" (Dijkstra.hprop_direct_deposits_rejected False)
+          , ignoreOnWindows "Dijkstra direct deposits rejected (nested)" (Dijkstra.hprop_direct_deposits_rejected True)
+          , ignoreOnWindows "Dijkstra sub-transaction governance" Dijkstra.hprop_sub_transaction_governance
+          , ignoreOnWindows "Dijkstra top-level key guards" Dijkstra.hprop_top_level_key_guards
+          , ignoreOnWindows "Dijkstra top-level native guards" Dijkstra.hprop_top_level_native_guards
+          , ignoreOnWindows "Dijkstra top-level Plutus V4 guards" Dijkstra.hprop_top_level_plutus_v4_guards
+          , ignoreOnWindows "Dijkstra required top-level V4 guard Spending" (Dijkstra.hprop_top_level_guard_purpose Dijkstra.Spending)
+          , ignoreOnWindows "Dijkstra required top-level V4 guard Minting" (Dijkstra.hprop_top_level_guard_purpose Dijkstra.Minting)
+          , ignoreOnWindows "Dijkstra required top-level V4 guard Certifying" (Dijkstra.hprop_top_level_guard_purpose Dijkstra.Certifying)
+          , ignoreOnWindows "Dijkstra required top-level V4 guard Rewarding" (Dijkstra.hprop_top_level_guard_purpose Dijkstra.Rewarding)
+          , ignoreOnWindows "Dijkstra required top-level V4 guard Proposing" (Dijkstra.hprop_top_level_guard_purpose Dijkstra.Proposing)
+          , ignoreOnWindows "Dijkstra required top-level V4 guard Voting" (Dijkstra.hprop_top_level_guard_purpose Dijkstra.Voting)
+          , ignoreOnWindows "Dijkstra required top-level V4 guard missing datum" Dijkstra.hprop_top_level_guard_missing_datum
           , ignoreOnMacAndWindows "Supports dumping/loading config files" Cardano.Testnet.Test.DumpConfig.hprop_dump_config
           , ignoreOnMacAndWindows "Can have its start time modified" Cardano.Testnet.Test.UpdateTimeStamps.hprop_update_time_stamps
           , ignoreOnMacAndWindows "Can get on-chain parameters from blockfrost files" Cardano.Testnet.Test.MainnetParams.hprop_mainnet_params
