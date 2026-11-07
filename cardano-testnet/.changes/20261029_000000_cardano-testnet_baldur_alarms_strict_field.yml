@@ -1,0 +1,6 @@
+description: |
+  Add `alarms = Nothing` to the local `TracerConfig` construction so the project compiles against the new strict `alarms` field in `cardano-tracer`.
+kind:
+- bugfix
+pr: 6664
+project: cardano-testnet

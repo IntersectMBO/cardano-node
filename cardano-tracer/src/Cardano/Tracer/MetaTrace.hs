@@ -84,6 +84,36 @@ data TracerTrace
     { ttConnection           :: HowToConnect
     , ttMessage              :: String
     }
+  | TracerStartedAlarms
+    { ttAlarmsEndpoint       :: Endpoint
+    }
+  | TracerAlarmAccepted
+    { ttAlarmAcceptedSource   :: Text
+    , ttAlarmAcceptedRuleId   :: Text
+    , ttAlarmAcceptedSeverity :: SeverityS
+    }
+  | TracerAlarmDuplicate
+    { ttAlarmDuplicateSource        :: Text
+    , ttAlarmDuplicateSourceEventId :: Text
+    }
+  | TracerAlarmRejected
+    { ttAlarmRejectedReason  :: Text
+    }
+  | TracerAlarmDispatched
+    { ttAlarmDispatchedConsumer :: Text
+    , ttAlarmDispatchedSource   :: Text
+    , ttAlarmDispatchedRuleId   :: Text
+    , ttAlarmDispatchedSeverity :: SeverityS
+    , ttAlarmDispatchedSummary  :: Text
+    }
+  | TracerAlarmHistoryRead
+    { ttAlarmHistoryReader      :: Text
+    , ttAlarmHistoryResultCount :: Int
+    }
+  | TracerAlarmTimeseriesEvalFailed
+    { ttAlarmTimeseriesEvalFailedRule   :: Text
+    , ttAlarmTimeseriesEvalFailedReason :: Text
+    }
   deriving Show
 
 -- | A bundle of domain-split tracers used in the application.
@@ -184,6 +214,43 @@ instance LogFormatting TracerTrace where
       , "conn"    .= ttConnection
       , "message" .= ttMessage
       ]
+    TracerStartedAlarms{..} -> mconcat
+      [ "kind"     .= AE.String "TracerStartedAlarms"
+      , "endpoint" .= ttAlarmsEndpoint
+      ]
+    TracerAlarmAccepted{..} -> mconcat
+      [ "kind"     .= AE.String "TracerAlarmAccepted"
+      , "source"   .= ttAlarmAcceptedSource
+      , "ruleId"   .= ttAlarmAcceptedRuleId
+      , "severity" .= ttAlarmAcceptedSeverity
+      ]
+    TracerAlarmDuplicate{..} -> mconcat
+      [ "kind"          .= AE.String "TracerAlarmDuplicate"
+      , "source"        .= ttAlarmDuplicateSource
+      , "sourceEventId" .= ttAlarmDuplicateSourceEventId
+      ]
+    TracerAlarmRejected{..} -> mconcat
+      [ "kind"   .= AE.String "TracerAlarmRejected"
+      , "reason" .= ttAlarmRejectedReason
+      ]
+    TracerAlarmDispatched{..} -> mconcat
+      [ "kind"     .= AE.String "TracerAlarmDispatched"
+      , "consumer" .= ttAlarmDispatchedConsumer
+      , "source"   .= ttAlarmDispatchedSource
+      , "ruleId"   .= ttAlarmDispatchedRuleId
+      , "severity" .= ttAlarmDispatchedSeverity
+      , "summary"  .= ttAlarmDispatchedSummary
+      ]
+    TracerAlarmHistoryRead{..} -> mconcat
+      [ "kind"        .= AE.String "TracerAlarmHistoryRead"
+      , "reader"      .= ttAlarmHistoryReader
+      , "resultCount" .= ttAlarmHistoryResultCount
+      ]
+    TracerAlarmTimeseriesEvalFailed{..} -> mconcat
+      [ "kind"   .= AE.String "TracerAlarmTimeseriesEvalFailed"
+      , "rule"   .= ttAlarmTimeseriesEvalFailedRule
+      , "reason" .= ttAlarmTimeseriesEvalFailedReason
+      ]
 
 instance MetaTrace TracerTrace where
     namespaceFor TracerBuildInfo {} = Namespace [] ["BuildInfo"]
@@ -208,6 +275,13 @@ instance MetaTrace TracerTrace where
     namespaceFor TracerError {} = Namespace [] ["Error"]
     namespaceFor TracerResource {} = Namespace [] ["Resources"]
     namespaceFor TracerForwardingInterrupted {} = Namespace [] ["ForwardingInterrupted"]
+    namespaceFor TracerStartedAlarms {} = Namespace [] ["StartedAlarms"]
+    namespaceFor TracerAlarmAccepted {} = Namespace [] ["AlarmAccepted"]
+    namespaceFor TracerAlarmDuplicate {} = Namespace [] ["AlarmDuplicate"]
+    namespaceFor TracerAlarmRejected {} = Namespace [] ["AlarmRejected"]
+    namespaceFor TracerAlarmDispatched {} = Namespace [] ["AlarmDispatched"]
+    namespaceFor TracerAlarmHistoryRead {} = Namespace [] ["AlarmHistoryRead"]
+    namespaceFor TracerAlarmTimeseriesEvalFailed {} = Namespace [] ["AlarmTimeseriesEvalFailed"]
 
     severityFor (Namespace _ ["BuildInfo"]) _ = Just Info
     severityFor (Namespace _ ["ParamsAre"]) _ = Just Warning
@@ -231,6 +305,13 @@ instance MetaTrace TracerTrace where
     severityFor (Namespace _ ["Error"]) _ = Just Error
     severityFor (Namespace _ ["Resources"]) _ = Just Info
     severityFor (Namespace _ ["ForwardingInterrupted"]) _ = Just Warning
+    severityFor (Namespace _ ["StartedAlarms"]) _ = Just Info
+    severityFor (Namespace _ ["AlarmAccepted"]) _ = Just Info
+    severityFor (Namespace _ ["AlarmDuplicate"]) _ = Just Debug
+    severityFor (Namespace _ ["AlarmRejected"]) _ = Just Warning
+    severityFor (Namespace _ ["AlarmDispatched"]) _ = Just Info
+    severityFor (Namespace _ ["AlarmHistoryRead"]) _ = Just Info
+    severityFor (Namespace _ ["AlarmTimeseriesEvalFailed"]) _ = Just Warning
     severityFor _ _ = Nothing
 
     documentFor _ = Just ""
@@ -258,6 +339,13 @@ instance MetaTrace TracerTrace where
       , Namespace [] ["Error"]
       , Namespace [] ["Resources"]
       , Namespace [] ["ForwardingInterrupted"]
+      , Namespace [] ["StartedAlarms"]
+      , Namespace [] ["AlarmAccepted"]
+      , Namespace [] ["AlarmDuplicate"]
+      , Namespace [] ["AlarmRejected"]
+      , Namespace [] ["AlarmDispatched"]
+      , Namespace [] ["AlarmHistoryRead"]
+      , Namespace [] ["AlarmTimeseriesEvalFailed"]
       ]
 
 stderrShowTracer :: Show a => Trace IO a
