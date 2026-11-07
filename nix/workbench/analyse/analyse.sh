@@ -1,11 +1,10 @@
 usage_analyse() {
      usage "analyse" "Analyse cluster runs" <<EOF
     $(helpcmd compare RUN_NAME..)     Produce a comparative analysis between specified runs, in a new
-     $(blk cmp)                     run directory.  A builtin $(blue .ede) template will be used and dumped,
-                             so a later $(red analyse) $(yellow recompare) can use it as basis.
+     $(blk cmp)                     run directory, as a Typst report.
 
     $(helpcmd render-comparison-pdf RUN_NAME)
-     $(blk render-pdf pdf)        Render a comparative .org report into PDF
+     $(blk render-pdf pdf)        Render a run's Typst report (single-run or comparison) into PDF
 
     $(helpcmd variance RUN-NAME..)
      $(blk var)                   Variance analyses on a set of runs
@@ -162,10 +161,10 @@ case "$op" in
         local usage="USAGE: wb analyse $op RUN"
         local run=${1:?$usage}; shift
         local dir=$(run compute-path "$run")
-        local report=$(find "$dir/analysis" -name "*.typ" | head -n1)
+        local report=$(find "$dir/analysis" -name "report-*.typ" | head -n1)
 
         if test -z "$report"
-        then fail "found no typst (*.typ) report source to render in $dir/analysis"; fi
+        then fail "found no typst (report-*.typ) report source to render in $dir/analysis"; fi
 
         if ! which "typst" > /dev/null
         then fail "No 'typst' binary found in PATH. As long as not part of the workbench shell, consider: 'nix profile install nixpkgs#typst'"; fi
@@ -185,14 +184,13 @@ case "$op" in
             compute-multi-clusterperf
             multi-clusterperf-json
             multi-clusterperf-gnuplot
-            multi-clusterperf-org
             multi-clusterperf-report
+            multi-clusterperf-{snapshots,txprocessing}
             multi-clusterperf-full
 
             read-propagations
             compute-multi-propagation
             multi-propagation-json
-            multi-propagation-org
             multi-propagation-{control,forger,peers,endtoend}
             multi-propagation-gnuplot
             multi-propagation-full
@@ -228,7 +226,6 @@ case "$op" in
 
             compute-propagation
             propagation-json
-            propagation-org
             propagation-{control,forger,peers,endtoend}
             propagation-gnuplot
             propagation-full
@@ -239,13 +236,15 @@ case "$op" in
             compute-clusterperf
             clusterperf-json
             clusterperf-gnuplot
-            clusterperf-org
             clusterperf-report
+            clusterperf-{snapshots,txprocessing}
             clusterperf-full
 
             compute-summary
             summary-json
             summary-report
+
+            report
          )
         verbose "analyse" "$(white full), calling script:  $(colorise ${script[*]})"
         analyse "${sargs[@]}" map "call ${script[*]}" "$@"
@@ -270,7 +269,6 @@ case "$op" in
 
             compute-propagation
             propagation-json
-            propagation-org
             propagation-{control,forger,peers,endtoend}
             propagation-gnuplot
             propagation-full
@@ -294,8 +292,8 @@ case "$op" in
             compute-clusterperf
             clusterperf-json
             clusterperf-gnuplot
-            clusterperf-org
             clusterperf-report
+            clusterperf-{snapshots,txprocessing}
             clusterperf-full
         )
         verbose "analyse" "$(white performance), calling script:  $(colorise ${script[*]})"
@@ -412,26 +410,27 @@ case "$op" in
         v9=("${v8[@]/#filter-slots/         'filter-slots'                   ${filters[@]}}")
         va=("${v9[@]/#timeline-slots/       'timeline-slots'                                                   ${locli_render[*]} ${locli_timeline[*]} }")
         vb=("${va[@]/#propagation-json/     'render-propagation'       --json \"$adir\"/blockprop.json                                  --full }")
-        vc=("${vb[@]/#propagation-org/      'render-propagation'        --org \"$adir\"/blockprop.org          ${locli_render[*]}       --full }")
-        vd=("${vc[@]/#propagation-control/  'render-propagation' --org-report \"$adir\"/blockprop.control.org  ${locli_render[*]}    --control }")
-        ve=("${vd[@]/#propagation-forger/   'render-propagation' --org-report \"$adir\"/blockprop.forger.org   ${locli_render[*]}     --forger }")
-        vf=("${ve[@]/#propagation-peers/    'render-propagation' --org-report \"$adir\"/blockprop.peers.org    ${locli_render[*]}      --peers }")
-        vg=("${vf[@]/#propagation-endtoend/ 'render-propagation' --org-report \"$adir\"/blockprop.endtoend.org ${locli_render[*]} --end-to-end }")
+        vd=("${vb[@]/#propagation-control/  'render-propagation' --typst \"$adir\"/blockprop.control.typ  ${locli_render[*]}    --control }")
+        ve=("${vd[@]/#propagation-forger/   'render-propagation' --typst \"$adir\"/blockprop.forger.typ   ${locli_render[*]}     --forger }")
+        vf=("${ve[@]/#propagation-peers/    'render-propagation' --typst \"$adir\"/blockprop.peers.typ    ${locli_render[*]}      --peers }")
+        vg=("${vf[@]/#propagation-endtoend/ 'render-propagation' --typst \"$adir\"/blockprop.endtoend.typ ${locli_render[*]} --end-to-end }")
         vh=("${vg[@]/#propagation-gnuplot/  'render-propagation'    --gnuplot \"$adir\"/cdf/%s.cdf             ${locli_render[*]}       --full }")
         vi=("${vh[@]/#propagation-full/     'render-propagation'     --pretty \"$adir\"/blockprop-full.txt     ${locli_render[*]}       --full }")
         vj=("${vi[@]/#clusterperf-json/     'render-clusterperf'       --json \"$adir\"/clusterperf.json                                --full }")
-        vk=("${vj[@]/#clusterperf-org/      'render-clusterperf'        --org \"$adir\"/clusterperf.org        ${locli_render[*]}       --full }")
-        vl=("${vk[@]/#clusterperf-report/   'render-clusterperf' --org-report \"$adir\"/clusterperf.report.org ${locli_render[*]}     --report }")
+        vl=("${vj[@]/#clusterperf-report/   'render-clusterperf' --typst \"$adir\"/clusterperf.report.typ ${locli_render[*]}     --report }")
         vm=("${vl[@]/#clusterperf-gnuplot/  'render-clusterperf'    --gnuplot \"$adir\"/cdf/%s.cdf             ${locli_render[*]}       --full }")
         vn=("${vm[@]/#clusterperf-full/     'render-clusterperf'     --pretty \"$adir\"/clusterperf-full.txt   ${locli_render[*]}       --full }")
         vo=("${vn[@]/#read-clusterperfs/    'read-clusterperfs' --clusterperf \"$adir\"/clusterperf.json }")
         vp=("${vo[@]/#read-propagations/    'read-propagations'        --prop \"$adir\"/blockprop.json }")
         vq=("${vp[@]/#read-summaries/       'read-summaries'        --summary \"$adir\"/summary.json }")
         vr=("${vq[@]/#summary-json/         'render-summary'           --json \"$adir\"/summary.json }")
-        vs=("${vr[@]/#summary-report/       'render-summary'     --org-report \"$adir\"/summary.org            ${locli_render[*]}}")
+        vs=("${vr[@]/#summary-report/       'render-summary' --typst \"$adir\"/summary.typ            ${locli_render[*]}}")
         vt=("${vs[@]/#hash-timeline/        'hash-timeline'        --timeline \"$adir\"/hash-timeline.json }")
+        vu=("${vt[@]/#report/               'report'                  --typst \"$adir\"/report-$run.typ }")
+        vv=("${vu[@]/#clusterperf-snapshots/    'render-clusterperf' --typst \"$adir\"/clusterperf.snapshots.typ    ${locli_render[*]} --snapshots }")
+        vw=("${vv[@]/#clusterperf-txprocessing/ 'render-clusterperf' --typst \"$adir\"/clusterperf.txprocessing.typ ${locli_render[*]} --tx-processing }")
         local ops_final=()
-        for v in "${vt[@]}"
+        for v in "${vw[@]}"
         do eval ops_final+=($v); done
 
         call_locli "$rtsmode" "${ops_final[@]}"
@@ -500,24 +499,23 @@ case "$op" in
         v2=(${v1[*]/#read-propagations/ 'read-propagations' ${props[*]}     })
         v3=(${v2[@]/#read-summaries/    'read-summaries'    ${summaries[*]} })
         v4=(${v3[*]/#multi-clusterperf-json/ 'render-multi-clusterperf' --json $adir/'clusterperf.json' --full $multi_aspect })
-        v5=(${v4[*]/#multi-clusterperf-org/     'render-multi-clusterperf' --org $adir/'clusterperf.org' --full $multi_aspect })
-        v6=(${v5[*]/#multi-clusterperf-report/  'render-multi-clusterperf' --org-report $adir/'clusterperf.report.org' --report $multi_aspect })
+        v6=(${v4[*]/#multi-clusterperf-report/  'render-multi-clusterperf' --typst $adir/'clusterperf.report.typ' --report $multi_aspect })
         v7=(${v6[*]/#multi-clusterperf-gnuplot/ 'render-multi-clusterperf' --gnuplot $adir/cdf/'%s.cdf' --full $multi_aspect })
         v8=(${v7[*]/#multi-clusterperf-full/    'render-multi-clusterperf' --pretty $adir/'clusterperf-full.txt' --full $multi_aspect })
         v9=(${v8[*]/#multi-propagation-json/     'render-multi-propagation' --json $adir/'blockprop.json' --full $multi_aspect })
-        va=(${v9[*]/#multi-propagation-org/      'render-multi-propagation' --org $adir/'blockprop.org' --full $multi_aspect })
-        vb=(${va[*]/#multi-propagation-control/  'render-multi-propagation' --org-report $adir/'blockprop.control.org' --control $multi_aspect })
-        vc=(${vb[*]/#multi-propagation-forger/   'render-multi-propagation' --org-report $adir/'blockprop.forger.org' --forger $multi_aspect })
-        vd=(${vc[*]/#multi-propagation-peers/    'render-multi-propagation' --org-report $adir/'blockprop.peers.org' --peers $multi_aspect })
-        ve=(${vd[*]/#multi-propagation-endtoend/ 'render-multi-propagation' --org-report $adir/'blockprop.endtoend.org' --end-to-end $multi_aspect })
+        vb=(${v9[*]/#multi-propagation-control/  'render-multi-propagation' --typst $adir/'blockprop.control.typ' --control $multi_aspect })
+        vc=(${vb[*]/#multi-propagation-forger/   'render-multi-propagation' --typst $adir/'blockprop.forger.typ' --forger $multi_aspect })
+        vd=(${vc[*]/#multi-propagation-peers/    'render-multi-propagation' --typst $adir/'blockprop.peers.typ' --peers $multi_aspect })
+        ve=(${vd[*]/#multi-propagation-endtoend/ 'render-multi-propagation' --typst $adir/'blockprop.endtoend.typ' --end-to-end $multi_aspect })
         vf=(${ve[*]/#multi-propagation-gnuplot/  'render-multi-propagation' --gnuplot $adir/cdf/'%s.cdf' --full $multi_aspect })
         vg=(${vf[*]/#multi-propagation-full/     'render-multi-propagation' --pretty $adir/'blockprop-full.txt' --full $multi_aspect })
-        vh=(${vg[*]/#compare/ 'compare' --ede nix/workbench/ede --report $adir/report-$run.org ${compares[*]} })
-        vi=(${vh[*]/#update/  'compare' --ede nix/workbench/ede --report $adir/report-$run.org ${compares[*]} --template $adir/report-$run.ede })
-        vj=(${vi[*]/#multi-summary-json/            'render-multi-summary' --json $adir/'summary.json' })
-        vk=(${vj[*]/#multi-summary-report/          'render-multi-summary' --org-report $adir/'summary.org' })
+        vh=(${vg[*]/#compare/ 'compare' --typst $adir/report-$run.typ ${compares[*]} })
+        vj=(${vh[*]/#multi-summary-json/            'render-multi-summary' --json $adir/'summary.json' })
+        vk=(${vj[*]/#multi-summary-report/          'render-multi-summary' --typst $adir/'summary.typ' })
         vl=(${vk[@]/#write-context/                 'write-meta-genesis'   --run-metafile    $dir/meta.json --shelley-genesis $shelley_genesis })
-        local ops_final=(${vl[*]})
+        vm=(${vl[*]/#multi-clusterperf-snapshots/    'render-multi-clusterperf' --typst $adir/'clusterperf.snapshots.typ'    --snapshots     $multi_aspect })
+        vn=(${vm[*]/#multi-clusterperf-txprocessing/ 'render-multi-clusterperf' --typst $adir/'clusterperf.txprocessing.typ' --tx-processing $multi_aspect })
+        local ops_final=(${vn[*]})
 
         call_locli "$rtsmode" "${ops_final[@]}"
 

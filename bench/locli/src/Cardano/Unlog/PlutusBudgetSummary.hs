@@ -4,6 +4,7 @@ module Cardano.Unlog.PlutusBudgetSummary
        ( PlutusBudgetSummary
        , readBudgetSummaryMaybe
        , writeResultsCSV
+       , writeScalingCSV
        ) where
 
 import           Cardano.Ledger.Coin (Coin (..))
@@ -12,13 +13,29 @@ import           Prelude
 
 import           Data.Aeson as Aeson (FromJSON, decodeFileStrict, parseJSON, withObject, (.:))
 import           Data.List (transpose)
+import           Data.Maybe (catMaybes)
 import           Data.Text as T (Text, intercalate, pack, unlines)
 import           Data.Text.IO as T (writeFile)
 import           GHC.Generics (Generic)
 import           GHC.Natural (Natural)
 import           Numeric (showFFloatAlt)
 import           System.Directory (doesFileExist)
+import           System.FilePath ((</>))
 
+
+-- | Plutus workload calibration for a report: if every run has the generator's
+--   budget summary, write them as one CSV column per run into the report's directory,
+--   and return the CSV's file name (relative to that directory).
+--   The runs are given by their analysis directories.
+writeScalingCSV :: FilePath -> [FilePath] -> IO (Maybe FilePath)
+writeScalingCSV reportDir analysisDirs = do
+  scalings <- catMaybes <$> mapM (readBudgetSummaryMaybe . budgetSummaryFile) analysisDirs
+  if not (null scalings) && length scalings == length analysisDirs
+    then writeResultsCSV (reportDir </> scalingFile) scalings >> pure (Just scalingFile)
+    else pure Nothing
+  where
+    scalingFile = "plutus-workload-scaling.csv"
+    budgetSummaryFile adir = adir </> ".." </> "generator" </> "plutus-budget-summary.json"
 
 readBudgetSummaryMaybe :: FilePath -> IO (Maybe PlutusBudgetSummary)
 readBudgetSummaryMaybe fp = do

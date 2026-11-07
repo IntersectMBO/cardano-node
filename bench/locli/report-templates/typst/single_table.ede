@@ -1,0 +1,19 @@
+// A single table rendered by locli: one section of a run's (or multi-run's) analysis.
+// Compile with: typst compile <this file>
+//
+// The table is bound to `locli-table`, so the single-run report (main_single.ede) can
+// `#import` it without this file's title block.
+
+{% include "preamble.ede" %}
+
+#align(center)[
+{% if anchor.title %}  #text(size: 14pt, weight: "bold")[{{ anchor.title }}] \
+{% endif %}  #text(size: 9pt)[{{ anchor.subtitle }}]
+{% if anchor.dateVer %}  \ #text(size: 9pt)[{{ anchor.dateVer }}]
+{% endif %}]
+
+#let locli-table = [
+{% include "table_generic.ede" with table = table %}
+]
+
+#locli-table

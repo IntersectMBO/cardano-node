@@ -1,5 +1,32 @@
 # Revision history for locli
 
+## 3.0 -- NEXT
+
+* This version fully drops support for parsing legacy tracing / `iohk-monitoring-framework` generated log objects.
+* It also drops capability of parsing log object formats from the development stages of new tracing / `hermod-tracing`.
+* Any dependency on the `"kind":` field of log objects is removed, as this field is scheduled for deprecation in `hermod-tracing`.
+* Ledger snapshot events are now persisted with their enclosed time (duration).
+* Fixed double-counting ledger snapshot events in the machine timeline.
+* Fixed namespace drift for several traces, keeping backwards compatibility.
+* Fixed ChainSync server header announcements being recorded twice: the falling edge of `ChainSync.ServerHeader.Update` comes without a `risingEdge` field, not with `false`. Block propagation metrics were unaffected (they use the first announcement).
+* Fixed a Word64 underflow in the per-slot rejected transactions (timeline column `rejd`): the node can report a negative `rejected` count, which is now clamped to 0 before conversion.
+* `Data.CDF`: `cdfAverageVal` of a CDF of CDFs is the average over all its inputs' averages; `cdf` is total on empty input; removed the unused `collapseCDF`. Summary values are rounded to 3 decimals.
+* Re-rendering a single run from its analysis results (`read-summaries`, no chain rebuilt) keeps the filters, block domain and analysis time of its summary in the table headers.
+* Summary table: one row per manifest package (`<version> @ <commit>`), shorter labels ("LO": log object, explained in the Manifest section); the Manifest section and its table share one page.
+* New test: Parse a fixture file log stream and round-trip it through SQLite.
+* Typst replaces Org mode for all report output; Org mode support is removed entirely (no more Emacs / LaTeX dependency for PDFs).
+  - The `render-*` commands' `--typst` output: standalone single-table documents (summary, cluster performance, block propagation sections, profiling data), generated from bundled templates.
+  - New CLI command `report`: a single-run Typst report, bundling the single-table files next to it.
+  - The single-run report includes the Plutus workload calibration as an addendum, like `compare` does, if the run has the generator's budget summary (`plutus-workload-scaling.csv` is written next to the report).
+  - `compare` creates its Typst report from `--typst FILE`; the `--ede`, `--template` and `--report` options are gone, as are the dumped template environment and `.ede` files.
+  - Removed render formats `--org` and `--org-report`.
+  - Data values are escaped in all Typst tables (e.g. `---` no longer renders as an em dash).
+  - Comparison tables: the absolute delta (Δ) is formatted like the values it's taken from (no spurious decimals on large counts, no `0.000` for small timings); comparing more runs than a table has rows no longer aborts.
+* New report sections, on a page of their own after End-to-end propagation (single-run and comparison reports; CLI: `render-clusterperf --snapshots / --tx-processing`):
+  - **Ledger Snapshots:** snapshots taken (a count of 0 is highlighted as a warning), write duration, and RTS live data after major GCs during vs. outside snapshot writes.
+  - **Transaction Processing:** transactions processed / accepted / rejected, reject ratio, mempool fill level (per analysed slot), and process / GC / mutator CPU time divided by the transactions processed (in the new unit `ms`). Rejected counts are run totals (processed minus accepted), as the node's per-batch count isn't reliable.
+* Reading analysis results is lenient towards CDFs missing from `clusterperf.json` (e.g. written by an older locli): they read as empty, and reports show them as not available (`—`), so older runs can still be compared against, and combined with newer ones in multi-run (variance) summaries.
+
 ## 2.4 -- Jul 2026
 
 * Create Plutus workload calibration CSV as part of run comparison, and include as addendum in `typst` report.

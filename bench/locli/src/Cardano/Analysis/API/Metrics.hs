@@ -132,15 +132,15 @@ instance (KnownCDF f) => TimelineFields (Summary f)  where
       "Number of machines under analysis"
 
    <> fScalar "sumFilters"             W2  Cnt (IInt   $   length.snd.sumFilters)
-      "Number of filters applied"
+      "Filters applied, count"
       ""
 
    <> fScalar "cdfLogObjectsEmitted"   W12 Cnt (IFloat $ cdfAverageVal.cdfLogObjectsEmitted)
-      "Log objects emitted per host"
+      "LO emitted / host"
       ""
 
    <> fScalar "cdfLogObjects"          W12 Cnt (IFloat $ cdfAverageVal.cdfLogObjects)
-      "Log objects analysed per host"
+      "LO analysed / host"
       ""
 
    <> fScalar "cdfRuntime"             W7  Sec (IFloat $ cdfAverageVal.cdfRuntime)
@@ -152,7 +152,7 @@ instance (KnownCDF f) => TimelineFields (Summary f)  where
       ""
 
    <> fScalar "sumLogObjectsTotal"     W12 Cnt (IInt   $ unCount.arityProj cdfMedian.sumLogObjectsTotal)
-      "Total log objects analysed"
+      "LO analysed, total"
       ""
 
    <> fScalar "ddRawCount.sumDomainTime"      W12 Sec (IInt $ arityProj cdfMedian.ddRawCount.sumDomainTime)
@@ -187,16 +187,13 @@ instance (KnownCDF f) => TimelineFields (Summary f)  where
       "Blocks rejected"
       ""
    where
-     pkgCommit pkg = fScalar pkg W7  Ver
-                     (IText $ unCommit.ciCommit.getComponent pkg.manifest.sumMeta)
-                     (pkg <> " git") ""
-     pkgVersion pkg = fScalar pkg W12  Ver
-                     (IText $ unVersion.ciVersion.getComponent pkg.manifest.sumMeta)
-                     (pkg <> " version") ""
-     manifestFields = mconcat . mconcat $
-                       [ manifestPackages <&> pkgVersion
-                       , manifestPackages <&> pkgCommit
-                       ]
+     -- One row per package: "<version> @ <commit, shortened>".
+     pkgVersionCommit pkg = fScalar pkg Wno Ver
+                     (IText $ versionCommit.getComponent pkg.manifest.sumMeta)
+                     pkg ""
+     versionCommit ComponentInfo{ciVersion, ciCommit} =
+       unVersion ciVersion <> " @ " <> unCommit (unsafeShortenCommit 7 ciCommit)
+     manifestFields = mconcat $ manifestPackages <&> pkgVersionCommit
 
 -- fieldJSONOverlay f = (:[]) . tryOverlayFieldDescription f
 
@@ -447,10 +444,18 @@ perfSubsetFn :: PerfSubset -> (Field DSelect p a -> Bool)
 perfSubsetFn = \case
   PerfFull   -> const True
   PerfReport -> dFields mtFieldsReport
+  PerfSnapshots    -> dFields mtFieldsSnapshots
+  PerfTxProcessing -> dFields mtFieldsTxProcessing
 
 mtFieldsReport :: [FieldName]
 mtFieldsReport =
   [ "CentiCpu", "CentiGC", "CentiMut", "cdfSpanLensCpu", "RSS", "Heap", "Live", "Alloc", "GcsMinor", "GcsMajor", "NetRd", "NetWr", "FsRd", "FsWr", "cdfStarts" ]
+
+mtFieldsSnapshots, mtFieldsTxProcessing :: [FieldName]
+mtFieldsSnapshots =
+  [ "cdfSnapTaken", "cdfSnapDuration", "cdfLiveMajGcDuring", "cdfLiveMajGcOutside" ]
+mtFieldsTxProcessing =
+  [ "cdfTxsProcessed", "cdfTxsAccepted", "cdfTxsRejected", "cdfTxsRejectRatio", "cdfMempoolTxs", "cdfCpuPerTx", "cdfGcPerTx", "cdfMutPerTx" ]
 
 instance CDFFields MachPerf p where
   cdfFields =
@@ -516,7 +521,7 @@ instance CDFFields MachPerf p where
       "RTS-reported heap size, MB"
 
     , fGrp' "Live"               "Live"    (DWord64 (rLive.mpResourceCDFs))
-      "RTS live GC dateset"
+      "RTS live GC dataset"
       "RTS-reported GC live data size, MB"
     ]
    <> fBoth "Alloc"  "Alloc" "MB/s"     W5 MBs P0 Lin Free (DWord64 (rAlloc.mpResourceCDFs))
@@ -551,6 +556,56 @@ instance CDFFields MachPerf p where
       "CPU spans at Ep boundary"
       "Length of over-85% CPU usage peaks, starting at epoch boundary, slots"
     ]
+
+   -- Ledger Snapshots
+   <> fBoth "cdfSnapTaken"        "Snap" "taken" W4 Cnt P0 Lin Free (DWord64 cdfSnapTaken)
+      "Taken"
+      "Ledger snapshots taken (completed) per host, during the analysed slots. 0 most likely indicates a trace parsing failure"
+
+   <> fBoth "cdfSnapDuration"     "Snap" "dur"   W5 Sec P2 Lin Free (DDeltaT cdfSnapDuration)
+      "Duration"
+      "Time it took to write a ledger snapshot to disk (ChainDB.LedgerEvent.Snapshot.TookSnapshot)"
+
+   <> fBoth "cdfLiveMajGcDuring"  "Live"  "snap" W5 MB  P0 Lin Free (DWord64 cdfLiveMajGcDuring)
+      "Live after majGC, during"
+      "RTS-reported live data after a major GC that occurred during a ledger snapshot write (from its start until 5s after its completion)"
+
+   <> fBoth "cdfLiveMajGcOutside" "Live"  "other" W5 MB P0 Lin Free (DWord64 cdfLiveMajGcOutside)
+      "Live after majGC, outside"
+      "RTS-reported live data after a major GC that occurred outside of ledger snapshot writes. The decisive measure of retained data; usually few samples"
+
+   -- Transaction Processing
+   <> fBoth "cdfTxsProcessed"     "Txns" "proc"  W7 Cnt P0 Lin Free (DWord64 cdfTxsProcessed)
+      "Txns processed"
+      "Transactions received from peers and submitted to the mempool, per host, over the analysed slots"
+
+   <> fBoth "cdfTxsAccepted"      "Txns" "acc"   W7 Cnt P0 Lin Free (DWord64 cdfTxsAccepted)
+      "Txns accepted"
+      "Processed transactions that were added to the mempool"
+
+   <> fBoth "cdfTxsRejected"      "Txns" "rej"   W7 Cnt P0 Lin Free (DWord64 cdfTxsRejected)
+      "Txns rejected"
+      "Processed transactions not added to the mempool: invalid, or already known. Run total of processed minus accepted, as the node's per-batch count isn't reliable"
+
+   <> fBoth "cdfTxsRejectRatio"   "Txns" "rej/"  W5 Rto P3 Lin R01 (DFloat cdfTxsRejectRatio)
+      "Reject ratio"
+      "Rejected / processed transactions. Explains differences between raw and per-transaction CPU usage"
+
+   <> fBoth "cdfMempoolTxs"       "Mem"  "pool"  W5 Cnt P0 Lin Free (DWord64 cdfMempoolTxs)
+      "Mempool fill level"
+      "Transactions in the mempool, per analysed slot (time-weighted). Its fill level, not its configured capacity"
+
+   <> fBoth "cdfCpuPerTx"         "CPU"  "/tx"   W5 Ms P3 Lin Free (DFloat cdfCpuPerTx)
+      "Proc CPU ÷ txns"
+      "Kernel-reported process CPU time, divided by the transactions processed. Not a per-tx cost: includes block validation, forging, snapshots and GC"
+
+   <> fBoth "cdfGcPerTx"          "GC"   "/tx"   W5 Ms P3 Lin Free (DFloat cdfGcPerTx)
+      "GC CPU ÷ txns"
+      "RTS-reported GC CPU time, divided by the transactions processed (as above). A heap regression shows here first"
+
+   <> fBoth "cdfMutPerTx"         "MUT"  "/tx"   W5 Ms P3 Lin Free (DFloat cdfMutPerTx)
+      "Mut CPU ÷ txns"
+      "RTS-reported mutator CPU time, divided by the transactions processed (as above)"
 
   fieldJSONOverlay f kvs =
     [ overlay kvs

@@ -39,13 +39,11 @@ timelineFromLogObjects :: Run -> (LogObjectSource, [LogObject])
                        -> Either Text (LogObjectSource, (RunScalars, [SlotStats UTCTime]))
 timelineFromLogObjects _ (f, []) =
   Left $ "timelineFromLogObjects:  zero logobjects from " <> pack (logObjectSourceFile f)
-timelineFromLogObjects run@Run{genesis} (f, xs') =
+timelineFromLogObjects run@Run{genesis} (f, xs) =
   Right . (f,)
   $ foldl' (timelineStep run f) zeroTimelineAccum xs
   & (aRunScalars &&& reverse . aSlotStats)
  where
-   xs = filter (not . ("DecodeError" `textRefEquals`) . loKind) xs'
-
    firstRelevantLogObjectTime :: UTCTime
    firstRelevantLogObjectTime = loAt (head xs) `max` systemStart genesis
    firstLogObjectHost :: Host
@@ -98,6 +96,7 @@ timelineFromLogObjects run@Run{genesis} (f, xs') =
      , slDensity = 0
      , slResources = SNothing
      , slChainDBSnap = 0
+     , slSnapshot    = SNothing
      , slRejectedTx = 0
      , slBlockNo = 0
      , slBlockGap = 0
@@ -187,9 +186,11 @@ timelineStep Run{genesis} f accum@TimelineAccum{aSlotStats=cur:_, ..} lo =
   LogObject{loBody=LOMempoolRejectedTx} ->
     forTAHead accum
       (\s-> s { slRejectedTx = slRejectedTx cur + 1 })
-  LogObject{loBody=LOLedgerTookSnapshot} ->
+  -- we only count snapshot completion events (those that have an enclosedTime in their trace)
+  LogObject{loAt, loBody=LOLedgerTookSnapshot{loEnclosedTime=SJust duration}} ->
     forTAHead accum
-      (\s-> s { slChainDBSnap = slChainDBSnap cur + 1 })
+      (\s-> s { slChainDBSnap = slChainDBSnap cur + 1
+              , slSnapshot    = SJust (loAt, duration) })
   LogObject{loBody=LOLedgerMetrics _ utxo density} ->
     forTAHead accum
       (\s-> s { slUtxoSize = utxo, slDensity = density })
@@ -223,7 +224,7 @@ timelineStep Run{genesis} f accum@TimelineAccum{aSlotStats=cur:_, ..} lo =
               +
               fromSMaybe 0 slSpanTxsMem
       , slTxsAccepted = slTxsAccepted + acc
-      , slTxsRejected = slTxsRejected + max 0 (fromIntegral rej)
+      , slTxsRejected = slTxsRejected + fromIntegral (max 0 rej)
       })
     { aTxsCollectedAt = loTid `Map.delete` aTxsCollectedAt
     }
@@ -408,6 +409,7 @@ patchSlotGap genesis curSlot a@TimelineAccum{aSlotStats=last:_, ..} =
           , slUtxoSize    = slUtxoSize last
           , slDensity     = slDensity last
           , slChainDBSnap = 0
+          , slSnapshot    = SNothing
           , slRejectedTx  = 0
           , slBlockNo     = aBlockNo
           , slBlockGap    = unSlotNo $ slot - aLastBlockSlot
@@ -451,6 +453,7 @@ addTimelineSlot genesis slot _time a@TimelineAccum{..} =
         , slUtxoSize    = 0
         , slDensity     = 0
         , slChainDBSnap = 0
+        , slSnapshot    = SNothing
         , slRejectedTx  = 0
         , slBlockNo     = aBlockNo
         , slBlockGap    = unSlotNo $ slot - aLastBlockSlot
@@ -591,11 +594,64 @@ slotStatsMachPerf run (f, slots) =
     , cdfSpanLensCpu       = dist sssSpanLensCpu
     , cdfSpanLensCpuEpoch  = dist sssSpanLensCpuEpoch
     , cdfSpanLensCpuRwd    = dist sssSpanLensCpuRwd
+    --
+    , cdfSnapTaken         = dist [sum (slChainDBSnap <$> slots)]
+    , cdfSnapDuration      = dist (snd <$> snapshots)
+    , cdfLiveMajGcDuring   = dist [ rLive r | (sl, r) <- majorGcSlots, duringSnapshot sl ]
+    , cdfLiveMajGcOutside  = dist [ rLive r | (sl, r) <- majorGcSlots, not (duringSnapshot sl) ]
+    --
+    , cdfTxsProcessed      = dist [txsProcessed]
+    , cdfTxsAccepted       = dist [txsAccepted]
+    , cdfTxsRejected       = dist [txsRejected]
+    , cdfTxsRejectRatio    = dist [perProcessedTx (fromIntegral txsRejected)]
+    , cdfMempoolTxs        = dist (slMempoolTxs <$> slots)
+    , cdfCpuPerTx          = dist [cpuMsPerTx rCentiCpu]
+    , cdfMutPerTx          = dist [cpuMsPerTx rCentiMut]
+    , cdfGcPerTx           = dist [cpuMsPerTx rCentiGC]
     , mpResourceCDFs       = computeResCDF stdCentiles slResources slots
     , ..
     }
   )
  where
+   Run{genesis = Genesis{slotLength}} = run
+
+   -- Ledger snapshots: completion time and duration of each.
+   snapshots :: [(UTCTime, NominalDiffTime)]
+   snapshots = slSnapshot `mapSMaybe` slots
+
+   -- A snapshot write window spans from its start until 5s after its completion,
+   -- to also catch the major GC that typically follows the write.
+   snapshotWindows :: [(UTCTime, UTCTime)]
+   snapshotWindows = snapshots <&>
+     \(done, duration) -> (negate duration `Time.addUTCTime` done, 5 `Time.addUTCTime` done)
+
+   duringSnapshot :: SlotStats a -> Bool
+   duringSnapshot SlotStats{slStart = SlotStart start} =
+     any (\(from, to) -> from <= end && start <= to) snapshotWindows
+    where end = slotLength `Time.addUTCTime` start
+
+   -- Slots whose resource sample saw at least one major GC; their live data is the one after it.
+   majorGcSlots :: [(SlotStats NominalDiffTime, Resources Word64)]
+   majorGcSlots = [ (sl, r) | sl@SlotStats{slResources = SJust r} <- slots, rGcsMajor r > 0 ]
+
+   -- Transaction processing: run totals. Per event, the node's 'rejected' count is unreliable
+   -- (computed against a different batch than 'accepted'); over the run, collected minus accepted is exact.
+   txsProcessed, txsAccepted, txsRejected :: Word64
+   txsProcessed = sum (slTxsCollected <$> slots)
+   txsAccepted  = sum (slTxsAccepted  <$> slots)
+   txsRejected  = txsProcessed - min txsProcessed txsAccepted
+
+   perProcessedTx :: Double -> Double
+   perProcessedTx x = if txsProcessed == 0 then 0 else x / fromIntegral txsProcessed
+
+   -- CPU time over the analysed slots, in ms per processed tx: the mean per-slot CPU share
+   -- (% of a core) times the analysed time, robust against slots without a resource sample.
+   cpuMsPerTx :: (Resources Word64 -> Word64) -> Double
+   cpuMsPerTx proj = perProcessedTx $ meanShare / 100 * analysedSeconds * 1000
+    where
+      shares = [ fromIntegral (proj r) | SJust r <- slResources <$> slots ] :: [Double]
+      meanShare = if null shares then 0 else sum shares / fromIntegral (length shares)
+      analysedSeconds = fromIntegral (length slots) * realToFrac slotLength
    domSlots = mkDataDomainInj sFirst sLast (fromIntegral . unSlotNo)
 
    (,) sFirst sLast = (slSlot . head &&& slSlot . last) slots
@@ -607,6 +663,15 @@ slotStatsMachPerf run (f, slots) =
 
 -- * 5. Multi-machine & multi-run summaries:
 --
+-- | For sample-based metrics, a host without samples (e.g. no major GC outside snapshot writes)
+--   would pull the unweighted average of averages towards 0: combine only the non-empty CDFs,
+--   unless all of them are empty. Across runs, this also keeps the analysis of a run that
+--   lacks a metric (by an older locli; read as an empty CDF) from failing the combination.
+nonEmptyCDFs :: [CDF p a] -> [CDF p a]
+nonEmptyCDFs xs = case filter ((> 0) . cdfSize) xs of
+  [] -> xs
+  ys -> ys
+
 summariseClusterPerf :: [Centile] -> [MachPerfOne] -> Either CDFError ClusterPerf
 summariseClusterPerf _ [] = error "Asked to summarise empty list of MachPerfOne"
 summariseClusterPerf centiles mps@(headline:_) = do
@@ -624,6 +689,18 @@ summariseClusterPerf centiles mps@(headline:_) = do
   cdfSpanLensCpu       <- cdf2OfCDFs comb $ mps <&> cdfSpanLensCpu
   cdfSpanLensCpuEpoch  <- cdf2OfCDFs comb $ mps <&> cdfSpanLensCpuEpoch
   cdfSpanLensCpuRwd    <- cdf2OfCDFs comb $ mps <&> cdfSpanLensCpuRwd
+  cdfSnapTaken         <- cdf2OfCDFs comb $ mps <&> cdfSnapTaken
+  cdfSnapDuration      <- cdf2OfCDFs comb $ nonEmptyCDFs $ mps <&> cdfSnapDuration
+  cdfLiveMajGcDuring   <- cdf2OfCDFs comb $ nonEmptyCDFs $ mps <&> cdfLiveMajGcDuring
+  cdfLiveMajGcOutside  <- cdf2OfCDFs comb $ nonEmptyCDFs $ mps <&> cdfLiveMajGcOutside
+  cdfTxsProcessed      <- cdf2OfCDFs comb $ mps <&> cdfTxsProcessed
+  cdfTxsAccepted       <- cdf2OfCDFs comb $ mps <&> cdfTxsAccepted
+  cdfTxsRejected       <- cdf2OfCDFs comb $ mps <&> cdfTxsRejected
+  cdfTxsRejectRatio    <- cdf2OfCDFs comb $ mps <&> cdfTxsRejectRatio
+  cdfMempoolTxs        <- cdf2OfCDFs comb $ mps <&> cdfMempoolTxs
+  cdfCpuPerTx          <- cdf2OfCDFs comb $ mps <&> cdfCpuPerTx
+  cdfMutPerTx          <- cdf2OfCDFs comb $ mps <&> cdfMutPerTx
+  cdfGcPerTx           <- cdf2OfCDFs comb $ mps <&> cdfGcPerTx
   mpResourceCDFs       <- sequence $ traverse (identity . mpResourceCDFs) mps <&>
     \case
       [] -> Left CDFEmptyDataset
@@ -645,20 +722,32 @@ summariseClusterPerf centiles mps@(headline:_) = do
 summariseMultiClusterPerf :: [Centile] -> [ClusterPerf] -> Either CDFError MultiClusterPerf
 summariseMultiClusterPerf _ [] = error "Asked to summarise empty list of MachPerfOne"
 summariseMultiClusterPerf centiles mps@(headline:_) = do
-  cdfHostSlots         <- cdf2OfCDFs comb $ mps <&> cdfHostSlots
-  cdfStarts            <- cdf2OfCDFs comb $ mps <&> cdfStarts
-  cdfLeads             <- cdf2OfCDFs comb $ mps <&> cdfLeads
-  cdfUtxo              <- cdf2OfCDFs comb $ mps <&> cdfUtxo
-  cdfDensity           <- cdf2OfCDFs comb $ mps <&> cdfDensity
-  cdfStarted           <- cdf2OfCDFs comb $ mps <&> cdfStarted
-  cdfBlkCtx            <- cdf2OfCDFs comb $ mps <&> cdfBlkCtx
-  cdfLgrState          <- cdf2OfCDFs comb $ mps <&> cdfLgrState
-  cdfLgrView           <- cdf2OfCDFs comb $ mps <&> cdfLgrView
-  cdfLeading           <- cdf2OfCDFs comb $ mps <&> cdfLeading
-  cdfBlockGap          <- cdf2OfCDFs comb $ mps <&> cdfBlockGap
-  cdfSpanLensCpu       <- cdf2OfCDFs comb $ mps <&> cdfSpanLensCpu
-  cdfSpanLensCpuEpoch  <- cdf2OfCDFs comb $ mps <&> cdfSpanLensCpuEpoch
-  cdfSpanLensCpuRwd    <- cdf2OfCDFs comb $ mps <&> cdfSpanLensCpuRwd
+  cdfHostSlots         <- cdf2OfCDFs comb $ nonEmptyCDFs $ mps <&> cdfHostSlots
+  cdfStarts            <- cdf2OfCDFs comb $ nonEmptyCDFs $ mps <&> cdfStarts
+  cdfLeads             <- cdf2OfCDFs comb $ nonEmptyCDFs $ mps <&> cdfLeads
+  cdfUtxo              <- cdf2OfCDFs comb $ nonEmptyCDFs $ mps <&> cdfUtxo
+  cdfDensity           <- cdf2OfCDFs comb $ nonEmptyCDFs $ mps <&> cdfDensity
+  cdfStarted           <- cdf2OfCDFs comb $ nonEmptyCDFs $ mps <&> cdfStarted
+  cdfBlkCtx            <- cdf2OfCDFs comb $ nonEmptyCDFs $ mps <&> cdfBlkCtx
+  cdfLgrState          <- cdf2OfCDFs comb $ nonEmptyCDFs $ mps <&> cdfLgrState
+  cdfLgrView           <- cdf2OfCDFs comb $ nonEmptyCDFs $ mps <&> cdfLgrView
+  cdfLeading           <- cdf2OfCDFs comb $ nonEmptyCDFs $ mps <&> cdfLeading
+  cdfBlockGap          <- cdf2OfCDFs comb $ nonEmptyCDFs $ mps <&> cdfBlockGap
+  cdfSpanLensCpu       <- cdf2OfCDFs comb $ nonEmptyCDFs $ mps <&> cdfSpanLensCpu
+  cdfSpanLensCpuEpoch  <- cdf2OfCDFs comb $ nonEmptyCDFs $ mps <&> cdfSpanLensCpuEpoch
+  cdfSpanLensCpuRwd    <- cdf2OfCDFs comb $ nonEmptyCDFs $ mps <&> cdfSpanLensCpuRwd
+  cdfSnapTaken         <- cdf2OfCDFs comb $ nonEmptyCDFs $ mps <&> cdfSnapTaken
+  cdfSnapDuration      <- cdf2OfCDFs comb $ nonEmptyCDFs $ mps <&> cdfSnapDuration
+  cdfLiveMajGcDuring   <- cdf2OfCDFs comb $ nonEmptyCDFs $ mps <&> cdfLiveMajGcDuring
+  cdfLiveMajGcOutside  <- cdf2OfCDFs comb $ nonEmptyCDFs $ mps <&> cdfLiveMajGcOutside
+  cdfTxsProcessed      <- cdf2OfCDFs comb $ nonEmptyCDFs $ mps <&> cdfTxsProcessed
+  cdfTxsAccepted       <- cdf2OfCDFs comb $ nonEmptyCDFs $ mps <&> cdfTxsAccepted
+  cdfTxsRejected       <- cdf2OfCDFs comb $ nonEmptyCDFs $ mps <&> cdfTxsRejected
+  cdfTxsRejectRatio    <- cdf2OfCDFs comb $ nonEmptyCDFs $ mps <&> cdfTxsRejectRatio
+  cdfMempoolTxs        <- cdf2OfCDFs comb $ nonEmptyCDFs $ mps <&> cdfMempoolTxs
+  cdfCpuPerTx          <- cdf2OfCDFs comb $ nonEmptyCDFs $ mps <&> cdfCpuPerTx
+  cdfMutPerTx          <- cdf2OfCDFs comb $ nonEmptyCDFs $ mps <&> cdfMutPerTx
+  cdfGcPerTx           <- cdf2OfCDFs comb $ nonEmptyCDFs $ mps <&> cdfGcPerTx
   mpResourceCDFs       <- sequence $ traverse (identity . mpResourceCDFs) mps <&>
     \case
       [] -> Left CDFEmptyDataset

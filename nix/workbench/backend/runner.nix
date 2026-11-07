@@ -268,7 +268,7 @@ let
             tee $out/wb-analyse.log
 
         cd $out
-        for x in $(ls *.json *.org *.txt | grep -v 'flt\.json$')
+        for x in $(ls *.json *.typ *.txt | grep -v 'flt\.json$')
         do echo "report $x $out $x" >> $out/nix-support/hydra-build-products
         done
         EOF
