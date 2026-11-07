@@ -53,9 +53,11 @@ This is the release process for node releases.
    integration tests before integration proceeds up the stack. Integration
    tests using the `cardano-testnet` package (in this repository) provide the
    primary integration signal at the node level.
-4. When the full stack is stable, components are released to CHaP bottom-up
-   and the Release Engineer replaces source-repository-package (SRP) stanzas
-   with the CHaP releases, working up the stack until the node is ready.
+4. When the full stack is stable, upstream components are released to CHaP
+   bottom-up, and the Release Engineer replaces source-repository-package
+   (SRP) stanzas with the CHaP releases, working up the stack until the node
+   is ready. With those dependency updates in place, prepare the
+   [Herald-managed packages](#herald-managed-packages) in this repository.
    For each new release, including a pre-release, the Release Engineer bumps
    the `cardano-node` Cabal version and, in the same change, increments the
    minor block-header protocol version to the next unused integer for that
@@ -216,6 +218,12 @@ to a full release in GitHub without any code changes or new tags.
 Example: `10.2.1` was published as a GitHub pre-release for approximately one
 month before being promoted to a full release. The tag was always `10.2.1`;
 only the GitHub release type changed.
+
+## Herald-managed packages
+
+`cardano-node-chairman`, `cardano-submit-api` and `cardano-testnet` manage changelogs with herald (see `.herald.yml`): each PR adds a fragment under the package's `.changes/` directory.
+Before merging and tagging the release, run `herald batch <package>` (available in the nix dev shell) to compile the changelog and bump the version in the cabal file.
+It bumps relative to the current cabal version, so pass the version explicitly (`-v A.B.C.D`) if that was already bumped by hand.
 
 # Collaboration
 
