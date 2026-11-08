@@ -167,8 +167,8 @@ if impl(ghc >= 9.14)
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: 1f2984cc9726f3c9f33a9e92298a6b3ce1237d88
-  --sha256: sha256-loNldxpkab6BnUv+rGSSTekNNrjrPm3ArVOQsb+l4oI=
+  tag: bca9f350e71567edfd1faec364bedc9bd2bd1a51
+  --sha256: sha256-q2ShDKjvwjfM5/RScs7G4ZkHFA7ioHT582K4X81mSDM=
 
 -- ouroboros-network leios-prototype with the egress scheduler
 source-repository-package
