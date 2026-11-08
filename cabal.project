@@ -166,13 +166,12 @@ if impl(ghc >= 9.14)
 -- ouroboros-consensus leios-prototype with the egress scheduler and adaptive endorsements,
 -- at the w45 pin (1f2984cc9) plus the voting-loop change of
 -- IntersectMBO/ouroboros-consensus#2498 (the closure's input table kept outside the
--- ledger state), for a single-host measurement. The sha256 below is the w45 pin's and
--- must be refreshed for a nix build.
+-- ledger state), for a single-host measurement.
 source-repository-package
   type: git
   location: https://github.com/EzequielPostan/ouroboros-consensus
   tag: c3bd32639954de6938eb7424349d6c93309aca9b
-  --sha256: sha256-loNldxpkab6BnUv+rGSSTekNNrjrPm3ArVOQsb+l4oI=
+  --sha256: sha256-RmDXvxYHd8PxXvTfweu5NP3MsZfj4uFCOOpc93sF8oU=
 
 -- ouroboros-network leios-prototype with the egress scheduler
 source-repository-package
