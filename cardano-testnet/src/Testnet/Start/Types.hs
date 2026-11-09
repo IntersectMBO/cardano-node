@@ -361,7 +361,6 @@ defaultTestnetDir = "./testnet"
 -- directory is created if it doesn't exist yet.
 mkConfigAbsolute :: FilePath -> IO Conf
 mkConfigAbsolute userOutputDir = do
-
   absUserOutputDir <-  makeAbsolute userOutputDir
   dirExists <- doesDirectoryExist absUserOutputDir
   let conf = mkConfig absUserOutputDir

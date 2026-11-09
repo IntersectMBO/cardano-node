@@ -7,7 +7,7 @@ module Cardano.Testnet.Test.EnableTracer
   ( hprop_enable_tracer
   ) where
 
-import           Cardano.Testnet (TestnetRuntimeOptions (..), TraceSupport (..), createAndRunTestnet, mkConf)
+import           Cardano.Testnet (TestnetRuntimeOptions (..), TraceSupport (..), createAndRunTestnet, mkConfig)
 
 import           Control.Monad (forM_)
 import           Data.Default.Class (def)
@@ -36,7 +36,7 @@ hprop_enable_tracer = integrationRetryWorkspace 2 "enable-tracer" $ \tmpDir -> H
   let creationOptions = def
       runtimeOptions = def { runtimeEnableTracer = TraceEnabled "127.0.0.1" Nothing }
 
-  conf <- mkConf tmpDir
+  let conf = mkConfig tmpDir
   runtime <- createAndRunTestnet creationOptions runtimeOptions conf
 
   -- The tracer writes its configuration to the testnet directory and its

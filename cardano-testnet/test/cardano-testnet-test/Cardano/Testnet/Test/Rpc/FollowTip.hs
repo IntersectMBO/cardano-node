@@ -45,7 +45,7 @@ import qualified Hedgehog.Extras as H
 -- @TASTY_PATTERN='/RPC FollowTip/' cabal test cardano-testnet-test@
 hprop_rpc_follow_tip :: H.Property
 hprop_rpc_follow_tip = integrationRetryWorkspace 2 "rpc-follow-tip" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
-  conf <- mkConf tempAbsBasePath'
+  let conf = mkConfig tempAbsBasePath'
 
   let era = Exp.ConwayEra
       sbe = convert era

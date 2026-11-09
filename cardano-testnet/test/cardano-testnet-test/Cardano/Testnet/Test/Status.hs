@@ -9,7 +9,7 @@ module Cardano.Testnet.Test.Status
 import           Cardano.Api (CardanoEra (..))
 
 import           Cardano.Testnet (TestnetNode (..), TestnetRuntime (..), createAndRunTestnet,
-                   defaultManifestFile, isTestnetNodeSpo, mkConf)
+                   defaultManifestFile, isTestnetNodeSpo, mkConfig)
 
 import           Prelude
 
@@ -42,7 +42,7 @@ import           RIO (tryAny)
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/Status reports network health/"'@
 hprop_status :: Property
 hprop_status = integrationRetryWorkspace 2 "status" $ \tmpDir -> H.runWithDefaultWatchdog_ $ do
-  conf <- mkConf tmpDir
+  let conf = mkConfig tmpDir
   TestnetRuntime{testnetNodes} <- createAndRunTestnet def def conf
 
   running <- H.evalIO $ checkStatus tmpDir 5
