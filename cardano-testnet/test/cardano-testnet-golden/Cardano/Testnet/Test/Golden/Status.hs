@@ -49,15 +49,15 @@ sampleReport = StatusReport
   , reportBestTip            = Just freshTip
   , reportNodes              =
       [ NodeProbeResult "node1" RoleSpo (Just 12345) (Just True) NodeOk (Just freshTip) Nothing
-          "logs/node1/stdout.log" "logs/node1/stderr.log" (Just 0) (Just sampleMempool)
+          "logs/node1/stdout.log" "logs/node1/stderr.log" (Just 0) (Just sampleMempool) (Just True)
       , NodeProbeResult "node2" RoleRelay (Just 12346) (Just True) NodeStalled (Just oldTip) Nothing
-          "logs/node2/stdout.log" "logs/node2/stderr.log" (Just 36) (Just emptyMempool)
+          "logs/node2/stdout.log" "logs/node2/stderr.log" (Just 36) (Just emptyMempool) (Just False)
       , NodeProbeResult "node3" RoleRelay Nothing Nothing NodeUnreachable Nothing
           (Just "no answer within 5s")
-          "logs/node3/stdout.log" "logs/node3/stderr.log" Nothing Nothing
+          "logs/node3/stdout.log" "logs/node3/stderr.log" Nothing Nothing Nothing
       , NodeProbeResult "node4" RoleRelay (Just 12348) (Just False) NodeDown Nothing
           (Just "Network.Socket.connect: <socket: 23>: does not exist (Connection refused)")
-          "logs/node4/stdout.log" "logs/node4/stderr.log" Nothing Nothing
+          "logs/node4/stdout.log" "logs/node4/stderr.log" Nothing Nothing Nothing
       ]
   , reportProblemExplanation = Nothing
   , reportChain              = Just (ChainInfo (AnyCardanoEra ConwayEra) (EpochNo 2) 234 266)
@@ -82,9 +82,9 @@ sampleRunningReport = sampleReport
   { reportStatus = NetworkRunning
   , reportNodes =
       [ NodeProbeResult "node1" RoleSpo (Just 12345) (Just True) NodeOk (Just freshTip) Nothing
-          "logs/node1/stdout.log" "logs/node1/stderr.log" (Just 0) (Just sampleMempool)
+          "logs/node1/stdout.log" "logs/node1/stderr.log" (Just 0) (Just sampleMempool) (Just True)
       , NodeProbeResult "node2" RoleRelay (Just 12346) (Just True) NodeOk (Just freshTip) Nothing
-          "logs/node2/stdout.log" "logs/node2/stderr.log" (Just 0) (Just sampleMempool)
+          "logs/node2/stdout.log" "logs/node2/stderr.log" (Just 0) (Just sampleMempool) (Just True)
       ]
   }
 
@@ -95,10 +95,10 @@ sampleStalledReport = sampleReport
   , reportChain = Just (ChainInfo (AnyCardanoEra ConwayEra) (EpochNo 0) 400 100)
   , reportNodes =
       [ NodeProbeResult "node1" RoleSpo (Just 12345) (Just True) NodeStalled (Just oldTip) Nothing
-          "logs/node1/stdout.log" "logs/node1/stderr.log" (Just 0) (Just emptyMempool)
+          "logs/node1/stdout.log" "logs/node1/stderr.log" (Just 0) (Just emptyMempool) (Just True)
       , NodeProbeResult "node2" RoleRelay (Just 12346) (Just False) NodeDown Nothing
           (Just "Network.Socket.connect: <socket: 23>: does not exist (Connection refused)")
-          "logs/node2/stdout.log" "logs/node2/stderr.log" Nothing Nothing
+          "logs/node2/stdout.log" "logs/node2/stderr.log" Nothing Nothing Nothing
       ]
   }
 
@@ -109,9 +109,9 @@ sampleStalledNoBlocksReport = sampleReport
   , reportChain = Nothing
   , reportNodes =
       [ NodeProbeResult "node1" RoleSpo (Just 12345) (Just True) NodeStalled Nothing Nothing
-          "logs/node1/stdout.log" "logs/node1/stderr.log" Nothing (Just emptyMempool)
+          "logs/node1/stdout.log" "logs/node1/stderr.log" Nothing (Just emptyMempool) Nothing
       , NodeProbeResult "node2" RoleRelay (Just 12346) (Just True) NodeStalled Nothing Nothing
-          "logs/node2/stdout.log" "logs/node2/stderr.log" Nothing (Just emptyMempool)
+          "logs/node2/stdout.log" "logs/node2/stderr.log" Nothing (Just emptyMempool) Nothing
       ]
   }
 
@@ -123,10 +123,10 @@ sampleStoppedReport = sampleReport
   , reportNodes =
       [ NodeProbeResult "node1" RoleSpo (Just 12345) (Just False) NodeDown Nothing
           (Just "Network.Socket.connect: <socket: 23>: does not exist (Connection refused)")
-          "logs/node1/stdout.log" "logs/node1/stderr.log" Nothing Nothing
+          "logs/node1/stdout.log" "logs/node1/stderr.log" Nothing Nothing Nothing
       , NodeProbeResult "node2" RoleRelay Nothing Nothing NodeUnreachable Nothing
           (Just "no answer within 5s")
-          "logs/node2/stdout.log" "logs/node2/stderr.log" Nothing Nothing
+          "logs/node2/stdout.log" "logs/node2/stderr.log" Nothing Nothing Nothing
       ]
   }
 

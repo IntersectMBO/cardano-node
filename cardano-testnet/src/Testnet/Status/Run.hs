@@ -8,27 +8,36 @@ module Testnet.Status.Run (
     calcNodeState,
     classifyNetwork,
     newestTip,
+    forkReference,
+    onReferenceChain,
+    askOnChain,
     renderStatusReportHumanReadable,
 ) where
 
-import           Cardano.Api (BlockNo (..), CardanoEra (..), ChainTip (..),
-                   ConsensusModeParams (..), EpochNo (..), LocalNodeConnectInfo (..),
-                   LocalTxMonitoringQuery (..), LocalTxMonitoringResult (..),
-                   MempoolSizeAndCapacity (..), NetworkId (..), NetworkMagic (..), ShelleyGenesis,
-                   SlotNo (..), SlotsInEpoch (..), SlotsToEpochEnd (..), SocketPath, Target (..),
+import           Cardano.Api (BlockInMode, BlockNo (..), CardanoEra (..), ChainPoint (..),
+                   ChainSyncClient (..), ChainTip (..), ConsensusModeParams (..), EpochNo (..),
+                   LocalChainSyncClient (..), LocalNodeClientProtocols (..),
+                   LocalNodeConnectInfo (..), LocalTxMonitoringQuery (..),
+                   LocalTxMonitoringResult (..), MempoolSizeAndCapacity (..), NetworkId (..),
+                   NetworkMagic (..), ShelleyGenesis, SlotNo (..), SlotsInEpoch (..),
+                   SlotsToEpochEnd (..), SocketPath, Target (..), connectToLocalNode,
                    executeLocalStateQueryExpr, getLocalChainTip, mapFile, queryCurrentEra,
                    queryEraHistory, queryTxMonitoringLocal, slotToEpoch)
 
 import qualified Cardano.Ledger.Shelley.API as SL
 import           Cardano.Node.Testnet.Paths (defaultGenesisFilepath, defaultManifestFile)
 import           Cardano.Prelude (Nat, NonEmpty, Word32, toList, transpose)
+import           Ouroboros.Network.Protocol.ChainSync.Client (ClientStIdle (..),
+                   ClientStIntersect (..))
 
 import           Prelude
 
+import           Control.Concurrent.MVar (MVar, newEmptyMVar, putMVar, takeMVar)
 import           Data.Aeson (FromJSON, eitherDecodeFileStrict')
 import           Data.Aeson.Encode.Pretty (encodePretty)
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Foldable (maximumBy)
+import           Data.List (intercalate, zip4)
 import           Data.List.NonEmpty (nonEmpty)
 import           Data.Maybe (fromMaybe, isNothing, mapMaybe)
 import           Data.Ord (comparing)
@@ -82,8 +91,9 @@ runCheckStatusOptions
 -- | Check the testnet in the given output directory. All nodes are asked for
 -- their tips at the same time. Then, also at the same time, each node that
 -- answered is asked about its mempool, and the node with the best tip is asked
--- where the chain is. Each query gets the given number of seconds, so the
--- check takes at most twice that long. It throws when the check itself
+-- where the chain is, and the node with the most blocks whether the tips of
+-- the others are on its chain. Each query gets the given number of seconds,
+-- so the check takes at most twice that long. It throws when the check itself
 -- fails: when the manifest, or the shelley genesis it points to, cannot be
 -- read.
 checkStatus :: HasCallStack => FilePath -> Nat -> IO StatusReport
@@ -115,19 +125,24 @@ checkNodes outputDir timeoutSeconds manifest@(Manifest{manifestNetwork = Manifes
     case [ (node, tip) | (node, probe) <- probed, Just tip <- [probeNodeTipInfo probe], Just tip == bestTip ] of
       (node, tip) : _ -> askChainInfo timeoutSeconds (connectInfoOf node) (tipSlot tip)
       [] -> pure Nothing
+  forkQuery <- async $
+    case forkReference [ (node, probeNodeTipInfo probe) | (node, probe) <- probed ] of
+      Just (node, reference) -> askOnChain timeoutSeconds (connectInfoOf node) reference tips
+      Nothing -> pure $ map (const Nothing) tips
   mempools <- forConcurrently probed $ \(node, probe) ->
     if isNothing (probeError probe)
       then askMempool timeoutSeconds (connectInfoOf node)
       else pure Nothing
   chain <- wait chainQuery
+  onChain <- wait forkQuery
   pure StatusReport
          { reportOutputDir = outputDir
          , reportCheckedAt = checkedAt
          , reportStatus = classifyNetwork (probeNodeState <$> nodes)
          , reportBestTip = bestTip
          , reportNodes =
-             [ probe{probeBlocksBehind = behind, probeMempool = mempool}
-             | (probe, behind, mempool) <- zip3 (toList nodes) (blocksBehind tips) mempools
+             [ probe{probeBlocksBehind = behind, probeMempool = mempool, probeOnLongestChain = onLongest}
+             | (probe, behind, mempool, onLongest) <- zip4 (toList nodes) (blocksBehind tips) mempools onChain
              ]
          , reportProblemExplanation = Nothing
          , reportChain = chain
@@ -176,6 +191,7 @@ probeNode outputDir timeoutSeconds magic limit slotStart
          , probeStderrFile = stderrFile
          , probeBlocksBehind = Nothing -- set by 'checkNodes'
          , probeMempool = Nothing -- set by 'checkNodes'
+         , probeOnLongestChain = Nothing -- set by 'checkNodes'
          }
   where
     askTip :: IO NodeAnswer
@@ -244,6 +260,47 @@ askChainInfo timeoutSeconds connectInfo slot = do
         Left _ -> Nothing
     _ -> Nothing
 
+-- | Ask the reference node, on a connection of its own, whether the tip of
+-- each node is on its chain. It uses the chain-sync request to find an
+-- intersection: the node finds a point when it is on its current chain,
+-- however old the point is. It asks about its own tip first, then about the
+-- tip of each node, in order, and 'onReferenceChain' turns the answers into
+-- one answer per node.
+askOnChain :: Nat -> LocalNodeConnectInfo -> TipInfo -> [Maybe TipInfo] -> IO [Maybe Bool]
+askOnChain timeoutSeconds connectInfo reference tips = do
+  resultVar <- newEmptyMVar
+  result <- tryAny . timeout (fromIntegral (timeoutSeconds * 1_000_000)) $ do
+    connectToLocalNode
+      connectInfo
+      LocalNodeClientProtocols
+        { localChainSyncClient = LocalChainSyncClient $ findEach resultVar [] (Just reference : tips)
+        , localTxSubmissionClient = Nothing
+        , localStateQueryClient = Nothing
+        , localTxMonitoringClient = Nothing
+        }
+    takeMVar resultVar
+  pure . onReferenceChain tips $ case result of
+    Right answers -> answers
+    Left _ -> Nothing
+  where
+    findEach
+      :: MVar [Maybe Bool] -- ^ where to put the answers
+      -> [Maybe Bool] -- ^ the answers so far, the newest first
+      -> [Maybe TipInfo] -- ^ the tips left to ask about
+      -> ChainSyncClient BlockInMode ChainPoint ChainTip IO ()
+    findEach resultVar found [] = ChainSyncClient $ do
+      putMVar resultVar (reverse found)
+      pure $ SendMsgDone ()
+    findEach resultVar found (Nothing : rest) = findEach resultVar (Nothing : found) rest
+    findEach resultVar found (Just tip : rest) =
+      ChainSyncClient . pure $
+        SendMsgFindIntersect
+          [tipPoint tip]
+          ClientStIntersect
+            { recvMsgIntersectFound = \_ _ -> findEach resultVar (Just True : found) rest
+            , recvMsgIntersectNotFound = \_ -> findEach resultVar (Just False : found) rest
+            }
+
 -- | The rule for the whole network.
 classifyNetwork :: NonEmpty NodeState -> NetworkStatus
 classifyNetwork states
@@ -281,6 +338,31 @@ blocksBehind tips = map (fmap behind) tips
     most = maximum (0 : [unBlockNo (tipBlockNo tip) | Just tip <- tips])
     behind tip = most - unBlockNo (tipBlockNo tip)
 
+-- | The rule for the node that the others are compared with, to find forks:
+-- the one with the most blocks, or the first of them when several have as
+-- many.
+forkReference :: [(a, Maybe TipInfo)] -> Maybe (a, TipInfo)
+forkReference nodes = foldl pick Nothing [ (node, tip) | (node, Just tip) <- nodes ]
+  where
+    pick (Just best) next
+      | tipBlockNo (snd next) <= tipBlockNo (snd best) = Just best
+    pick _ next = Just next
+
+-- | The rule for forks, from the reference node's answers ('askOnChain'):
+-- first about its own tip, then about the tip of each node ('Nothing' for a
+-- node without a tip). When its own tip is on its chain, the answers about the
+-- nodes are the result: 'Just True' for a node on the reference chain,
+-- 'Just False' for a node on a fork. Otherwise every node is unknown
+-- ('Nothing'): the reference node did not answer, or it switched to another
+-- chain after it told its tip, so its answers are about another chain.
+onReferenceChain :: [Maybe TipInfo] -> Maybe [Maybe Bool] -> [Maybe Bool]
+onReferenceChain _ (Just (Just True : answers)) = answers
+onReferenceChain tips _ = map (const Nothing) tips
+
+-- | The point of the chain that a tip is at.
+tipPoint :: TipInfo -> ChainPoint
+tipPoint tip = ChainPoint (tipSlot tip) (tipHash tip)
+
 -- | The 'StatusReport' when there is no manifest, with a hint about why.
 noTestnetReport :: FilePath -> IO StatusReport
 noTestnetReport outputDir = do
@@ -312,7 +394,7 @@ renderStatusReportHumanReadable
     , reportProblemExplanation = problemExplanation
     , reportChain = chain
     } =
-  pretty (T.pack ("Network: " <> summary status)) <> hardline <> chainLine <> details <> hardline <> errors
+  pretty (T.pack ("Network: " <> summary status)) <> hardline <> chainLine <> forkLine <> details <> hardline <> errors
   where
     notOk = length $ filter ((/= NodeOk) . probeNodeState) nodes
 
@@ -367,6 +449,19 @@ renderStatusReportHumanReadable
                    <> hardline
         )
         chain
+
+    forkLine :: Doc ann
+    forkLine =
+      case ( forkReference [ (probeNodeName node, probeNodeTipInfo node) | node <- nodes ]
+           , [ probeNodeName node | node <- nodes, probeOnLongestChain node == Just False ]
+           ) of
+        (Just (reference, _), offChain@(_ : _)) ->
+          pretty (T.pack ( "Fork: " <> intercalate ", " offChain
+                             <> (if length offChain == 1 then " is" else " are")
+                             <> " not on the chain of " <> reference <> ", which has the most blocks"
+                         ))
+            <> hardline
+        _ -> mempty
 
     details :: Doc ann
     details =

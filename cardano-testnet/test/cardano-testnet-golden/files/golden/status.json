@@ -25,6 +25,7 @@
                 "txs": 1
             },
             "name": "node1",
+            "onLongestChain": true,
             "pid": 12345,
             "pidAlive": true,
             "role": "spo",
@@ -47,6 +48,7 @@
                 "txs": 0
             },
             "name": "node2",
+            "onLongestChain": false,
             "pid": 12346,
             "pidAlive": true,
             "role": "relay",
@@ -65,6 +67,7 @@
             "error": "no answer within 5s",
             "mempool": null,
             "name": "node3",
+            "onLongestChain": null,
             "pid": null,
             "pidAlive": null,
             "role": "relay",
@@ -78,6 +81,7 @@
             "error": "Network.Socket.connect: <socket: 23>: does not exist (Connection refused)",
             "mempool": null,
             "name": "node4",
+            "onLongestChain": null,
             "pid": 12348,
             "pidAlive": false,
             "role": "relay",

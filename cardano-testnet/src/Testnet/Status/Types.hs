@@ -141,6 +141,9 @@ data NodeProbeResult = NodeProbeResult
   , probeBlocksBehind :: !(Maybe Word64)  -- ^ how many blocks it is behind the node with the
                                           -- most blocks; 'Nothing' when it has no tip
   , probeMempool     :: !(Maybe MempoolInfo) -- ^ 'Nothing' when it did not answer
+  , probeOnLongestChain :: !(Maybe Bool)  -- ^ whether its tip is on the chain of the node with
+                                          -- the most blocks; 'Nothing' when it has no tip, or
+                                          -- when that cannot be told
   } deriving (Eq, Show)
 
 instance ToJSON NodeProbeResult where
@@ -157,6 +160,7 @@ instance ToJSON NodeProbeResult where
     , "stderrFile" .= probeStderrFile n
     , "blocksBehind" .= probeBlocksBehind n
     , "mempool"  .= probeMempool n
+    , "onLongestChain" .= probeOnLongestChain n
     ]
 
 -- | What is in a node's mempool.

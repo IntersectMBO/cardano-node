@@ -82,7 +82,7 @@ library
                       , network
                       , optparse-applicative-fork
                       , parsec
-                      , ouroboros-network:{api, framework, ouroboros-network} ^>= 2.0
+                      , ouroboros-network:{api, framework, ouroboros-network, protocols} ^>= 2.0
                       , cardano-diffusion:{api, cardano-diffusion} ^>= 1.3
                       , prettyprinter
                       , process

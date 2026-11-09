@@ -1,5 +1,6 @@
 Network: DEGRADED - chain is producing blocks, but 3 of 4 nodes are not ok
 Chain: era conway, epoch 2, slot 234 of 500
+Fork: node2 is not on the chain of node1, which has the most blocks
 +-------+-------+-------------+-------+----------+-----------+---------+--------+--------------------+
 | NODE  | ROLE  | STATE       | PID   | TIP SLOT | TIP BLOCK | TIP AGE | BEHIND | MEMPOOL            |
 +-------+-------+-------------+-------+----------+-----------+---------+--------+--------------------+

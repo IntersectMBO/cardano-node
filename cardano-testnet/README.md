@@ -451,6 +451,9 @@ Where the chain is means the era, the epoch, and the slot in the epoch of the fr
 The era is the one the nodes are in, so after a hard fork it differs from the era in the manifest.
 For every node, the output also has its two log files, how many blocks it is behind the node with the most blocks, and what is in its mempool.
 The table shows the same things: a `Chain:` line under the `Network:` line, the `BEHIND` and `MEMPOOL` columns, and the log files after the error of each node that did not answer.
+The node with the most blocks is also asked whether the tip of each other node is on its chain.
+A node whose tip is not on that chain is on a fork: its `onLongestChain` field is `false`, and the table has a `Fork:` line that names it.
+This is only a warning: it does not change the state of the node, the state of the network, or the exit code.
 Each question to a node waits at most `--timeout` seconds, and the whole check takes at most twice that long.
 The exit code is 0 while the chain is producing blocks, even when some nodes are not healthy.
 A script that needs every node to be healthy can check the `status` field:
