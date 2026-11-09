@@ -1,0 +1,4 @@
+pr: 6769
+kind:
+  - breaking
+description: The `cardano` and `create-env` commands no longer accept `--params-file`; use `--params-blockfrost-file` instead.

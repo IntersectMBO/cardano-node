@@ -288,7 +288,7 @@ pOnChainParams = fmap (fromMaybe DefaultParams) <$> optional $
 
 pCustomParamsFile :: Parser TestnetOnChainParams
 pCustomParamsFile = OnChainParamsFile <$> OA.strOption
-  (  OA.long "params-file"
+  (  OA.long "params-blockfrost-file"
   <> OA.help "File containing custom on-chain parameters in Blockfrost format:\nhttps://docs.blockfrost.io/#tag/cardano--epochs/GET/epochs/latest/parameters"
   <> OA.metavar "FILEPATH"
   )

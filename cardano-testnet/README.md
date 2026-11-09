@@ -69,7 +69,7 @@ Usage: cardano-testnet cardano
     [--epoch-length SLOTS]
     [--slot-length SECONDS]
     [--active-slots-coeff DOUBLE]
-    [--params-file FILEPATH | --params-mainnet]
+    [--params-blockfrost-file FILEPATH | --params-mainnet]
     [--output-dir DIRECTORY]
   ]
   [--enable-new-epoch-state-logging]
@@ -115,7 +115,8 @@ Available options:
   --slot-length SECONDS    Slot length. (default: 0.1)
   --active-slots-coeff DOUBLE
                            Active slots coefficient. (default: 5.0e-2)
-  --params-file FILEPATH   File containing custom on-chain parameters in
+  --params-blockfrost-file FILEPATH
+                           File containing custom on-chain parameters in
                            Blockfrost format:
                            https://docs.blockfrost.io/#tag/cardano--epochs/GET/epochs/latest/parameters
   --params-mainnet         Use mainnet on-chain parameters
@@ -283,7 +284,7 @@ Usage: cardano-testnet create-env
   [--epoch-length SLOTS]
   [--slot-length SECONDS]
   [--active-slots-coeff DOUBLE]
-  [--params-file FILEPATH | --params-mainnet]
+  [--params-blockfrost-file FILEPATH | --params-mainnet]
   --output DIRECTORY
 
 
@@ -313,7 +314,8 @@ Available options:
   --slot-length SECONDS    Slot length. (default: 0.1)
   --active-slots-coeff DOUBLE
                            Active slots coefficient. (default: 5.0e-2)
-  --params-file FILEPATH   File containing custom on-chain parameters in
+  --params-blockfrost-file FILEPATH
+                           File containing custom on-chain parameters in
                            Blockfrost format:
                            https://docs.blockfrost.io/#tag/cardano--epochs/GET/epochs/latest/parameters
   --params-mainnet         Use mainnet on-chain parameters
@@ -345,7 +347,7 @@ Notes:
 
 By default, the `create-env` sub-command generates on-chain parameters at their initial value.
 If you want your test network to use a different set of on-chain parameters without specifying them by hand, you can use one of the following options:
-1. Use `--params-file` to specify a set of on-chain parameters.
+1. Use `--params-blockfrost-file` to specify a set of on-chain parameters.
    The file must be formatted as a JSON response from this [Blockfrost endpoint](https://docs.blockfrost.io/#tag/cardano--epochs/GET/epochs/latest/parameters).
 2. Use `--params-mainnet` to get on-chain parameters similar to the current state of mainnet.
    Those parameters are provisioned from [this file](https://raw.githubusercontent.com/input-output-hk/cardano-parameters/refs/heads/main/mainnet/parameters.json), which is updated every epoch (i.e. every five days).
