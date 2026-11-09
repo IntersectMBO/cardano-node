@@ -40,13 +40,18 @@ prop_selected_fields_are_defined = withTests 1 $ property $ do
 
 -- | Derived from the record itself: a newly added CDF can't go without a definition.
 prop_machPerf_cdfs_are_defined = withTests 1 $ property $
-  undefinedIn machPerfIds machPerfCDFs === fmap unFieldName undefinedBefore3_0
+  Set.fromList (undefinedIn machPerfIds machPerfCDFs) === Set.fromList (unFieldName <$> unreported)
  where
    machPerfCDFs = FieldName <$> filter ("cdf" `T.isPrefixOf`) (recordSelectors (Proxy @(MachPerf I)))
 
--- | CDFs without a metric definition as of locli 3.0, so in no report or data dictionary.
-undefinedBefore3_0 :: [FieldName]
-undefinedBefore3_0 = [ "cdfHostSlots", "cdfLeads", "cdfUtxo", "cdfSpanLensCpuRwd" ]
+-- | CDFs kept in the analysis results (JSON) on purpose, without a metric definition, so in
+--   no report or data dictionary.
+--   cdfHostSlots: slots analysed per node; it differs between nodes if one node's timeline
+--   covers less of the run (late start, early stop), or its slots are filtered differently.
+--   cdfLeads: leadership wins per slot, per node; with dense pools (several forger credentials
+--   per node) the per-node rates differ by the credentials held.
+unreported :: [FieldName]
+unreported = [ "cdfHostSlots", "cdfLeads" ]
 
 tests :: IO Bool
 tests =

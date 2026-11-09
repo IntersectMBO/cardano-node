@@ -13,11 +13,10 @@ import Cardano.Prelude hiding (head, toText)
 import Cardano.Prelude qualified as CP
 
 import Data.List                        ((!!))
+import Data.List.NonEmpty qualified as NE
 import Data.Map.Strict qualified as Map
 import Data.Text                        (pack, unpack)
 import Data.Text.Short                  (toText)
-import Data.Vector (Vector)
-import Data.Vector qualified as Vec
 
 import Data.Time.Clock qualified as Time
 
@@ -536,38 +535,73 @@ data SlotStatsSummary
   = SlotStatsSummary
   { sssSpanLensCpu      :: [Int]
   , sssSpanLensCpuEpoch :: [Int]
-  , sssSpanLensCpuRwd   :: [Int]
+  , sssSpanLensCpuSnap  :: [Int]
+  , sssSpanLensCpuOther :: [Int]
   }
 
-slotStatsSummary :: forall a. Run -> [SlotStats a] -> SlotStatsSummary
-slotStatsSummary Run{genesis=Genesis{epochLength}} slots =
-  SlotStatsSummary{..}
+-- | Whether the time interval overlaps any of the windows.
+overlapsAny :: [(UTCTime, UTCTime)] -> (UTCTime, UTCTime) -> Bool
+overlapsAny windows (start, end) = any (\(from, to) -> from <= end && start <= to) windows
+
+-- | Over-85% CPU peaks: maximal runs of consecutive slots (in slot time: a gap left by the slot
+--   filters ends a run) at >= 85% CPU; slots without a resource sample count as high.
+--   Each peak is attributed to one cause, in this order:
+--   1. the epoch transition: the peak ends at most 3 slots before the epoch's first block is
+--      adopted (the ledger computes the transition with it); counted from the epoch's first slot;
+--   2. a ledger snapshot: the peak overlaps a snapshot write window;
+--   3. other.
+--   Lengths are slot counts.
+slotStatsSummary :: forall a. NominalDiffTime -> [(UTCTime, UTCTime)] -> [SlotStats a] -> SlotStatsSummary
+slotStatsSummary slotLength snapshotWindows slots =
+  SlotStatsSummary
+  { sssSpanLensCpu      = length <$> spansCpu
+  , sssSpanLensCpuEpoch = [ n | (EpochTransition n, _)  <- classified ]
+  , sssSpanLensCpuSnap  = [ length sp | (SnapshotWrite, sp) <- classified ]
+  , sssSpanLensCpuOther = [ length sp | (OtherCause,    sp) <- classified ]
+  }
  where
-   sssSpanLensCpu      = spanLen <$> spansCpu
-   sssSpanLensCpuRwd   = Vec.length <$> filter (spanContainsEpochSlot rewardCalcBeginSlot) spansCpu
-   sssSpanLensCpuEpoch = Vec.length <$> spansCpuEpoch
+   high :: SlotStats a -> Bool
+   high = (/= SJust False) . fmap ((>=85) . rCentiCpu) . slResources
 
-   rewardCalcBeginSlot = 3 + floor @Double (fromIntegral epochLength * 0.4)
+   spansCpu :: [NonEmpty (SlotStats a)]
+   spansCpu = go slots
+    where
+      go xs = case dropWhile (not . high) xs of
+        []      -> []
+        x : xs' -> let (run, rest) = consecutive x xs' in (x :| run) : go rest
+      consecutive prev (y : ys)
+        | high y, slSlot y == slSlot prev + 1 = first (y :) (consecutive y ys)
+      consecutive _ ys = ([], ys)
 
-   spansCpu :: [Vector (SlotStats a)]
-   spansCpu       = spans
-                      ((/= SJust False) . fmap ((>=85) . rCentiCpu) . slResources)
-                      (toList slots)
+   -- Per epoch, the slot where its first block is adopted: the first change of the chain's block
+   -- number within the epoch -- only for epochs whose first slot was analysed.
+   firstBlockAdoptions :: Map.Map EpochNo (SlotStats a)
+   firstBlockAdoptions = Map.fromListWith (\_ earlier -> earlier)
+     [ (slEpoch cur, cur)
+     | (prev, cur) <- zip slots (drop 1 slots)
+     , slBlockNo cur /= slBlockNo prev
+     , slEpoch cur `elem` epochsFromStart ]
 
-   spansCpuEpoch :: [Vector (SlotStats a)]
-   spansCpuEpoch  = filter (spanContainsEpochSlot 3) spansCpu <&>
-     \v-> let   tailEpoch =  slEpoch (Vec.last v)
-          in if tailEpoch == slEpoch (Vec.head v) then v
-             else Vec.dropWhile ((tailEpoch == ) . slEpoch) v
+   epochsFromStart :: [EpochNo]
+   epochsFromStart = [ slEpoch sl | sl <- slots, unEpochSlot (slEpochSlot sl) == 0 ]
 
-   spanLen :: Vector (SlotStats a) -> Int
-   spanLen = fromIntegral . unSlotNo . uncurry (-) . (slSlot *** slSlot) . (Vec.last &&& Vec.head)
+   classified :: [(Cause, NonEmpty (SlotStats a))]
+   classified = spansCpu <&> \sp -> (,sp) $
+     case [ n | let end = slSlot (NE.last sp)
+              , adopted <- Map.elems firstBlockAdoptions
+              , end <= slSlot adopted, slSlot adopted - end <= 3
+              , let n = length $ NE.filter ((== slEpoch adopted) . slEpoch) sp
+              , n > 0 ] of
+       n : _ -> EpochTransition n
+       []
+         | overlapsAny snapshotWindows (spanTime sp) -> SnapshotWrite
+         | otherwise                                 -> OtherCause
 
-   spanContainsEpochSlot :: Word64 -> Vector (SlotStats a) -> Bool
-   spanContainsEpochSlot s =
-     uncurry (&&)
-     . ((s >) . unEpochSlot . slEpochSlot . Vec.head &&&
-        (s <) . unEpochSlot . slEpochSlot . Vec.last)
+   spanTime :: NonEmpty (SlotStats a) -> (UTCTime, UTCTime)
+   spanTime sp = ( unSlotStart (slStart (NE.head sp))
+                 , slotLength `Time.addUTCTime` unSlotStart (slStart (NE.last sp)) )
+
+data Cause = EpochTransition Int | SnapshotWrite | OtherCause
 
 -- * 4. Summarise SlotStats & SlotStatsSummary into MachPerf:
 --
@@ -579,11 +613,10 @@ slotStatsMachPerf run (f, slots) =
     { mpVersion            = getLocliVersion
     , mpDomainSlots        = domSlots
     , mpDomainCDFSlots     = domSlots -- At unit-arity it's just a replica.
-    , cdfHostSlots         = dist [fromIntegral . unI $ ddFilteredCount domSlots]
+    , cdfHostSlots         = dist [fromIntegral (length slots)]  -- slots analysed, not the domain's width
     --
     , cdfStarts            = dist (slCountStarts <$> slots)
     , cdfLeads             = dist (slCountLeads <$> slots)
-    , cdfUtxo              = dist (slUtxoSize <$> slots)
     , cdfDensity           = dist (slDensity <$> slots)
     , cdfStarted           = dist (slStarted `mapSMaybe` slots)
     , cdfBlkCtx            = dist (slBlkCtx `mapSMaybe` slots)
@@ -593,7 +626,8 @@ slotStatsMachPerf run (f, slots) =
     , cdfBlockGap          = dist (slBlockGap <$> slots)
     , cdfSpanLensCpu       = dist sssSpanLensCpu
     , cdfSpanLensCpuEpoch  = dist sssSpanLensCpuEpoch
-    , cdfSpanLensCpuRwd    = dist sssSpanLensCpuRwd
+    , cdfSpanLensCpuSnap   = dist sssSpanLensCpuSnap
+    , cdfSpanLensCpuOther  = dist sssSpanLensCpuOther
     --
     , cdfSnapTaken         = dist [sum (slChainDBSnap <$> slots)]
     , cdfSnapDuration      = dist (snd <$> snapshots)
@@ -627,8 +661,7 @@ slotStatsMachPerf run (f, slots) =
 
    duringSnapshot :: SlotStats a -> Bool
    duringSnapshot SlotStats{slStart = SlotStart start} =
-     any (\(from, to) -> from <= end && start <= to) snapshotWindows
-    where end = slotLength `Time.addUTCTime` start
+     overlapsAny snapshotWindows (start, slotLength `Time.addUTCTime` start)
 
    -- Slots whose resource sample saw at least one major GC; their live data is the one after it.
    majorGcSlots :: [(SlotStats NominalDiffTime, Resources Word64)]
@@ -659,7 +692,7 @@ slotStatsMachPerf run (f, slots) =
    dist :: Divisible a => [a] -> CDF I a
    dist = cdfZ stdCentiles
 
-   SlotStatsSummary{..} = slotStatsSummary run slots
+   SlotStatsSummary{..} = slotStatsSummary slotLength snapshotWindows slots
 
 -- * 5. Multi-machine & multi-run summaries:
 --
@@ -669,7 +702,6 @@ summariseClusterPerf centiles mps@(headline:_) = do
   cdfHostSlots         <- cdf2OfCDFs comb $ mps <&> cdfHostSlots
   cdfStarts            <- cdf2OfCDFs comb $ mps <&> cdfStarts
   cdfLeads             <- cdf2OfCDFs comb $ mps <&> cdfLeads
-  cdfUtxo              <- cdf2OfCDFs comb $ mps <&> cdfUtxo
   cdfDensity           <- cdf2OfCDFs comb $ mps <&> cdfDensity
   cdfStarted           <- cdf2OfCDFs comb $ mps <&> cdfStarted
   cdfBlkCtx            <- cdf2OfCDFs comb $ mps <&> cdfBlkCtx
@@ -677,9 +709,10 @@ summariseClusterPerf centiles mps@(headline:_) = do
   cdfLgrView           <- cdf2OfCDFs comb $ mps <&> cdfLgrView
   cdfLeading           <- cdf2OfCDFs comb $ mps <&> cdfLeading
   cdfBlockGap          <- cdf2OfCDFs comb $ mps <&> cdfBlockGap
-  cdfSpanLensCpu       <- cdf2OfCDFs comb $ mps <&> cdfSpanLensCpu
-  cdfSpanLensCpuEpoch  <- cdf2OfCDFs comb $ mps <&> cdfSpanLensCpuEpoch
-  cdfSpanLensCpuRwd    <- cdf2OfCDFs comb $ mps <&> cdfSpanLensCpuRwd
+  cdfSpanLensCpu       <- cdf2OfCDFs comb $ nonEmptyCDFs $ mps <&> cdfSpanLensCpu
+  cdfSpanLensCpuEpoch  <- cdf2OfCDFs comb $ nonEmptyCDFs $ mps <&> cdfSpanLensCpuEpoch
+  cdfSpanLensCpuSnap   <- cdf2OfCDFs comb $ nonEmptyCDFs $ mps <&> cdfSpanLensCpuSnap
+  cdfSpanLensCpuOther  <- cdf2OfCDFs comb $ nonEmptyCDFs $ mps <&> cdfSpanLensCpuOther
   cdfSnapTaken         <- cdf2OfCDFs comb $ mps <&> cdfSnapTaken
   cdfSnapDuration      <- cdf2OfCDFs comb $ nonEmptyCDFs $ mps <&> cdfSnapDuration
   cdfLiveMajGcDuring   <- cdf2OfCDFs comb $ nonEmptyCDFs $ mps <&> cdfLiveMajGcDuring
@@ -716,7 +749,6 @@ summariseMultiClusterPerf centiles mps@(headline:_) = do
   cdfHostSlots         <- cdf2OfCDFs comb $ nonEmptyCDFs $ mps <&> cdfHostSlots
   cdfStarts            <- cdf2OfCDFs comb $ nonEmptyCDFs $ mps <&> cdfStarts
   cdfLeads             <- cdf2OfCDFs comb $ nonEmptyCDFs $ mps <&> cdfLeads
-  cdfUtxo              <- cdf2OfCDFs comb $ nonEmptyCDFs $ mps <&> cdfUtxo
   cdfDensity           <- cdf2OfCDFs comb $ nonEmptyCDFs $ mps <&> cdfDensity
   cdfStarted           <- cdf2OfCDFs comb $ nonEmptyCDFs $ mps <&> cdfStarted
   cdfBlkCtx            <- cdf2OfCDFs comb $ nonEmptyCDFs $ mps <&> cdfBlkCtx
@@ -726,7 +758,8 @@ summariseMultiClusterPerf centiles mps@(headline:_) = do
   cdfBlockGap          <- cdf2OfCDFs comb $ nonEmptyCDFs $ mps <&> cdfBlockGap
   cdfSpanLensCpu       <- cdf2OfCDFs comb $ nonEmptyCDFs $ mps <&> cdfSpanLensCpu
   cdfSpanLensCpuEpoch  <- cdf2OfCDFs comb $ nonEmptyCDFs $ mps <&> cdfSpanLensCpuEpoch
-  cdfSpanLensCpuRwd    <- cdf2OfCDFs comb $ nonEmptyCDFs $ mps <&> cdfSpanLensCpuRwd
+  cdfSpanLensCpuSnap   <- cdf2OfCDFs comb $ nonEmptyCDFs $ mps <&> cdfSpanLensCpuSnap
+  cdfSpanLensCpuOther  <- cdf2OfCDFs comb $ nonEmptyCDFs $ mps <&> cdfSpanLensCpuOther
   cdfSnapTaken         <- cdf2OfCDFs comb $ nonEmptyCDFs $ mps <&> cdfSnapTaken
   cdfSnapDuration      <- cdf2OfCDFs comb $ nonEmptyCDFs $ mps <&> cdfSnapDuration
   cdfLiveMajGcDuring   <- cdf2OfCDFs comb $ nonEmptyCDFs $ mps <&> cdfLiveMajGcDuring

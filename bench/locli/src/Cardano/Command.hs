@@ -769,9 +769,9 @@ runChainCommand s c@ComputeSummary = do
 
 runChainCommand s@State{sSummaries = Just (summary:_)} c@(RenderSummary rc@RenderConfig{..} f) = do
   progress "summary" (Q "rendering summary")
-  bodySummary <- if rcFormat == AsTypst
-    then liftIO $ (:[]) <$> generateTypstSummary rc anchor (iFields sumFieldsReport) summary
-    else pure    $ renderSummary rc anchor (iFields sumFieldsReport) summary
+  bodySummary <- case textFormat rcFormat of
+    Nothing -> liftIO $ (:[]) <$> generateTypstSummary rc anchor (iFields sumFieldsReport) summary
+    Just tf -> pure (renderSummary tf summary) & newExceptT & firstExceptT (CommandError c)
   dumpText "summary" bodySummary (modeFilename f "" rcFormat)
     & firstExceptT (CommandError c)
   renderProfiling c rc anchor f (sumProfilingData summary)
@@ -802,9 +802,9 @@ runChainCommand _ c@ComputeMultiSummary{} = missingCommandData c
 runChainCommand s@State{sMultiSummary=Just summary}
   c@(RenderMultiSummary rc@RenderConfig{..} f) = do
   progress "multi-summary" (Q "rendering multi-run summary")
-  body <- if rcFormat == AsTypst
-    then liftIO $ (:[]) <$> generateTypstSummary rc anchor (iFields sumFieldsReport) summary
-    else pure    $ renderSummary rc anchor (iFields sumFieldsReport) summary
+  body <- case textFormat rcFormat of
+    Nothing -> liftIO $ (:[]) <$> generateTypstSummary rc anchor (iFields sumFieldsReport) summary
+    Just tf -> pure (renderSummary tf summary) & newExceptT & firstExceptT (CommandError c)
   dumpText "multi-summary" body (modeFilename f "" rcFormat)
     & firstExceptT (CommandError c)
   renderProfiling c rc anchor f (sumProfilingData summary)
@@ -852,13 +852,14 @@ runChainCommand s c@(Compare outf@(TextOutputFile outfp) runs) = do
 renderCDFs :: (CDFFields a p, KnownCDF p, ToJSON (a p))
   => ChainCommand -> RenderConfig -> TextOutputFile -> Anchor -> (Field DSelect p a -> Bool) -> CDF2Aspect -> a p
   -> ExceptT CommandError IO ()
-renderCDFs c rc@RenderConfig{rcFormat} f anchor fieldSelr aspect x
-  | rcFormat == AsTypst = do
+renderCDFs c rc@RenderConfig{rcFormat} f anchor fieldSelr aspect x =
+  case textFormat rcFormat of
+    Nothing -> do
       body <- liftIO $ generateTypstCDFs rc anchor fieldSelr aspect x
       dumpText "" [body] f
         & firstExceptT (CommandError c)
-  | otherwise =
-      forM_ (renderAnalysisCDFs anchor fieldSelr aspect Nothing rc x) $
+    Just tf ->
+      forM_ (renderAnalysisCDFs tf anchor fieldSelr aspect Nothing rc x) $
         \(name, body) ->
           dumpText (T.unpack name) body (modeFilename f name rcFormat)
           & firstExceptT (CommandError c)

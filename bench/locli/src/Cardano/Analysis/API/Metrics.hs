@@ -226,7 +226,7 @@ bpFieldsEndToEndBrief =
 
 instance CDFFields BlockProp p where
   cdfFields =
-      fGrp ",------------------ Forger event Δt: --------------------."
+      fGrp ",------------------ Forger event dt: --------------------."
             W4 Sec P3 Log Free
     [ fGrp' "cdfForgerStart"         "Loop" (DDeltaT cdfForgerStart)
       "Started forge loop iteration"
@@ -275,7 +275,7 @@ instance CDFFields BlockProp p where
       "Slot start to announced"
       "Time since slot start until header announcement (ChainSyncServerEvent.TraceChainSyncServerRead.AddBlock)"
     ]
-   <> fGrp ",------ Peer event Δt: ------."
+   <> fGrp ",------ Peer event dt: ------."
             W4 Sec P3 Log Free
     [ fGrp' "cdfPeerNoticeFirst"     "NtiF" (DDeltaT cdfPeerNoticeFirst)
       "First peer notice"
@@ -342,7 +342,7 @@ instance CDFFields BlockProp p where
       "Block size"
       "Block size, in bytes"
    where r = nChunksEachOf (length adoptionCentiles) 5
-             ",-- Slot-rel. Δt to adoption centile: -."
+             ",-- Slot-rel. dt to adoption centile: -."
          checkCentile i centi (centi', d) =
            if T.unpack centi' == printf "cdf%.2f" centi then d
            else error $ printf "Centile mismatch: [%d]: exp=%f act=%s"
@@ -364,7 +364,7 @@ instance TimelineFields BlockEvents where
    <> fBoth' "bfBlockSize" "size"  "bytes" W6 B   P0 Lin Free (IInt    (bfBlockSize.beForge))
    <> fBoth' "bfBlockGap"  "block" "gap"   W5 Len P0 Lin Free (IDeltaT (bfBlockGap .beForge))
    <> fBoth' "bpeIsFork"   "for"  "-ks"    W3 Blk P0 Lin Free (IInt    (count bpeIsFork.beErrors))
-   <> fGrp "--------- Forger event Δt: ---------"
+   <> fGrp "--------- Forger event dt: ---------"
             W4 Sec P3 Log Free
     [ fGrp' "bfStarted"     "Start"  (IDeltaT (bfStarted  .beForge)) "" ""
     , fGrp' "bfBlkCtx"      "BlkCtx" (IDeltaTM (bfBlkCtx  .beForge)) "" ""
@@ -379,7 +379,7 @@ instance TimelineFields BlockEvents where
     , fGrp' "bfAdopted"     "Adopt"  (IDeltaT (bfAdopted  .beForge)) "" ""
     , fGrp' "bfAnnouncedCum" "AnnCum"(IDeltaT (bfAnnouncedCum.beForge)) "" ""
     ]
-   <> fGrp "-- Peer event Δt averages: --"
+   <> fGrp "-- Peer event dt averages: --"
             W4 Sec P3 Log Free
     [ fGrp' "boNoticed"     "Notic"  (IDeltaT (af  boNoticed   . valids)) "" ""
     , fGrp' "boRequested"   "Requd"  (IDeltaT (af  boRequested . valids)) "" ""
@@ -388,7 +388,7 @@ instance TimelineFields BlockEvents where
     , fGrp' "boSending"     "Send"   (IDeltaT (af' boSending   . valids)) "" ""
     , fGrp' "pAdopted"      "Adopt"  (IDeltaT (af' boAdopted   . valids)) "" ""
     ]
-   <> fGrp "Propagation Δt:"
+   <> fGrp "Propagation dt:"
             W4 Sec P3 Log Free
     [ fGrp' "0.50"          "0.5"  (IDeltaT (percSpec 0.50 . bePropagation)) "" ""
     , fGrp' "0.80"          "0.8"  (IDeltaT (percSpec 0.80 . bePropagation)) "" ""
@@ -455,11 +455,11 @@ perfSubsetFn = \case
 
 mtFieldsReport :: [FieldName]
 mtFieldsReport =
-  [ "CentiCpu", "CentiGC", "CentiMut", "cdfSpanLensCpu", "RSS", "Heap", "Live", "Alloc", "GcsMinor", "GcsMajor", "NetRd", "NetWr", "FsRd", "FsWr", "cdfStarts" ]
+  [ "CentiCpu", "CentiGC", "CentiMut", "cdfSpanLensCpuEpoch", "cdfSpanLensCpuOther", "RSS", "Heap", "Live", "Alloc", "GcsMinor", "GcsMajor", "NetRd", "NetWr", "FsRd", "FsWr", "cdfStarts" ]
 
 mtFieldsSnapshots, mtFieldsTxProcessing :: [FieldName]
 mtFieldsSnapshots =
-  [ "cdfSnapTaken", "cdfSnapDuration", "cdfLiveMajGcDuring", "cdfLiveMajGcOutside" ]
+  [ "cdfSnapTaken", "cdfSnapDuration", "cdfSpanLensCpuSnap", "cdfLiveMajGcDuring", "cdfLiveMajGcOutside" ]
 mtFieldsTxProcessing =
   [ "cdfTxsProcessed", "cdfTxsAccepted", "cdfTxsRejected", "cdfTxsRejectRatio", "cdfMempoolTxs", "cdfCpuPerTx", "cdfGcPerTx", "cdfMutPerTx" ]
 
@@ -469,7 +469,7 @@ instance CDFFields MachPerf p where
       "Forge loop starts"
       "For any given slot, how many forging loop starts were registered"
 
-   <> fGrp "----------- Δt -----------" W4 Sec P3 Log Free
+   <> fGrp "----------- dt -----------" W4 Sec P3 Log Free
     [ fGrp' "cdfStarted"     "Start"       (DDeltaT cdfStarted)
       "Forge loop tardiness"
       "Forge loop iteration start delay (TraceStartLeadershipCheck), relative to slot start"
@@ -555,12 +555,16 @@ instance CDFFields MachPerf p where
 
    <> fGrp  "CPU-85%span"               W5 Slo P0 Lin Free
     [ fGrp' "cdfSpanLensCpu"        "All" (DInt cdfSpanLensCpu)
-      "CPU 85% spans"
-      "Length of over-85% CPU usage peaks, slots"
+      "CPU 85% peaks, all"
+      "Length of over-85% CPU usage peaks (consecutive slots), slots: all of them, whatever their cause"
 
     , fGrp' "cdfSpanLensCpuEpoch" "Epoch" (DInt cdfSpanLensCpuEpoch)
-      "CPU spans at Ep boundary"
-      "Length of over-85% CPU usage peaks, starting at epoch boundary, slots"
+      "CPU 85% peaks, epoch transition"
+      "Length of the over-85% CPU usage peak ending at most 3 slots before the epoch's first block is adopted (the ledger's epoch transition), counted from the epoch's first slot, slots"
+
+    , fGrp' "cdfSpanLensCpuOther" "Other" (DInt cdfSpanLensCpuOther)
+      "CPU 85% peaks, other"
+      "Length of over-85% CPU usage peaks neither at an epoch transition nor during a ledger snapshot write, slots. Unexplained saturation shows here"
     ]
 
    -- Ledger Snapshots
@@ -575,6 +579,10 @@ instance CDFFields MachPerf p where
    <> fBoth "cdfLiveMajGcDuring"  "Live"  "snap" W5 MB  P0 Lin Free (DWord64 cdfLiveMajGcDuring)
       "Live after majGC, during"
       "RTS-reported live data after a major GC that occurred during a ledger snapshot write (from its start until 5s after its completion)"
+
+   <> fBoth "cdfSpanLensCpuSnap"  "CPU"   "85%"  W5 Slo P0 Lin Free (DInt cdfSpanLensCpuSnap)
+      "CPU 85% peaks, snapshot"
+      "Length of over-85% CPU usage peaks overlapping a ledger snapshot write (from its start until 5s after its completion), slots. Compared to Duration: CPU-bound vs. I/O-bound snapshots. Needs snapshot durations, as stored by locli 3.0"
 
    <> fBoth "cdfLiveMajGcOutside" "Live"  "other" W5 MB P0 Lin Free (DWord64 cdfLiveMajGcOutside)
       "Live after majGC, outside"

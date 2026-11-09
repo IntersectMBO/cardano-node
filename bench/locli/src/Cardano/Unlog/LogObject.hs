@@ -198,18 +198,8 @@ interpreters = Map.fromList
   , (,) "Forge.Loop.ForgeTickedLedgerState" $
     \v -> LOTickedLedgerState
             <$> v .: "slot"
-  -- Compat: pre-rename namespace, kept in case older node versions are still
-  -- in the fleet during a rollout.
-  , (,) "Forge.Loop.TickedLedgerState" $
-    \v -> LOTickedLedgerState
-            <$> v .: "slot"
 
   , (,) "Forge.Loop.ForgingMempoolSnapshot" $
-    \v -> LOMempoolSnapshot
-            <$> v .: "slot"
-  -- Compat: pre-rename namespace, kept in case older node versions are still
-  -- in the fleet during a rollout.
-  , (,) "Forge.Loop.MempoolSnapshot" $
     \v -> LOMempoolSnapshot
             <$> v .: "slot"
 

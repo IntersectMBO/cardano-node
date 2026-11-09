@@ -152,9 +152,6 @@ prop_hostLogs_without_db_fields_readable = withTests 1 $ property $ do
 -- real log line in the fixture, so an interpreter can't be added or renamed
 -- without being verified against actual node output: namespaces and payload
 -- shapes drift across node versions without notice.
---
--- `legacyNamespaces` are kept for nodes still emitting a namespace's former
--- name; they're absent from the (recent) log the fixture was extracted from.
 
 -- The fixture holds both edges of one ChainSync server update (rising edge with
 -- "risingEdge": true, falling edge without the field): only one is an announcement.
@@ -166,15 +163,9 @@ prop_interpreters_covered_by_fixture = withTests 1 $ property $ do
   fixtureLines <- evalIO $ BS.lines <$> BS.readFile fixtureFile
   namespaces   <- forM fixtureLines $ \l ->
     evalEither $ AE.eitherDecodeStrict l >>= AE.parseEither (AE.withObject "LogObject" (AE..: "ns"))
-  let covered = Set.fromList (namespaces :: [Text]) <> legacyNamespaces
+  let covered = Set.fromList (namespaces :: [Text])
   filter ((`Set.notMember` covered) . ST.toText) logObjectStreamInterpreterKeys
     === []
-
-legacyNamespaces :: Set Text
-legacyNamespaces = Set.fromList
-  [ "Forge.Loop.TickedLedgerState"    -- now: Forge.Loop.ForgeTickedLedgerState
-  , "Forge.Loop.MempoolSnapshot"      -- now: Forge.Loop.ForgingMempoolSnapshot
-  ]
 
 tests :: IO Bool
 tests =

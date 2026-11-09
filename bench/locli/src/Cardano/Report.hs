@@ -30,7 +30,7 @@ import           Cardano.Render (Anchor, CDF2Aspect, RenderConfig (..), aspectCo
 import           Cardano.Typst
 import           Cardano.Util as Util
 
-import           Prelude (id, tail, unzip3, zipWith3)
+import           Prelude (id, tail, zipWith3)
 
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Map.Strict as Map
@@ -124,51 +124,55 @@ filenameInfix = \case
   _                     -> "unknown"
 
 
-data Section where
-  STable ::
-    { sData      :: !(a p)
-    , sFields    :: !FSelect
-    , sTypstFile :: !FilePath -- ^ The single table file, as written by the workbench's analysis
+-- | A report section: one table, of the fields selected from one analysis result.
+data Section
+  = Section
+    { sTypstFile :: !FilePath -- ^ The single table file, as written by the workbench's analysis
     , sTitle     :: !Text
-    } -> Section
+    , sTable     :: !SectionTable
+    }
 
-summaryReportSection :: Summary f -> Section
+-- | The data and the field selection share their type, so a section yields its own values.
+data SectionTable where
+  TSummary :: TimelineFields a        => !a     -> !(Field ISelect I a -> Bool) -> SectionTable
+  TCDFs    :: (CDFFields a p, KnownCDF p) => !(a p) -> !(Field DSelect p a -> Bool) -> SectionTable
+
+summaryReportSection :: KnownCDF f => Summary f -> Section
 summaryReportSection summ =
-  STable summ (ISel @SummaryOne $ iFields sumFieldsReport) "summary.typ"
-    "Overall run parameters"
+  Section "summary.typ" "Overall run parameters" $
+    TSummary summ (iFields sumFieldsReport)
 
 machPerfSection :: MachPerf (CDF I) -> Section
 machPerfSection mp =
-  STable mp (DSel @MachPerf     $ dFields mtFieldsReport)  "clusterperf.report.typ"
-    "Resource Usage"
+  Section "clusterperf.report.typ" "Resource Usage" $
+    TCDFs mp (dFields mtFieldsReport)
 
-blockPropSections :: BlockProp f -> [Section]
+blockPropSections :: KnownCDF f => BlockProp f -> [Section]
 blockPropSections bp =
-  [ STable bp (DSel @BlockProp $ dFields bpFieldsControl)  "blockprop.control.typ"
-    "Anomaly control"
+  [ Section "blockprop.control.typ" "Anomaly control" $
+    TCDFs bp (dFields bpFieldsControl)
 
-  , STable bp (DSel @BlockProp $ dFields bpFieldsForger)   "blockprop.forger.typ"
-    "Forging"
+  , Section "blockprop.forger.typ" "Forging" $
+    TCDFs bp (dFields bpFieldsForger)
 
-  , STable bp (DSel @BlockProp $ dFields bpFieldsPeers)    "blockprop.peers.typ"
-    "Individual peer propagation"
+  , Section "blockprop.peers.typ" "Individual peer propagation" $
+    TCDFs bp (dFields bpFieldsPeers)
 
-  , STable bp (DSel @BlockProp $ dFields bpFieldsEndToEnd) "blockprop.endtoend.typ"
-    "End-to-end propagation"
+  , Section "blockprop.endtoend.typ" "End-to-end propagation" $
+    TCDFs bp (dFields bpFieldsEndToEnd)
   ]
 
 -- | Derived / complementary performance metrics; reports put them on a page of their own.
 derivedPerfSections :: MachPerf (CDF I) -> [Section]
 derivedPerfSections mp =
-  [ STable mp (DSel @MachPerf $ dFields mtFieldsSnapshots)    "clusterperf.snapshots.typ"
-    "Ledger Snapshots"
+  [ Section "clusterperf.snapshots.typ" "Ledger Snapshots" $
+    TCDFs mp (dFields mtFieldsSnapshots)
 
-  , STable mp (DSel @MachPerf $ dFields mtFieldsTxProcessing) "clusterperf.txprocessing.typ"
-    "Transaction Processing"
+  , Section "clusterperf.txprocessing.typ" "Transaction Processing" $
+    TCDFs mp (dFields mtFieldsTxProcessing)
   ]
 
--- | NB. The comparison report pairs these with 'selAnalyses' in 'generateTypst' by position.
-analysesReportSections :: MachPerf (CDF I) -> BlockProp f -> [Section]
+analysesReportSections :: KnownCDF f => MachPerf (CDF I) -> BlockProp f -> [Section]
 analysesReportSections mp bp =
   machPerfSection mp : blockPropSections bp <> derivedPerfSections mp
 
@@ -177,12 +181,16 @@ analysesReportSections mp bp =
 fieldsWarnIfZero :: [FieldName]
 fieldsWarnIfZero = [ "cdfSnapTaken" ]
 
-rowDecriptions :: FSelect -> [Text]
-rowDecriptions = \case
-  ISel sel -> filter sel timelineFields <&> fShortDesc
-  DSel sel -> filter sel cdfFields      <&> describe
-  where
-    describe f = fShortDesc f <> ", " <> renderUnit (fUnit f)
+sectionRowDescs :: Section -> [Text]
+sectionRowDescs = sTable >>> \case
+  TSummary _ sel -> filter sel timelineFields <&> fShortDesc
+  TCDFs    _ sel -> filter sel cdfFields      <&> \f -> fShortDesc f <> ", " <> renderUnit (fUnit f)
+
+-- | A section's values: the summary's as text, the averages of the CDFs as numbers.
+sectionValues :: Section -> Either [Text] [NumField]
+sectionValues = sTable >>> \case
+  TSummary x sel -> Left  $ extractAsText  sel x
+  TCDFs    x sel -> Right $ extractAverage sel x
 
 
 --
@@ -334,18 +342,23 @@ instance ToJSON TmplSectionTypst where
     , "rows"      .= tstRows
     ]
 
-liftTmplSectionTypst :: [Text] -> Either [[Text]] [[NumField]] -> Section -> TmplSectionTypst
-liftTmplSectionTypst tstRunIds tstVals STable{..} =
+-- | A comparison table: titles and rows from the base run's section, values from each run's own.
+liftTmplSectionTypst :: [Text] -> Section -> [Section] -> TmplSectionTypst
+liftTmplSectionTypst tstRunIds base runs =
   TmplTableTypst
-    { tstTitle        = sTitle
+    { tstTitle        = sTitle base
     , tstHeader       = []
     , tstRows         = [[]]
+    , tstRowDesc      = sectionRowDescs base
     , ..
     }
   where
-    tstRowDesc = rowDecriptions sFields
+    tstVals = case partitionEithers (sectionValues <$> runs) of
+      (texts, [])   -> Left texts
+      ([], numbers) -> Right numbers
+      _             -> error "liftTmplSectionTypst: runs' sections differ in kind"
 
-extractAsText :: forall f a. (a ~ Summary f, TimelineFields a)
+extractAsText :: forall a. TimelineFields a
   => (Field ISelect I a -> Bool) -> a -> [Text]
 extractAsText fieldSelr summ =
   fields' <&> renderSummaryScalar summ
@@ -374,43 +387,28 @@ generateTypst ::
          -> Maybe FilePath
          -> (SomeSummary, ClusterPerf, SomeBlockProp) -> [(SomeSummary, ClusterPerf, SomeBlockProp)]
          -> IO Text
-generateTypst typstFileName mScalingCSV theBase@(SomeSummary summ, cp, SomeBlockProp bp) rest = do
+generateTypst typstFileName mScalingCSV theBase rest = do
   ctx <- getReport metas (last templates & trManifest & getComponent "cardano-node" & ciVersion)
   renderTypstTemplate "main_comparison.ede" $ mkTmplEnv ctx templates
  where
    allRuns = theBase : rest
 
-   selSummary :: Field ISelect I a -> Bool
-   selSummary = iFields sumFieldsReport
+   -- The summary, then the analyses: the same sections, in the same order, for every run.
+   sectionsOf :: (SomeSummary, ClusterPerf, SomeBlockProp) -> [Section]
+   sectionsOf (SomeSummary ss, cperf, SomeBlockProp sbp) =
+     summaryReportSection ss : analysesReportSections cperf sbp
 
-   -- NB. In the order of 'analysesReportSections'.
-   selAnalyses :: (SomeSummary, ClusterPerf, SomeBlockProp) -> [[NumField]]
-   selAnalyses (_, cperf, SomeBlockProp sbp) =
-      [ extractAverage (dFields mtFieldsReport)       cperf
-      , extractAverage (dFields bpFieldsControl)      sbp
-      , extractAverage (dFields bpFieldsForger)       sbp
-      , extractAverage (dFields bpFieldsPeers)        sbp
-      , extractAverage (dFields bpFieldsEndToEnd)     sbp
-      , extractAverage (dFields mtFieldsSnapshots)    cperf
-      , extractAverage (dFields mtFieldsTxProcessing) cperf
-      ]
-
-   metas          :: [Metadata]
-   templates      :: [TmplRun]
-   summaryContent :: [[Text]]
-   runIds         :: [Text]
-   (metas, templates, summaryContent) = unzip3
-     [(sumMeta ss, liftTmplRun ss, extractAsText selSummary ss) | (SomeSummary ss, _, _) <- allRuns]
+   metas     :: [Metadata]
+   templates :: [TmplRun]
+   runIds    :: [Text]
+   (metas, templates) = unzip
+     [(sumMeta ss, liftTmplRun ss) | (SomeSummary ss, _, _) <- allRuns]
    runIds = map ident metas
 
-   summarySection = liftTmplSectionTypst runIds (Left summaryContent) $ summaryReportSection summ
-
-   analysisSections =
-     [ liftTmplSectionTypst runIds (Right content) section
-        | (content, section) <- zip analysesContents (analysesReportSections cp bp)
-     ]
-     where
-      analysesContents = transpose $ map selAnalyses allRuns
+   (summarySection, analysisSections) =
+     case zipWith (liftTmplSectionTypst runIds) (sectionsOf theBase) (transpose $ sectionsOf <$> allRuns) of
+       s : as -> (s, as)
+       []     -> error "generateTypst: no sections"
 
    mkTmplEnv rc runTempls = fromPairs $
      [ "report"     .= rc
@@ -429,7 +427,7 @@ generateTypst typstFileName mScalingCSV theBase@(SomeSummary summ, cp, SomeBlock
 --   workbench's single-run analysis) found next to the report, by importing them.
 --   Missing table files are noted in the report, instead of failing its compilation.
 --   With a Plutus workload calibration CSV, it's rendered as an addendum.
-generateTypstReport :: FilePath -> Maybe FilePath -> SummaryOne -> ClusterPerf -> BlockProp f -> IO Text
+generateTypstReport :: KnownCDF f => FilePath -> Maybe FilePath -> SummaryOne -> ClusterPerf -> BlockProp f -> IO Text
 generateTypstReport typstPath mScalingCSV summ cp bp = do
   ctx <- getReport [sumMeta summ] (baseTmpl & trManifest & getComponent "cardano-node" & ciVersion)
   summaryFile  <- tableFile (summaryReportSection summ)
@@ -449,9 +447,10 @@ generateTypstReport typstPath mScalingCSV summ cp bp = do
    baseTmpl = liftTmplRun summ
 
    tableFile :: Section -> IO TableFile
-   tableFile STable{sTitle, sTypstFile = tfName} = do
+   tableFile section = do
+     let tfName = sTypstFile section
      tfPresent <- doesFileExist (FP.takeDirectory typstPath </> tfName)
-     pure TableFile{tfTitle = sTitle, ..}
+     pure TableFile{tfTitle = sTitle section, ..}
 
 data TableFile
   = TableFile

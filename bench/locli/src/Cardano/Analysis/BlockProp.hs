@@ -396,14 +396,14 @@ rebuildChain Run{genesis} flts _fltNames (fmap snd -> machViews) =
           , bfSlotStart  = bfeSlotStart
           , bfBlockGap   = 0 -- To be filled in after chain is rebuilt.
           , bfBlockSize  = bfeBlockSize & handleMiss "Size"
-          , bfStarted    = bfeStarted   & handleMiss "Δt Started"
+          , bfStarted    = bfeStarted   & handleMiss "dt Started"
           , bfBlkCtx     = bfeBlkCtx
           , bfLgrState   = bfeLgrState
           , bfLgrView    = bfeLgrView
-          , bfLeading    = bfeLeading   & handleMiss "Δt Leading"
+          , bfLeading    = bfeLeading   & handleMiss "dt Leading"
           , bfTicked     = bfeTicked
           , bfMemSnap    = bfeMemSnap
-          , bfForged     = bfeForged    & handleMiss "Δt Forged"
+          , bfForged     = bfeForged    & handleMiss "dt Forged"
           -- NOTE (XXX, TODO, FIXME):
           --    1. we need to get to the bottom of this
           --    2. this happens sufficiently rarely (2500+ blocks in an affected run)
@@ -411,19 +411,19 @@ rebuildChain Run{genesis} flts _fltNames (fmap snd -> machViews) =
           , bfAnnounced  = bfeAnnounced
                            <|> (if True -- bfeBlockNo == 0 -- silliness
                                 then SJust 0.01 else SNothing)
-                           & handleMiss "Δt Announced (forger)"
+                           & handleMiss "dt Announced (forger)"
           , bfAnnouncedCum = bfeAnnouncedCum
                            <|> (if True -- bfeBlockNo == 0 -- silliness
                                 then SJust 0.01 else SNothing)
-                           & handleMiss "Δt AnnouncedCum (forger)"
+                           & handleMiss "dt AnnouncedCum (forger)"
           , bfSending    = bfeSending
                            <|> (if True -- bfeBlockNo == 0 -- silliness
                                 then SJust 0.01 else SNothing)
-                           & handleMiss "Δt Sending (forger)"
+                           & handleMiss "dt Sending (forger)"
           , bfAdopted    = bfeAdopted
                            <|> (if True -- bfeBlockNo == 0 -- silliness
                                 then SJust 0.01 else SNothing)
-                           & handleMiss "Δt Adopted (forger)"
+                           & handleMiss "dt Adopted (forger)"
           , bfChainDelta = bfeChainDelta
           }
         , beForks = unsafeCoerceCount $ countListAll otherBlocks

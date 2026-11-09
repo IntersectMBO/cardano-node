@@ -162,11 +162,10 @@ data MachPerf f
     { mpVersion            :: !Cardano.Analysis.API.LocliVersion.LocliVersion
     , mpDomainSlots        :: !(CDFList f (DataDomain I SlotNo))
     , mpDomainCDFSlots     :: !(DataDomain f SlotNo)
-    , cdfHostSlots         :: !(CDF f Word64)
+    , cdfHostSlots         :: !(CDF f Word64)          -- ^ per node: slots analysed (after slot filters); JSON only
     -- distributions
     , cdfStarts            :: !(CDF f Word64)
-    , cdfLeads             :: !(CDF f Word64)
-    , cdfUtxo              :: !(CDF f Word64)
+    , cdfLeads             :: !(CDF f Word64)          -- ^ per slot: leadership wins (several with dense pools); JSON only
     , cdfDensity           :: !(CDF f Double)
     , cdfStarted           :: !(CDF f NominalDiffTime)
     , cdfBlkCtx            :: !(CDF f NominalDiffTime)
@@ -176,7 +175,8 @@ data MachPerf f
     , cdfBlockGap          :: !(CDF f Word64)
     , cdfSpanLensCpu       :: !(CDF f Int)
     , cdfSpanLensCpuEpoch  :: !(CDF f Int)
-    , cdfSpanLensCpuRwd    :: !(CDF f Int)
+    , cdfSpanLensCpuSnap   :: !(CDF f Int)
+    , cdfSpanLensCpuOther  :: !(CDF f Int)
     -- Ledger Snapshots
     , cdfSnapTaken         :: !(CDF f Word64)          -- ^ per node: snapshots completed
     , cdfSnapDuration      :: !(CDF f NominalDiffTime) -- ^ per snapshot: writing duration

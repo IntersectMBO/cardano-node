@@ -30,6 +30,7 @@ addedIn3_0 =
   [ "cdfSnapTaken", "cdfSnapDuration", "cdfLiveMajGcDuring", "cdfLiveMajGcOutside"
   , "cdfTxsProcessed", "cdfTxsAccepted", "cdfTxsRejected", "cdfTxsRejectRatio", "cdfMempoolTxs"
   , "cdfCpuPerTx", "cdfMutPerTx", "cdfGcPerTx"
+  , "cdfSpanLensCpuSnap", "cdfSpanLensCpuOther"
   ]
 
 decodeClusterPerf :: KeyMap.KeyMap Value -> Either [Char] ClusterPerf
@@ -72,6 +73,9 @@ prop_multiClusterPerf_2x_combinable = withTests 1 $ property $ do
   only2x <- evalEither $ combine [old, old]
   cdfAverageVal (cdfMempoolTxs mixed) === cdfAverageVal (cdfMempoolTxs full)
   cdfSize (cdfMempoolTxs only2x) === 0
+  -- a metric empty in the 3.0 run too (no CPU peaks in the fixture run): still combines, empty
+  cdfSize (cdfSpanLensCpuOther full)  === 0
+  cdfSize (cdfSpanLensCpuOther mixed) === 0
 
 -- | Real summary of a locli 3.0 analysis.
 summaryFixture :: FilePath

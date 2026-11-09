@@ -44,6 +44,20 @@ data RenderFormat
   | AsTypst
   deriving (Eq, Show, Bounded, Enum)
 
+-- | The formats rendered here; Typst output is template-based, and comes from Cardano.Report.
+data TextFormat
+  = TextJSON
+  | TextGnuplot
+  | TextPretty
+
+-- | Nothing for Typst.
+textFormat :: RenderFormat -> Maybe TextFormat
+textFormat = \case
+  AsJSON    -> Just TextJSON
+  AsGnuplot -> Just TextGnuplot
+  AsPretty  -> Just TextPretty
+  AsTypst   -> Nothing
+
 -- | Explain the poor human a little bit of what was going on:
 data Anchor
   = Anchor
@@ -143,11 +157,10 @@ renderFieldCentiles x cdfProj Field{..} =
     DFloat  (cdfProj . ($ x) ->ds) -> ds <&> fmap (formatDouble fWidth)
     DDeltaT (cdfProj . ($ x) ->ds) -> ds <&> fmap (formatDiffTime fWidth)
 
-renderSummary :: forall f a. (a ~ Summary f, ToJSON a)
-  => RenderConfig -> Anchor -> (Field ISelect I a -> Bool) -> a -> [Text]
-renderSummary RenderConfig{rcFormat=AsJSON} _ _ x = (:[]) . LT.toStrict $ encodeToLazyText x
-renderSummary rc  _ _ _ =
-  error $ "renderSummary: RenderConfig not supported:  " <> show rc
+-- | The summary as text: only as JSON (its table is Typst only).
+renderSummary :: forall f a. (a ~ Summary f, ToJSON a) => TextFormat -> a -> Either Text [Text]
+renderSummary TextJSON x = Right . (:[]) . LT.toStrict $ encodeToLazyText x
+renderSummary _        _ = Left "the summary renders as JSON or Typst only"
 
 -- | Profiling entries as a table, sorted by time share: a header, and one row per function.
 profilingDataTable :: (ProfileEntry (CDF I) -> Bool) -> ProfilingData (CDF I) -> ([Text], [[Text]])
@@ -325,16 +338,12 @@ aspectColHeadersAndProjections = \case
           , fromIntegral cdfSize
           ]))
 
-renderAnalysisCDFs :: forall a p. (CDFFields a p, KnownCDF p, ToJSON (a p)) => Anchor -> (Field DSelect p a -> Bool) -> CDF2Aspect -> Maybe [Centile] -> RenderConfig -> a p -> [(Text, [Text])]
+renderAnalysisCDFs :: forall a p. (CDFFields a p, KnownCDF p, ToJSON (a p)) => TextFormat -> Anchor -> (Field DSelect p a -> Bool) -> CDF2Aspect -> Maybe [Centile] -> RenderConfig -> a p -> [(Text, [Text])]
 
-renderAnalysisCDFs _anchor _fieldSelr _c2a _centileSelr RenderConfig{rcFormat=AsTypst} _x =
-  -- Typst output is template-based, and thus produced in IO by Cardano.Report.
-  error "renderAnalysisCDFs(AsTypst): use Cardano.Report.generateTypstCDFs"
-
-renderAnalysisCDFs _anchor _fieldSelr _c2a _centileSelr RenderConfig{rcFormat=AsJSON} x = (:[]) . ("",) . (:[]) . LT.toStrict $
+renderAnalysisCDFs TextJSON _anchor _fieldSelr _c2a _centileSelr _rc x = (:[]) . ("",) . (:[]) . LT.toStrict $
   encodeToLazyText x
 
-renderAnalysisCDFs anchor fieldSelr _c2a _centileSelr rc@RenderConfig{rcFormat=AsGnuplot} x =
+renderAnalysisCDFs TextGnuplot anchor fieldSelr _c2a _centileSelr rc x =
   filter fieldSelr cdfFields <&>
   \Field{fId=cdfField} ->
     (,) cdfField $
@@ -342,7 +351,7 @@ renderAnalysisCDFs anchor fieldSelr _c2a _centileSelr rc@RenderConfig{rcFormat=A
     (mapRenderCDF ((== cdfField) . fId) Nothing (unliftCDFValExtra cdfIx) x
      & fmap (T.intercalate " "))
 
-renderAnalysisCDFs a fieldSelr _c2a centiSelr rc@RenderConfig{rcFormat=AsPretty} x =
+renderAnalysisCDFs TextPretty a fieldSelr _c2a centiSelr rc x =
   (:[]) . ("",) $
   renderAnchor rc a
   :  catMaybes [head1, head2]

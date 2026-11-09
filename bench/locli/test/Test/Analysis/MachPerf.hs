@@ -106,6 +106,7 @@ sizeAvg c = (cdfSize c, unI (cdfAverage c))
 
 prop_machPerf_snapshots_and_txs = withTests 1 $ property $ do
   mp <- evalEither $ snd <$> slotStatsMachPerf run (LogObjectSourceOther "test", slots)
+  sizeAvg (cdfHostSlots mp)        === (1, 15)  -- slots analysed, not last - first
   -- Ledger snapshots
   sizeAvg (cdfSnapTaken mp)        === (1, 1)
   sizeAvg (cdfSnapDuration mp)     === (1, 2)
@@ -120,6 +121,30 @@ prop_machPerf_snapshots_and_txs = withTests 1 $ property $ do
   sizeAvg (cdfCpuPerTx mp)         === (1, 500)
   sizeAvg (cdfGcPerTx mp)          === (1, 100)
   sizeAvg (cdfMutPerTx mp)         === (1, 400)
+
+-- | Slots 990..1040 (epoch length 1000), slot 1030 filtered out. The epoch's first block is
+--   adopted in slot 1004. Peaks at 95% CPU: 993-994 (other); 999-1002 (ends 2 slots before the
+--   first block: the epoch transition, 3 slots of it in the new epoch); 1019-1022 (during a
+--   snapshot completing at 1020.5 after 2s: window 1018.5 .. 1025.5); 1029 and 1031 (split by
+--   the filtered slot: two peaks); 1035 (other).
+peakSlots :: [SlotStats NominalDiffTime]
+peakSlots =
+  [ (slot n) { slEpoch     = EpochNo (n `div` 1000)
+             , slEpochSlot = EpochSlot (n `mod` 1000)
+             , slBlockNo   = if n < 1004 then 5 else 6
+             , slSnapshot  = if n == 1020 then SJust (1020.5 `addUTCTime` t0, 2) else SNothing
+             , slResources = slResources (slot n) <&> \r -> r { rCentiCpu = if peak n then 95 else 50 } }
+  | n <- [990 .. 1040], n /= 1030 ]
+ where
+   peak n = n `elem` ([993, 994] <> [999 .. 1002] <> [1019 .. 1022] <> [1029, 1031, 1035])
+
+prop_machPerf_cpu_peaks_by_cause = withTests 1 $ property $ do
+  mp <- evalEither $ snd <$> slotStatsMachPerf run (LogObjectSourceOther "test", peakSlots)
+  let sizeSum c = (cdfSize c, round (unI (cdfAverage c) * fromIntegral (cdfSize c)) :: Int)
+  sizeSum (cdfSpanLensCpu      mp) === (6, 13)  -- 2 + 4 + 4 + 1 + 1 + 1 slots
+  sizeSum (cdfSpanLensCpuEpoch mp) === (1, 3)   -- from the epoch's first slot
+  sizeSum (cdfSpanLensCpuSnap  mp) === (1, 4)
+  sizeSum (cdfSpanLensCpuOther mp) === (4, 5)   -- 2 + 1 + 1 + 1
 
 -- | Without processed txs, the ratios read 0 (not NaN); more accepted than processed
 --   (counted from different events) yields 0 rejected, not a Word64 underflow.

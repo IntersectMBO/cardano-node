@@ -163,10 +163,6 @@ class TimelineFields a where
   rtCommentary   :: a -> TimelineComments a -> [Text]
   rtCommentary _ _ = []
 
-data FSelect where
-  ISel :: TimelineFields a   => (Field ISelect I a -> Bool) -> FSelect
-  DSel :: CDFFields      a p => (Field DSelect p a -> Bool) -> FSelect
-
 data DSelect p a
   = DInt    (a p -> CDF p Int)
   | DWord64 (a p -> CDF p Word64)
