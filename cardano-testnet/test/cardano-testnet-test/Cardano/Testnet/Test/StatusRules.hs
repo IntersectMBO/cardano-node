@@ -5,6 +5,9 @@ module Cardano.Testnet.Test.StatusRules
   , unit_classify_network
   , unit_exit_codes
   , unit_best_tip
+  , unit_blocks_behind
+  , unit_fork_reference
+  , unit_on_reference_chain
   ) where
 
 import           Cardano.Api (BlockNo (..), SlotNo (..), deserialiseFromRawBytesHex)
@@ -14,7 +17,8 @@ import           Prelude
 import           Data.List.NonEmpty (NonEmpty (..))
 import           System.Exit (ExitCode (..))
 
-import           Testnet.Status.Run (calcNodeState, classifyNetwork, newestTip)
+import           Testnet.Status.Run (blocksBehind, calcNodeState, classifyNetwork, forkReference,
+                   newestTip, onReferenceChain)
 import           Testnet.Status.Types
 
 import           Hedgehog ((===))
@@ -79,3 +83,45 @@ unit_best_tip = H.propertyOnce $ do
   newestTip [tipA, tipB] === Just tipB
   newestTip [tipB, tipA] === Just tipB
   newestTip [] === Nothing
+
+-- | Execute me with:
+-- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/Blocks behind/"'@
+unit_blocks_behind :: H.Property
+unit_blocks_behind = H.propertyOnce $ do
+  let tipAtBlock n = (tipOfAge 1) { tipBlockNo = BlockNo n }
+  -- Counted from the tip with the most blocks, which is not always the newest
+  -- one, so the number is never negative.
+  blocksBehind [Just (tipAtBlock 8), Just (tipAtBlock 10), Nothing] === [Just 2, Just 0, Nothing]
+  blocksBehind [Just ((tipAtBlock 10) { tipSlot = SlotNo 90 }), Just ((tipAtBlock 9) { tipSlot = SlotNo 95 })]
+    === [Just 0, Just 1]
+  blocksBehind [Nothing, Nothing] === [Nothing, Nothing]
+  blocksBehind [] === []
+
+-- | Execute me with:
+-- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/Fork reference/"'@
+unit_fork_reference :: H.Property
+unit_fork_reference = H.propertyOnce $ do
+  let tipAt slot n = (tipOfAge 1) { tipSlot = SlotNo slot, tipBlockNo = BlockNo n }
+  -- The node with the most blocks, even when another one has a newer tip.
+  forkReference [('a', Just (tipAt 95 9)), ('b', Just (tipAt 90 10)), ('c', Nothing)]
+    === Just ('b', tipAt 90 10)
+  -- The first of the nodes with the most blocks.
+  forkReference [('a', Just (tipAt 90 10)), ('b', Just (tipAt 95 10))] === Just ('a', tipAt 90 10)
+  forkReference [('a', Nothing :: Maybe TipInfo)] === Nothing
+  forkReference ([] :: [(Char, Maybe TipInfo)]) === Nothing
+
+-- | Execute me with:
+-- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/On the reference chain/"'@
+unit_on_reference_chain :: H.Property
+unit_on_reference_chain = H.propertyOnce $ do
+  let reference = (tipOfAge 1) { tipSlot = SlotNo 100, tipBlockNo = BlockNo 10 }
+      forked = (tipOfAge 1) { tipSlot = SlotNo 60, tipBlockNo = BlockNo 5 }
+      tips = [Just reference, Just forked, Nothing]
+  -- The answers are about the reference node's own tip first, then about the
+  -- tip of each node. When the first one is yes, the others are the result.
+  onReferenceChain tips (Just [Just True, Just True, Just False, Nothing]) === [Just True, Just False, Nothing]
+  -- When the reference node did not answer, every node is unknown.
+  onReferenceChain tips Nothing === [Nothing, Nothing, Nothing]
+  -- When the reference node's own tip is not on its chain, it switched to
+  -- another chain, and every node is unknown.
+  onReferenceChain tips (Just [Just False, Just True, Just False, Nothing]) === [Nothing, Nothing, Nothing]

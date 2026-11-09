@@ -182,6 +182,12 @@ tests = do
             Cardano.Testnet.Test.StatusRules.unit_exit_codes
         , H.testPropertyNamed "Best tip" (fromString "unit_best_tip")
             Cardano.Testnet.Test.StatusRules.unit_best_tip
+        , H.testPropertyNamed "Blocks behind" (fromString "unit_blocks_behind")
+            Cardano.Testnet.Test.StatusRules.unit_blocks_behind
+        , H.testPropertyNamed "Fork reference" (fromString "unit_fork_reference")
+            Cardano.Testnet.Test.StatusRules.unit_fork_reference
+        , H.testPropertyNamed "On the reference chain" (fromString "unit_on_reference_chain")
+            Cardano.Testnet.Test.StatusRules.unit_on_reference_chain
         ]
     , T.testGroup "NodesWithOptions parser"
         [ H.testPropertyNamed "Roundtrip" (fromString "prop_parseNodeSpecs_roundtrip")

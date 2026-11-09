@@ -1,10 +1,10 @@
 Network: STOPPED - no node answers
-+-------+-------+-------------+-------+----------+-----------+---------+
-| NODE  | ROLE  | STATE       | PID   | TIP SLOT | TIP BLOCK | TIP AGE |
-+-------+-------+-------------+-------+----------+-----------+---------+
-| node1 | spo   | down        | 12345 | -        | -         | -       |
-+-------+-------+-------------+-------+----------+-----------+---------+
-| node2 | relay | unreachable | -     | -        | -         | -       |
-+-------+-------+-------------+-------+----------+-----------+---------+
-node1: Network.Socket.connect: <socket: 23>: does not exist (Connection refused)
-node2: no answer within 5s
++-------+-------+-------------+-------+----------+-----------+---------+--------+---------+
+| NODE  | ROLE  | STATE       | PID   | TIP SLOT | TIP BLOCK | TIP AGE | BEHIND | MEMPOOL |
++-------+-------+-------------+-------+----------+-----------+---------+--------+---------+
+| node1 | spo   | down        | 12345 | -        | -         | -       | -      | -       |
++-------+-------+-------------+-------+----------+-----------+---------+--------+---------+
+| node2 | relay | unreachable | -     | -        | -         | -       | -      | -       |
++-------+-------+-------------+-------+----------+-----------+---------+--------+---------+
+node1: Network.Socket.connect: <socket: 23>: does not exist (Connection refused) (logs: testnet/logs/node1/stdout.log, testnet/logs/node1/stderr.log)
+node2: no answer within 5s (logs: testnet/logs/node2/stdout.log, testnet/logs/node2/stderr.log)

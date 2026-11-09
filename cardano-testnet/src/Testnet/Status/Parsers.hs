@@ -37,7 +37,7 @@ pStatusCheckTimeout :: Parser Nat
 pStatusCheckTimeout = OA.option timeoutReader
   (   OA.long "timeout"
   <>  OA.metavar "SECONDS"
-  <>  OA.help "How many seconds to wait for each node to answer (1 - 3600)."
+  <>  OA.help "How many seconds to wait for each answer from a node (1 - 3600). The whole check takes at most twice as long."
   <>  OA.value 5
   <>  OA.showDefault
   )

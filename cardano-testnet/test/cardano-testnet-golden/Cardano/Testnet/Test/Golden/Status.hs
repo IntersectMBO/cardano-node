@@ -8,8 +8,8 @@ module Cardano.Testnet.Test.Golden.Status
   , golden_StatusCommand
   ) where
 
-import           Cardano.Api (BlockHeader, BlockNo (..), Hash, SlotNo (..),
-                   deserialiseFromRawBytesHex)
+import           Cardano.Api (AnyCardanoEra (..), BlockHeader, BlockNo (..), CardanoEra (..),
+                   EpochNo (..), Hash, SlotNo (..), deserialiseFromRawBytesHex)
 
 import           Cardano.Testnet.Test.Golden.Util (execDetailCardanoTestnet)
 
@@ -26,9 +26,10 @@ import qualified Data.Text.Encoding as Text
 import           Data.Time.Calendar (fromGregorian)
 import           Data.Time.Clock (UTCTime (..))
 import           System.Exit (ExitCode (..))
-import           System.FilePath ((</>))
+import           System.FilePath (isPathSeparator, (</>))
 
 import           Testnet.Manifest (ManifestNodeRole (..))
+import           Testnet.Start.Types (defaultTestnetDir)
 import           Testnet.Status.Run (renderStatusReportHumanReadable)
 import           Testnet.Status.Types
 
@@ -48,14 +49,25 @@ sampleReport = StatusReport
   , reportBestTip            = Just freshTip
   , reportNodes              =
       [ NodeProbeResult "node1" RoleSpo (Just 12345) (Just True) NodeOk (Just freshTip) Nothing
+          "logs/node1/stdout.log" "logs/node1/stderr.log" (Just 0) (Just sampleMempool) (Just True)
       , NodeProbeResult "node2" RoleRelay (Just 12346) (Just True) NodeStalled (Just oldTip) Nothing
+          "logs/node2/stdout.log" "logs/node2/stderr.log" (Just 36) (Just emptyMempool) (Just False)
       , NodeProbeResult "node3" RoleRelay Nothing Nothing NodeUnreachable Nothing
           (Just "no answer within 5s")
+          "logs/node3/stdout.log" "logs/node3/stderr.log" Nothing Nothing Nothing
       , NodeProbeResult "node4" RoleRelay (Just 12348) (Just False) NodeDown Nothing
           (Just "Network.Socket.connect: <socket: 23>: does not exist (Connection refused)")
+          "logs/node4/stdout.log" "logs/node4/stderr.log" Nothing Nothing Nothing
       ]
   , reportProblemExplanation = Nothing
+  , reportChain              = Just (ChainInfo (AnyCardanoEra ConwayEra) (EpochNo 2) 234 266)
   }
+
+-- | The mempools of the sample nodes that answered: one with a transaction,
+-- and an empty one.
+sampleMempool, emptyMempool :: MempoolInfo
+sampleMempool = MempoolInfo 1 239 129024
+emptyMempool = MempoolInfo 0 0 129024
 
 -- | The tips of the sample reports: a fresh one and an old one.
 freshTip, oldTip :: TipInfo
@@ -70,7 +82,9 @@ sampleRunningReport = sampleReport
   { reportStatus = NetworkRunning
   , reportNodes =
       [ NodeProbeResult "node1" RoleSpo (Just 12345) (Just True) NodeOk (Just freshTip) Nothing
+          "logs/node1/stdout.log" "logs/node1/stderr.log" (Just 0) (Just sampleMempool) (Just True)
       , NodeProbeResult "node2" RoleRelay (Just 12346) (Just True) NodeOk (Just freshTip) Nothing
+          "logs/node2/stdout.log" "logs/node2/stderr.log" (Just 0) (Just sampleMempool) (Just True)
       ]
   }
 
@@ -78,10 +92,13 @@ sampleStalledReport :: StatusReport
 sampleStalledReport = sampleReport
   { reportStatus = NetworkStalled
   , reportBestTip = Just oldTip
+  , reportChain = Just (ChainInfo (AnyCardanoEra ConwayEra) (EpochNo 0) 400 100)
   , reportNodes =
       [ NodeProbeResult "node1" RoleSpo (Just 12345) (Just True) NodeStalled (Just oldTip) Nothing
+          "logs/node1/stdout.log" "logs/node1/stderr.log" (Just 0) (Just emptyMempool) (Just True)
       , NodeProbeResult "node2" RoleRelay (Just 12346) (Just False) NodeDown Nothing
           (Just "Network.Socket.connect: <socket: 23>: does not exist (Connection refused)")
+          "logs/node2/stdout.log" "logs/node2/stderr.log" Nothing Nothing Nothing
       ]
   }
 
@@ -89,9 +106,12 @@ sampleStalledNoBlocksReport :: StatusReport
 sampleStalledNoBlocksReport = sampleReport
   { reportStatus = NetworkStalled
   , reportBestTip = Nothing
+  , reportChain = Nothing
   , reportNodes =
       [ NodeProbeResult "node1" RoleSpo (Just 12345) (Just True) NodeStalled Nothing Nothing
+          "logs/node1/stdout.log" "logs/node1/stderr.log" Nothing (Just emptyMempool) Nothing
       , NodeProbeResult "node2" RoleRelay (Just 12346) (Just True) NodeStalled Nothing Nothing
+          "logs/node2/stdout.log" "logs/node2/stderr.log" Nothing (Just emptyMempool) Nothing
       ]
   }
 
@@ -99,11 +119,14 @@ sampleStoppedReport :: StatusReport
 sampleStoppedReport = sampleReport
   { reportStatus = NetworkStopped
   , reportBestTip = Nothing
+  , reportChain = Nothing
   , reportNodes =
       [ NodeProbeResult "node1" RoleSpo (Just 12345) (Just False) NodeDown Nothing
           (Just "Network.Socket.connect: <socket: 23>: does not exist (Connection refused)")
+          "logs/node1/stdout.log" "logs/node1/stderr.log" Nothing Nothing Nothing
       , NodeProbeResult "node2" RoleRelay Nothing Nothing NodeUnreachable Nothing
           (Just "no answer within 5s")
+          "logs/node2/stdout.log" "logs/node2/stderr.log" Nothing Nothing Nothing
       ]
   }
 
@@ -117,6 +140,7 @@ sampleNoTestnetReport = StatusReport
   , reportBestTip            = Nothing
   , reportNodes              = []
   , reportProblemExplanation = Just DirMissing
+  , reportChain              = Nothing
   }
 
 -- | Parse a fixture hash, failing loudly on a typo in the literal.
@@ -147,24 +171,36 @@ golden_StatusJson = propertyOnce $ do
 golden_StatusTable :: Property
 golden_StatusTable = propertyOnce $ do
   base <- H.getProjectBase
-  diffVsGoldenFile (show $ renderStatusReportHumanReadable sampleReport) $
+  diffVsGoldenFile (render sampleReport) $
     base </> goldenFile "status.txt"
-  diffVsGoldenFile (show $ renderStatusReportHumanReadable sampleNoTestnetReport) $
+  diffVsGoldenFile (render sampleNoTestnetReport) $
     base </> goldenFile "status_no_testnet.txt"
   diffVsGoldenFile
-    (show $ renderStatusReportHumanReadable sampleNoTestnetReport{reportProblemExplanation = Just NotReady}) $
+    (render sampleNoTestnetReport{reportProblemExplanation = Just NotReady}) $
     base </> goldenFile "status_no_testnet_not_ready.txt"
   diffVsGoldenFile
-    (show $ renderStatusReportHumanReadable sampleNoTestnetReport{reportProblemExplanation = Just NotATestnetDir}) $
+    (render sampleNoTestnetReport{reportProblemExplanation = Just NotATestnetDir}) $
     base </> goldenFile "status_no_testnet_not_a_testnet_dir.txt"
-  diffVsGoldenFile (show $ renderStatusReportHumanReadable sampleRunningReport) $
+  diffVsGoldenFile (render sampleRunningReport) $
     base </> goldenFile "status_running.txt"
-  diffVsGoldenFile (show $ renderStatusReportHumanReadable sampleStalledReport) $
+  diffVsGoldenFile (render sampleStalledReport) $
     base </> goldenFile "status_stalled.txt"
-  diffVsGoldenFile (show $ renderStatusReportHumanReadable sampleStalledNoBlocksReport) $
+  diffVsGoldenFile (render sampleStalledNoBlocksReport) $
     base </> goldenFile "status_stalled_no_blocks.txt"
-  diffVsGoldenFile (show $ renderStatusReportHumanReadable sampleStoppedReport) $
+  diffVsGoldenFile (render sampleStoppedReport) $
     base </> goldenFile "status_stopped.txt"
+
+  -- With the default directory "./testnet", each log path has one kind of
+  -- separator, the one of the platform. The comparisons above cannot tell,
+  -- because 'render' turns every separator into '/'.
+  assertWith (show $ renderStatusReportHumanReadable sampleStoppedReport{reportOutputDir = defaultTestnetDir}) $
+    isInfixOf $ "(logs: " <> ("testnet" </> "logs" </> "node1" </> "stdout.log")
+                  <> ", " <> ("testnet" </> "logs" </> "node1" </> "stderr.log") <> ")"
+  where
+    -- The golden files have '/' in the log paths, so on Windows every path
+    -- separator is turned into '/' before the comparison.
+    render :: StatusReport -> String
+    render = map (\c -> if isPathSeparator c then '/' else c) . show . renderStatusReportHumanReadable
 
 -- | The real command, without a testnet: the exit code, stdout and stderr for
 -- a missing directory, as a table and as JSON, and for a broken manifest. The

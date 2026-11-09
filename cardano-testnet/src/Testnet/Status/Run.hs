@@ -4,39 +4,54 @@
 module Testnet.Status.Run (
     runCheckStatusOptions,
     checkStatus,
+    blocksBehind,
     calcNodeState,
     classifyNetwork,
     newestTip,
+    forkReference,
+    onReferenceChain,
+    askOnChain,
     renderStatusReportHumanReadable,
 ) where
 
-import           Cardano.Api (BlockNo (..), CardanoEra (..), ChainTip (..),
-                   ConsensusModeParams (..), LocalNodeConnectInfo (..), NetworkId (..),
-                   NetworkMagic (..), ShelleyGenesis, SlotNo (..), getLocalChainTip, mapFile)
+import           Cardano.Api (BlockInMode, BlockNo (..), CardanoEra (..), ChainPoint (..),
+                   ChainSyncClient (..), ChainTip (..), ConsensusModeParams (..), EpochNo (..),
+                   LocalChainSyncClient (..), LocalNodeClientProtocols (..),
+                   LocalNodeConnectInfo (..), LocalTxMonitoringQuery (..),
+                   LocalTxMonitoringResult (..), MempoolSizeAndCapacity (..), NetworkId (..),
+                   NetworkMagic (..), ShelleyGenesis, SlotNo (..), SlotsInEpoch (..),
+                   SlotsToEpochEnd (..), SocketPath, Target (..), connectToLocalNode,
+                   executeLocalStateQueryExpr, getLocalChainTip, mapFile, queryCurrentEra,
+                   queryEraHistory, queryTxMonitoringLocal, slotToEpoch)
 
 import qualified Cardano.Ledger.Shelley.API as SL
 import           Cardano.Node.Testnet.Paths (defaultGenesisFilepath, defaultManifestFile)
 import           Cardano.Prelude (Nat, NonEmpty, Word32, toList, transpose)
+import           Ouroboros.Network.Protocol.ChainSync.Client (ClientStIdle (..),
+                   ClientStIntersect (..))
 
 import           Prelude
 
+import           Control.Concurrent.MVar (MVar, newEmptyMVar, putMVar, takeMVar)
 import           Data.Aeson (FromJSON, eitherDecodeFileStrict')
 import           Data.Aeson.Encode.Pretty (encodePretty)
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Foldable (maximumBy)
+import           Data.List (intercalate, zip4)
 import           Data.List.NonEmpty (nonEmpty)
-import           Data.Maybe (fromMaybe, mapMaybe)
+import           Data.Maybe (fromMaybe, isNothing, mapMaybe)
 import           Data.Ord (comparing)
 import           Data.Text (Text)
 import qualified Data.Text as T
 import           Data.Time (NominalDiffTime, UTCTime, addUTCTime, diffUTCTime, getCurrentTime)
+import           Data.Word (Word64)
 import           GHC.Stack (HasCallStack)
 import           Prettyprinter (Doc, concatWith, hardline, parens, pretty, softline)
 import           Prettyprinter.Render.Text (putDoc)
 import           Prettyprinter.Util (reflow)
 import           System.Directory (doesDirectoryExist, doesFileExist)
 import           System.Exit (exitWith)
-import           System.FilePath ((</>))
+import           System.FilePath (normalise, (</>))
 import           System.Timeout (timeout)
 import           Text.Printf (printf)
 
@@ -44,14 +59,15 @@ import           Testnet.ChainWatchdog (chainForecastHorizon, chainStallTimeoutF
 import           Testnet.Manifest (Manifest (..), ManifestGenesisFiles (..), ManifestNetwork (..),
                    ManifestNode (..), ManifestNodeRole (..), ManifestPaths (..))
 import           Testnet.Signal (isProcessAlive)
-import           Testnet.Start.Types (defaultTestnetDir)
-import           Testnet.Status.Types (CheckStatusOptions (..), NetworkStatus (..),
-                   NoTestnetReason (..), NodeAnswer (..), NodeProbeResult (..), NodeState (..),
-                   OutputFormat (..), StatusReport (..), TipInfo (..), exitCodeForStatus)
+import           Testnet.Start.Types (anyEraToString, defaultTestnetDir)
+import           Testnet.Status.Types (ChainInfo (..), CheckStatusOptions (..), MempoolInfo (..),
+                   NetworkStatus (..), NoTestnetReason (..), NodeAnswer (..), NodeProbeResult (..),
+                   NodeState (..), OutputFormat (..), StatusReport (..), TipInfo (..),
+                   exitCodeForStatus)
 import           Testnet.Types (sgSlotLength, sgSystemStart, testnetEpochSlots)
 
 import           RIO (displayException, hFlush, stdout, throwString, tryAny)
-import           UnliftIO.Async (forConcurrently)
+import           UnliftIO.Async (async, forConcurrently, wait)
 
 -- | Run the @status@ command: print the report (a table, or JSON) on stdout
 -- and exit with 0 (running or degraded), 3 (stalled), 4 (stopped) or 5 (no
@@ -72,10 +88,14 @@ runCheckStatusOptions
       hFlush stdout
       exitWith . exitCodeForStatus $ reportStatus status
 
--- | Check the testnet in the given output directory. Each node gets the
--- given number of seconds to answer, and all nodes are asked at the same
--- time. It throws when the check itself fails: when the manifest, or the
--- shelley genesis it points to, cannot be read.
+-- | Check the testnet in the given output directory. All nodes are asked for
+-- their tips at the same time. Then, also at the same time, each node that
+-- answered is asked about its mempool, and the node with the best tip is asked
+-- where the chain is, and the node with the most blocks whether the tips of
+-- the others are on its chain. Each query gets the given number of seconds,
+-- so the check takes at most twice that long. It throws when the check itself
+-- fails: when the manifest, or the shelley genesis it points to, cannot be
+-- read.
 checkStatus :: HasCallStack => FilePath -> Nat -> IO StatusReport
 checkStatus outputDir timeoutSeconds = do
   let manifestFile = outputDir </> defaultManifestFile
@@ -98,19 +118,41 @@ checkNodes outputDir timeoutSeconds manifest@(Manifest{manifestNetwork = Manifes
   checkedAt <- getCurrentTime
   nodes <- forConcurrently (manifestNodes manifest) $
               probeNode outputDir timeoutSeconds magic limit slotStart
+  let probed = zip (toList $ manifestNodes manifest) (toList nodes)
+      tips = map probeNodeTipInfo $ toList nodes
+      bestTip = newestTip . mapMaybe probeNodeTipInfo $ toList nodes
+  chainQuery <- async $
+    case [ (node, tip) | (node, probe) <- probed, Just tip <- [probeNodeTipInfo probe], Just tip == bestTip ] of
+      (node, tip) : _ -> askChainInfo timeoutSeconds (connectInfoOf node) (tipSlot tip)
+      [] -> pure Nothing
+  forkQuery <- async $
+    case forkReference [ (node, probeNodeTipInfo probe) | (node, probe) <- probed ] of
+      Just (node, reference) -> askOnChain timeoutSeconds (connectInfoOf node) reference tips
+      Nothing -> pure $ map (const Nothing) tips
+  mempools <- forConcurrently probed $ \(node, probe) ->
+    if isNothing (probeError probe)
+      then askMempool timeoutSeconds (connectInfoOf node)
+      else pure Nothing
+  chain <- wait chainQuery
+  onChain <- wait forkQuery
   pure StatusReport
          { reportOutputDir = outputDir
          , reportCheckedAt = checkedAt
          , reportStatus = classifyNetwork (probeNodeState <$> nodes)
-         , reportBestTip = newestTip . mapMaybe probeNodeTipInfo $ toList nodes
-         , reportNodes = toList nodes
+         , reportBestTip = bestTip
+         , reportNodes =
+             [ probe{probeBlocksBehind = behind, probeMempool = mempool, probeOnLongestChain = onLongest}
+             | (probe, behind, mempool, onLongest) <- zip4 (toList nodes) (blocksBehind tips) mempools onChain
+             ]
          , reportProblemExplanation = Nothing
+         , reportChain = chain
          }
   where
     -- The chain watchdog's threshold for a dead chain: one number for both.
     limit = chainStallTimeoutFromHorizon (chainForecastHorizon genesis)
     slotLength = SL.fromNominalDiffTimeMicro (sgSlotLength genesis)
     slotStart (SlotNo slot) = addUTCTime (fromIntegral slot * slotLength) (sgSystemStart genesis)
+    connectInfoOf ManifestNode{mnodeSocketPath = socketPath} = nodeConnectInfo outputDir magic socketPath
 
 -- | Check the status of one node in the testnet.
 probeNode
@@ -127,6 +169,8 @@ probeNode outputDir timeoutSeconds magic limit slotStart
             , mnodeRole = role
             , mnodePid = pid
             , mnodeSocketPath = socketPath
+            , mnodeStdoutFile = stdoutFile
+            , mnodeStderrFile = stderrFile
             } = do
   answer <- askTip
   pidAlive <- maybe (pure Nothing) isProcessAlive pid
@@ -143,6 +187,11 @@ probeNode outputDir timeoutSeconds magic limit slotStart
          , probeError = case answer of
                           NoAnswer reason -> Just reason
                           _ -> Nothing
+         , probeStdoutFile = stdoutFile
+         , probeStderrFile = stderrFile
+         , probeBlocksBehind = Nothing -- set by 'checkNodes'
+         , probeMempool = Nothing -- set by 'checkNodes'
+         , probeOnLongestChain = Nothing -- set by 'checkNodes'
          }
   where
     askTip :: IO NodeAnswer
@@ -163,11 +212,94 @@ probeNode outputDir timeoutSeconds magic limit slotStart
               Left e -> NoAnswer $ displayException e
 
     connectInfo :: LocalNodeConnectInfo
-    connectInfo = LocalNodeConnectInfo
-                    { localNodeSocketPath = mapFile (outputDir </>) socketPath
-                    , localNodeNetworkId = Testnet (NetworkMagic $ fromIntegral magic)
-                    , localConsensusModeParams = CardanoModeParams testnetEpochSlots
-                    }
+    connectInfo = nodeConnectInfo outputDir magic socketPath
+
+-- | How to connect to a node of the testnet in the given output directory.
+nodeConnectInfo :: FilePath -> Word32 -> SocketPath -> LocalNodeConnectInfo
+nodeConnectInfo outputDir magic socketPath =
+  LocalNodeConnectInfo
+    { localNodeSocketPath = mapFile (outputDir </>) socketPath
+    , localNodeNetworkId = Testnet (NetworkMagic $ fromIntegral magic)
+    , localConsensusModeParams = CardanoModeParams testnetEpochSlots
+    }
+
+-- | Ask a node what is in its mempool, on a connection of its own.
+-- 'Nothing' when it does not answer in time, or fails.
+askMempool :: Nat -> LocalNodeConnectInfo -> IO (Maybe MempoolInfo)
+askMempool timeoutSeconds connectInfo = do
+  result <- tryAny . timeout (fromIntegral (timeoutSeconds * 1_000_000)) $
+    queryTxMonitoringLocal connectInfo LocalTxMonitoringMempoolInformation
+  pure $ case result of
+    Right (Just (LocalTxMonitoringMempoolSizeAndCapacity sizes _)) ->
+      Just MempoolInfo
+             { mempoolTxs = numberOfTxs sizes
+             , mempoolBytes = sizeInBytes sizes
+             , mempoolCapacityBytes = capacityInBytes sizes
+             }
+    _ -> Nothing
+
+-- | Ask a node where the chain is: the era it is in, and the epoch of the
+-- given slot. 'Nothing' when it does not answer in time, or cannot tell.
+askChainInfo :: Nat -> LocalNodeConnectInfo -> SlotNo -> IO (Maybe ChainInfo)
+askChainInfo timeoutSeconds connectInfo slot = do
+  result <- tryAny . timeout (fromIntegral (timeoutSeconds * 1_000_000)) $
+    executeLocalStateQueryExpr connectInfo VolatileTip $ do
+      era <- queryCurrentEra
+      eraHistory <- queryEraHistory
+      pure $ (,) <$> era <*> eraHistory
+  pure $ case result of
+    Right (Just (Right (Right (era, eraHistory)))) ->
+      case slotToEpoch slot eraHistory of
+        Right (epoch, SlotsInEpoch inEpoch, SlotsToEpochEnd toEnd) ->
+          Just ChainInfo
+                 { chainEra = era
+                 , chainEpoch = epoch
+                 , chainSlotInEpoch = inEpoch
+                 , chainSlotsToEpochEnd = toEnd
+                 }
+        Left _ -> Nothing
+    _ -> Nothing
+
+-- | Ask the reference node, on a connection of its own, whether the tip of
+-- each node is on its chain. It uses the chain-sync request to find an
+-- intersection: the node finds a point when it is on its current chain,
+-- however old the point is. It asks about its own tip first, then about the
+-- tip of each node, in order, and 'onReferenceChain' turns the answers into
+-- one answer per node.
+askOnChain :: Nat -> LocalNodeConnectInfo -> TipInfo -> [Maybe TipInfo] -> IO [Maybe Bool]
+askOnChain timeoutSeconds connectInfo reference tips = do
+  resultVar <- newEmptyMVar
+  result <- tryAny . timeout (fromIntegral (timeoutSeconds * 1_000_000)) $ do
+    connectToLocalNode
+      connectInfo
+      LocalNodeClientProtocols
+        { localChainSyncClient = LocalChainSyncClient $ findEach resultVar [] (Just reference : tips)
+        , localTxSubmissionClient = Nothing
+        , localStateQueryClient = Nothing
+        , localTxMonitoringClient = Nothing
+        }
+    takeMVar resultVar
+  pure . onReferenceChain tips $ case result of
+    Right answers -> answers
+    Left _ -> Nothing
+  where
+    findEach
+      :: MVar [Maybe Bool] -- ^ where to put the answers
+      -> [Maybe Bool] -- ^ the answers so far, the newest first
+      -> [Maybe TipInfo] -- ^ the tips left to ask about
+      -> ChainSyncClient BlockInMode ChainPoint ChainTip IO ()
+    findEach resultVar found [] = ChainSyncClient $ do
+      putMVar resultVar (reverse found)
+      pure $ SendMsgDone ()
+    findEach resultVar found (Nothing : rest) = findEach resultVar (Nothing : found) rest
+    findEach resultVar found (Just tip : rest) =
+      ChainSyncClient . pure $
+        SendMsgFindIntersect
+          [tipPoint tip]
+          ClientStIntersect
+            { recvMsgIntersectFound = \_ _ -> findEach resultVar (Just True : found) rest
+            , recvMsgIntersectNotFound = \_ -> findEach resultVar (Just False : found) rest
+            }
 
 -- | The rule for the whole network.
 classifyNetwork :: NonEmpty NodeState -> NetworkStatus
@@ -198,6 +330,39 @@ calcNodeState _limit pidAlive (NoAnswer _)
 newestTip :: [TipInfo] -> Maybe TipInfo
 newestTip = fmap (maximumBy (comparing tipSlot)) . nonEmpty
 
+-- | How many blocks each tip is behind the tip with the most blocks: how many
+-- blocks its node is missing. A node without a tip has no number.
+blocksBehind :: [Maybe TipInfo] -> [Maybe Word64]
+blocksBehind tips = map (fmap behind) tips
+  where
+    most = maximum (0 : [unBlockNo (tipBlockNo tip) | Just tip <- tips])
+    behind tip = most - unBlockNo (tipBlockNo tip)
+
+-- | The rule for the node that the others are compared with, to find forks:
+-- the one with the most blocks, or the first of them when several have as
+-- many.
+forkReference :: [(a, Maybe TipInfo)] -> Maybe (a, TipInfo)
+forkReference nodes = foldl pick Nothing [ (node, tip) | (node, Just tip) <- nodes ]
+  where
+    pick (Just best) next
+      | tipBlockNo (snd next) <= tipBlockNo (snd best) = Just best
+    pick _ next = Just next
+
+-- | The rule for forks, from the reference node's answers ('askOnChain'):
+-- first about its own tip, then about the tip of each node ('Nothing' for a
+-- node without a tip). When its own tip is on its chain, the answers about the
+-- nodes are the result: 'Just True' for a node on the reference chain,
+-- 'Just False' for a node on a fork. Otherwise every node is unknown
+-- ('Nothing'): the reference node did not answer, or it switched to another
+-- chain after it told its tip, so its answers are about another chain.
+onReferenceChain :: [Maybe TipInfo] -> Maybe [Maybe Bool] -> [Maybe Bool]
+onReferenceChain _ (Just (Just True : answers)) = answers
+onReferenceChain tips _ = map (const Nothing) tips
+
+-- | The point of the chain that a tip is at.
+tipPoint :: TipInfo -> ChainPoint
+tipPoint tip = ChainPoint (tipSlot tip) (tipHash tip)
+
 -- | The 'StatusReport' when there is no manifest, with a hint about why.
 noTestnetReport :: FilePath -> IO StatusReport
 noTestnetReport outputDir = do
@@ -215,6 +380,7 @@ noTestnetReport outputDir = do
          , reportBestTip = Nothing
          , reportNodes = []
          , reportProblemExplanation = Just explanation
+         , reportChain = Nothing
          }
 
 -- | Render a 'StatusReport' in a human readable way.
@@ -226,8 +392,9 @@ renderStatusReportHumanReadable
     , reportNodes = nodes
     , reportOutputDir = outputDir
     , reportProblemExplanation = problemExplanation
+    , reportChain = chain
     } =
-  pretty (T.pack ("Network: " <> summary status)) <> hardline <> details <> hardline <> errors
+  pretty (T.pack ("Network: " <> summary status)) <> hardline <> chainLine <> forkLine <> details <> hardline <> errors
   where
     notOk = length $ filter ((/= NodeOk) . probeNodeState) nodes
 
@@ -266,12 +433,42 @@ renderStatusReportHumanReadable
     summary NetworkStopped = "STOPPED - no node answers"
     summary NoTestnet = "NO-TESTNET - no " <> defaultManifestFile <> " in " <> outputDir
 
+    chainLine :: Doc ann
+    chainLine =
+      foldMap
+        ( \ChainInfo
+            { chainEra = era
+            , chainEpoch = epoch
+            , chainSlotInEpoch = inEpoch
+            , chainSlotsToEpochEnd = toEnd
+            } -> pretty (T.pack ( "Chain: era " <> anyEraToString era
+                                    <> ", epoch " <> show (unEpochNo epoch)
+                                    <> ", slot " <> show inEpoch
+                                    <> " of " <> show (inEpoch + toEnd)
+                                ))
+                   <> hardline
+        )
+        chain
+
+    forkLine :: Doc ann
+    forkLine =
+      case ( forkReference [ (probeNodeName node, probeNodeTipInfo node) | node <- nodes ]
+           , [ probeNodeName node | node <- nodes, probeOnLongestChain node == Just False ]
+           ) of
+        (Just (reference, _), offChain@(_ : _)) ->
+          pretty (T.pack ( "Fork: " <> intercalate ", " offChain
+                             <> (if length offChain == 1 then " is" else " are")
+                             <> " not on the chain of " <> reference <> ", which has the most blocks"
+                         ))
+            <> hardline
+        _ -> mempty
+
     details :: Doc ann
     details =
       case status of
         NoTestnet -> "No testnet" <> maybe "" (\x -> softline <> parens (explain x)) problemExplanation
         _ -> renderTable $
-               ["NODE", "ROLE", "STATE", "PID", "TIP SLOT", "TIP BLOCK", "TIP AGE"]
+               ["NODE", "ROLE", "STATE", "PID", "TIP SLOT", "TIP BLOCK", "TIP AGE", "BEHIND", "MEMPOOL"]
                  : [ [ nodeName
                      , case nodeRole of
                          RoleSpo -> "spo"
@@ -293,15 +490,26 @@ renderStatusReportHumanReadable
                                       , show $ unBlockNo blockNo
                                       , seconds age
                                       ]
+                       <> [maybe "-" show mBlocksBehind, maybe "-" mempoolCell mMempool]
                     | NodeProbeResult
                         { probeNodeName = nodeName
                         , probeNodeRole = nodeRole
                         , probePid = mNodePid
                         , probeNodeState = nodeState
                         , probeNodeTipInfo = mNodeTipInfo
+                        , probeBlocksBehind = mBlocksBehind
+                        , probeMempool = mMempool
                         }
                       <- nodes
                    ]
+
+    mempoolCell :: MempoolInfo -> String
+    mempoolCell
+      MempoolInfo
+        { mempoolTxs = txs
+        , mempoolBytes = bytes
+        , mempoolCapacityBytes = capacity
+        } = show txs <> " tx, " <> show bytes <> "/" <> show capacity <> " B"
 
     -- The directory is one word: a line can break around it, never inside it.
     explain :: NoTestnetReason -> Doc ann
@@ -309,10 +517,21 @@ renderStatusReportHumanReadable
     explain NotReady = reflow "Genesis files exist, but no manifest: the testnet is still starting or it never became ready."
     explain NotATestnetDir = pretty outputDir <> softline <> reflow "is not a testnet output directory."
 
+    -- The log paths are normalised, so that on Windows they use only '\',
+    -- also with the default directory "./testnet".
     errors :: Doc ann
     errors = mconcat
-      [ pretty (T.pack (nodeName <> ": " <> err)) <> hardline
-      | NodeProbeResult{probeNodeName = nodeName, probeError = Just err} <- nodes
+      [ pretty (T.pack ( nodeName <> ": " <> err
+                           <> " (logs: " <> normalise (outputDir </> stdoutFile) <> ", " <> normalise (outputDir </> stderrFile) <> ")"
+                       ))
+          <> hardline
+      | NodeProbeResult
+          { probeNodeName = nodeName
+          , probeError = Just err
+          , probeStdoutFile = stdoutFile
+          , probeStderrFile = stderrFile
+          }
+        <- nodes
       ]
 
 -- | Render rows of cells as a table, with a border around every cell.
