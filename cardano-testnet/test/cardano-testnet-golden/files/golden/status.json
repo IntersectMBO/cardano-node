@@ -5,18 +5,32 @@
         "hash": "cc061706c16ad2b35450f1528f5652ff172f9b0acabcdc29284e2363d3bebb2a",
         "slot": 1234
     },
+    "chain": {
+        "epoch": 2,
+        "era": "conway",
+        "slotInEpoch": 234,
+        "slotsToEpochEnd": 266
+    },
     "chainProducingBlocks": true,
     "checkedAt": "2026-01-01T00:01:00Z",
     "exitCode": 0,
     "noTestnetReason": null,
     "nodes": [
         {
+            "blocksBehind": 0,
             "error": null,
+            "mempool": {
+                "bytes": 239,
+                "capacityBytes": 129024,
+                "txs": 1
+            },
             "name": "node1",
             "pid": 12345,
             "pidAlive": true,
             "role": "spo",
             "state": "ok",
+            "stderrFile": "logs/node1/stderr.log",
+            "stdoutFile": "logs/node1/stdout.log",
             "tip": {
                 "ageSeconds": 0.5,
                 "blockNo": 56,
@@ -25,12 +39,20 @@
             }
         },
         {
+            "blocksBehind": 36,
             "error": null,
+            "mempool": {
+                "bytes": 0,
+                "capacityBytes": 129024,
+                "txs": 0
+            },
             "name": "node2",
             "pid": 12346,
             "pidAlive": true,
             "role": "relay",
             "state": "stalled",
+            "stderrFile": "logs/node2/stderr.log",
+            "stdoutFile": "logs/node2/stdout.log",
             "tip": {
                 "ageSeconds": 83.4,
                 "blockNo": 20,
@@ -39,24 +61,32 @@
             }
         },
         {
+            "blocksBehind": null,
             "error": "no answer within 5s",
+            "mempool": null,
             "name": "node3",
             "pid": null,
             "pidAlive": null,
             "role": "relay",
             "state": "unreachable",
+            "stderrFile": "logs/node3/stderr.log",
+            "stdoutFile": "logs/node3/stdout.log",
             "tip": null
         },
         {
+            "blocksBehind": null,
             "error": "Network.Socket.connect: <socket: 23>: does not exist (Connection refused)",
+            "mempool": null,
             "name": "node4",
             "pid": 12348,
             "pidAlive": false,
             "role": "relay",
             "state": "down",
+            "stderrFile": "logs/node4/stderr.log",
+            "stdoutFile": "logs/node4/stdout.log",
             "tip": null
         }
     ],
-    "schemaVersion": 1,
+    "schemaVersion": 2,
     "status": "degraded"
 }

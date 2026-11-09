@@ -446,7 +446,12 @@ A pre-existing manifest from an earlier run in the same directory is deleted bef
 
 ### Status output
 
-`cardano-testnet status --json` prints the health of a testnet as a single JSON object: the state of the network, the exit code of the command, why there is no testnet (when there is none), the freshest tip, and the state and tip of every node, with the error of a node that did not answer.
+`cardano-testnet status --json` prints the health of a testnet as a single JSON object: the state of the network, the exit code of the command, why there is no testnet (when there is none), the freshest tip, where the chain is, and the state and tip of every node, with the error of a node that did not answer.
+Where the chain is means the era, the epoch, and the slot in the epoch of the freshest tip.
+The era is the one the nodes are in, so after a hard fork it differs from the era in the manifest.
+For every node, the output also has its two log files, how many blocks it is behind the node with the most blocks, and what is in its mempool.
+The table shows the same things: a `Chain:` line under the `Network:` line, the `BEHIND` and `MEMPOOL` columns, and the log files after the error of each node that did not answer.
+Each question to a node waits at most `--timeout` seconds, and the whole check takes at most twice that long.
 The exit code is 0 while the chain is producing blocks, even when some nodes are not healthy.
 A script that needs every node to be healthy can check the `status` field:
 

@@ -5,6 +5,7 @@ module Cardano.Testnet.Test.StatusRules
   , unit_classify_network
   , unit_exit_codes
   , unit_best_tip
+  , unit_blocks_behind
   ) where
 
 import           Cardano.Api (BlockNo (..), SlotNo (..), deserialiseFromRawBytesHex)
@@ -14,7 +15,7 @@ import           Prelude
 import           Data.List.NonEmpty (NonEmpty (..))
 import           System.Exit (ExitCode (..))
 
-import           Testnet.Status.Run (calcNodeState, classifyNetwork, newestTip)
+import           Testnet.Status.Run (blocksBehind, calcNodeState, classifyNetwork, newestTip)
 import           Testnet.Status.Types
 
 import           Hedgehog ((===))
@@ -79,3 +80,16 @@ unit_best_tip = H.propertyOnce $ do
   newestTip [tipA, tipB] === Just tipB
   newestTip [tipB, tipA] === Just tipB
   newestTip [] === Nothing
+
+-- | Execute me with:
+-- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/Blocks behind/"'@
+unit_blocks_behind :: H.Property
+unit_blocks_behind = H.propertyOnce $ do
+  let tipAtBlock n = (tipOfAge 1) { tipBlockNo = BlockNo n }
+  -- Counted from the tip with the most blocks, which is not always the newest
+  -- one, so the number is never negative.
+  blocksBehind [Just (tipAtBlock 8), Just (tipAtBlock 10), Nothing] === [Just 2, Just 0, Nothing]
+  blocksBehind [Just ((tipAtBlock 10) { tipSlot = SlotNo 90 }), Just ((tipAtBlock 9) { tipSlot = SlotNo 95 })]
+    === [Just 0, Just 1]
+  blocksBehind [Nothing, Nothing] === [Nothing, Nothing]
+  blocksBehind [] === []

@@ -2,7 +2,7 @@
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://github.com/IntersectMBO/cardano-node/cardano-testnet/schemas/status.schema.json",
     "title": "cardano-testnet status",
-    "description": "Output of 'cardano-testnet status --json': the health of a testnet, found by asking every node in its manifest for its chain tip. The schema is strict: it describes schema version 1 exactly, unknown fields are an error, and any change to the output shape bumps schemaVersion.",
+    "description": "Output of 'cardano-testnet status --json': the health of a testnet, found by asking every node in its manifest for its chain tip and its mempool, and the node with the best tip where the chain is. The schema is strict: it describes schema version 2 exactly, unknown fields are an error, and any change to the output shape bumps schemaVersion.",
     "type": "object",
     "required": [
         "schemaVersion",
@@ -12,13 +12,14 @@
         "chainProducingBlocks",
         "bestTip",
         "nodes",
-        "noTestnetReason"
+        "noTestnetReason",
+        "chain"
     ],
     "additionalProperties": false,
     "properties": {
         "schemaVersion": {
             "type": "integer",
-            "const": 1,
+            "const": 2,
             "description": "Schema version. Any change to the output shape, including new fields or values, bumps it."
         },
         "checkedAt": {
@@ -54,12 +55,44 @@
                 { "$ref": "#/$defs/tip" }
             ]
         },
+        "chain": {
+            "description": "Where the chain is, as the node with the best tip sees it. Null when no node answered with a tip, or when that node did not tell.",
+            "oneOf": [
+                { "type": "null" },
+                {
+                    "type": "object",
+                    "required": ["era", "epoch", "slotInEpoch", "slotsToEpochEnd"],
+                    "additionalProperties": false,
+                    "properties": {
+                        "era": {
+                            "type": "string",
+                            "description": "Lowercase name of the era the node is in, e.g. \"conway\". It can differ from the era in the manifest, which is the era the testnet started in."
+                        },
+                        "epoch": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "description": "Epoch of the best tip."
+                        },
+                        "slotInEpoch": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "description": "Slot of the best tip within its epoch, counted from 0."
+                        },
+                        "slotsToEpochEnd": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "description": "Slots until the end of the epoch: slotInEpoch + slotsToEpochEnd is the length of the epoch."
+                        }
+                    }
+                }
+            ]
+        },
         "nodes": {
             "type": "array",
             "description": "One entry per node, in the order of the manifest. Empty for \"no-testnet\".",
             "items": {
                 "type": "object",
-                "required": ["name", "role", "pid", "pidAlive", "state", "tip", "error"],
+                "required": ["name", "role", "pid", "pidAlive", "state", "tip", "error", "stdoutFile", "stderrFile", "blocksBehind", "mempool"],
                 "additionalProperties": false,
                 "properties": {
                     "name": {
@@ -102,6 +135,49 @@
                         "oneOf": [
                             { "type": "null" },
                             { "type": "string" }
+                        ]
+                    },
+                    "stdoutFile": {
+                        "type": "string",
+                        "description": "The node's stdout log, relative to the testnet directory, as in the manifest."
+                    },
+                    "stderrFile": {
+                        "type": "string",
+                        "description": "The node's stderr log, relative to the testnet directory, as in the manifest."
+                    },
+                    "blocksBehind": {
+                        "description": "How many blocks the node is behind the node with the most blocks, or null when it did not answer with a tip.",
+                        "oneOf": [
+                            { "type": "null" },
+                            { "type": "integer", "minimum": 0 }
+                        ]
+                    },
+                    "mempool": {
+                        "description": "What is in the node's mempool, or null when the node did not answer, or did not answer this question in time.",
+                        "oneOf": [
+                            { "type": "null" },
+                            {
+                                "type": "object",
+                                "required": ["txs", "bytes", "capacityBytes"],
+                                "additionalProperties": false,
+                                "properties": {
+                                    "txs": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "description": "How many transactions are in the mempool."
+                                    },
+                                    "bytes": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "description": "Their total size, in bytes."
+                                    },
+                                    "capacityBytes": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "description": "How many bytes the mempool can hold."
+                                    }
+                                }
+                            }
                         ]
                     }
                 }

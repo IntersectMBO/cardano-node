@@ -1,0 +1,6 @@
+description: '`cardano-testnet status` also shows the era, the epoch and the slot in the epoch, what is in the mempool of each node, how many blocks each node is behind, and the log files of each node that does not answer; its JSON output has new fields and schema version 2, so check it against the version 2 schema, and set the new fields when building `StatusReport` or `NodeProbeResult` values.'
+kind:
+- feature
+- breaking
+pr: 6770
+project: cardano-testnet
