@@ -447,8 +447,11 @@ generateTypst typstFileName mScalingCSV theBase rest = do
 --   workbench's single-run analysis) found next to the report, by importing them.
 --   Missing table files are noted in the report, instead of failing its compilation.
 --   With a Plutus workload calibration CSV, it's rendered as an addendum.
-generateTypstReport :: KnownCDF f => FilePath -> Maybe FilePath -> SummaryOne -> ClusterPerf -> BlockProp f -> IO Text
-generateTypstReport typstPath mScalingCSV summ cp bp = do
+--   For a variance report (the results of 'Cardano.Analysis.Summary.summariseMultiSummary'
+--   & co.), the input runs are given, and listed on the title page and in the Manifest.
+generateTypstReport :: (KnownCDF f, KnownCDF g)
+  => FilePath -> Maybe FilePath -> [Metadata] -> Summary g -> ClusterPerf -> BlockProp f -> IO Text
+generateTypstReport typstPath mScalingCSV varianceInputs summ cp bp = do
   ctx <- getReport [sumMeta summ] (baseTmpl & trManifest & getComponent "cardano-node" & ciVersion)
   summaryFile  <- tableFile (summaryReportSection summ)
   sectionFiles <- mapM tableFile (analysesReportSections cp bp)
@@ -463,6 +466,8 @@ generateTypstReport typstPath mScalingCSV summ cp bp = do
     , "typstFile"  .= FP.takeFileName typstPath
     ]
     ++ maybe [] (\csvFile -> ["scalingCSV" .= csvFile]) mScalingCSV
+    ++ [ "variance" .= (varianceInputs <&> \Metadata{tag, ident} -> object ["tag" .= tag, "ident" .= ident])
+       | not (null varianceInputs) ]
  where
    baseTmpl = liftTmplRun summ
 

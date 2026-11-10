@@ -16,6 +16,9 @@ import           System.FilePath ((</>))
 import           System.IO.Temp (withSystemTempDirectory)
 
 import           Cardano.Analysis.API
+import           Cardano.Analysis.BlockProp (summariseMultiBlockProp)
+import           Cardano.Analysis.MachPerf (summariseMultiClusterPerf)
+import           Cardano.Analysis.Summary (summariseMultiSummary)
 import           Cardano.Render
 import           Cardano.Report
 import           Cardano.Typst (Coloring (..), renderNumField)
@@ -114,9 +117,9 @@ prop_single_run_report_renders = withTests 1 $ property $ do
 
   evalIO (withSystemTempDirectory "locli-test-report" $ \dir -> do
       let reportFile = dir </> "report-fixture-run.typ"
-      missing <- generateTypstReport reportFile Nothing summ cp bp
+      missing <- generateTypstReport reportFile Nothing [] summ cp bp
       for_ tableFiles $ \f -> T.writeFile (dir </> f) ""
-      present <- generateTypstReport reportFile Nothing summ cp bp
+      present <- generateTypstReport reportFile Nothing [] summ cp bp
       pure (missing, present))
     >>= \(missing, present) -> do
       for_ [missing, present] $ \t -> do
@@ -124,6 +127,7 @@ prop_single_run_report_renders = withTests 1 $ property $ do
         assertContains "<export_file_name>" t
         assertContains "LO stands for log object" t
         assert . not $ "Plutus Workload Calibration" `T.isInfixOf` t
+        assert . not $ "variance across" `T.isInfixOf` t
       -- a table file is imported if present, otherwise noted as missing
       for_ tableFiles $ \f -> do
         let imported = "import \"" <> T.pack f <> "\""
@@ -133,6 +137,32 @@ prop_single_run_report_renders = withTests 1 $ property $ do
         annotate f
         assert . not $ imported `T.isInfixOf` missing
         assert . not $ noted    `T.isInfixOf` present
+
+-- | A variance analysis (`wb a variance`): the fixture run combined with itself. Its tables
+--   (inter-run statistics) and its report, which has the single-run report's structure and
+--   lists the input runs.
+prop_variance_report_renders = withTests 1 $ property $ do
+  (summ, cp, bp) <- fixtureRun
+  let centiles = nEquicentiles 7
+  msumm <- evalEither . first (show @_ @Text) $ summariseMultiSummary zeroUTCTime centiles [summ, summ]
+  mcp   <- evalEither . first (show @_ @Text) $ unMultiClusterPerf <$> summariseMultiClusterPerf centiles [cp, cp]
+  mbp   <- evalEither . first (show @_ @Text) $ summariseMultiBlockProp centiles [bp, bp]
+
+  assertRendered =<< evalIO (generateTypstSummary typstCfg anchor (iFields sumFieldsReport) msumm)
+  for_ [mtFieldsReport, mtFieldsSnapshots, mtFieldsTxProcessing] $ \fs ->
+    assertRendered =<< evalIO (generateTypstCDFs typstCfg anchor (dFields fs) OfInterCDF mcp)
+  for_ [bpFieldsControl, bpFieldsForger, bpFieldsPeers, bpFieldsEndToEnd] $ \fs ->
+    assertRendered =<< evalIO (generateTypstCDFs typstCfg anchor (dFields fs) OfInterCDF mbp)
+
+  report <- evalIO $ withSystemTempDirectory "locli-test-variance" $ \dir ->
+    generateTypstReport (dir </> "report-variance.typ") Nothing [sumMeta summ, sumMeta summ] msumm mcp mbp
+  assertRendered report
+  assertContains "variance across 2 runs" report
+  -- the input runs are listed in a comment of the report source, not in the PDF
+  assertContains ("//   " <> tag (sumMeta summ) <> " (" <> ident (sumMeta summ) <> ")") report
+  assert . not $ ("`" <> tag (sumMeta summ) <> "`") `T.isInfixOf` report
+  assertContains "LO stands for log object" report
+  assert . not $ "Plutus Workload Calibration" `T.isInfixOf` report
 
 -- | The Plutus workload calibration: its CSV is written if every run has the generator's
 --   budget summary (test/data/generator/, next to the fixture run's analysis directory),
@@ -148,7 +178,7 @@ prop_plutus_calibration_renders = withTests 1 $ property $ do
       csv       <- maybe (pure "") (T.readFile . (dir </>)) written
       noSummary <- writeScalingCSV dir [noGenerator]
       partial   <- writeScalingCSV dir ["test/data/analysis", noGenerator]
-      report    <- generateTypstReport (dir </> "report-fixture-run.typ") written summ cp bp
+      report    <- generateTypstReport (dir </> "report-fixture-run.typ") written [] summ cp bp
       pure (written, noSummary, partial, csv, report)
 
   written   === Just "plutus-workload-scaling.csv"
@@ -174,6 +204,8 @@ prop_comparison_report_renders = withTests 1 $ property $ do
   plain <- evalIO $ generateTypst "report.typ" Nothing run [run2x]
   assertRendered plain
   assertContains "LO stands for log object" plain
+  -- the compared runs are listed in a comment of the report source
+  assertContains ("//   " <> tag (sumMeta summ) <> " (" <> ident (sumMeta summ) <> ")") plain
   assertContains "—" plain
 
   withScaling <- evalIO $ generateTypst "report.typ" (Just "plutus-workload-scaling.csv") run [run2x]

@@ -1,3 +1,6 @@
+// Comparison of these runs (tag, ident); the first one is the baseline:
+{% for r in runs %}//   {{ r.value.meta.tag }} ({{ r.value.meta.ident }})
+{% endfor %}//
 // To load CDF data for plotting from other run directories, you need to make
 // the root for compiling the document somewhat more permissive:
 //

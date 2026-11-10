@@ -259,7 +259,7 @@ parseChainCommand =
    ]) <|>
 
    subparser (mconcat [ commandGroup "Single-run report"
-   , op "report" "Generate a single-run Typst report, bundling the single table Typst files next to it"
+   , op "report" "Generate a Typst report of a single run, or of a variance analysis (multi-run results), bundling the single table Typst files next to it"
      (RenderReport
        <$> optTextOutputFile "typst"    "Report .typ file to create.")
    ]) <|>
@@ -813,6 +813,18 @@ runChainCommand s@State{sMultiSummary=Just summary}
 runChainCommand _ c@RenderMultiSummary{} = missingCommandData c
   ["multi-run summary"]
 
+-- A variance report: the multi-run results, written into the variance run's analysis directory.
+-- Without Plutus calibration: variance requires the same workload, so it adds nothing.
+runChainCommand s@State{ sMultiSummary     = Just summary
+                       , sMultiClusterPerf = Just (MultiClusterPerf perf)
+                       , sMultiBlockProp   = Just prop
+                       , sSummaries        = Just inputs }
+  c@(RenderReport f@(TextOutputFile outfp)) = do
+  progress "report" (Q $ printf "rendering variance report of %d runs" (length inputs))
+  body <- liftIO $ generateTypstReport outfp Nothing (sumMeta <$> inputs) summary perf prop
+  dumpText "report" [body] f
+    & firstExceptT (CommandError c)
+  pure s
 runChainCommand s@State{ sSummaries   = Just [summary]
                        , sClusterPerf = Just [perf]
                        , sBlockProp   = Just [prop] }
@@ -820,12 +832,12 @@ runChainCommand s@State{ sSummaries   = Just [summary]
   progress "report" (Q "rendering single-run report")
   -- The report is written into the run's analysis directory.
   mScalingCSV <- liftIO $ writeScalingCSV (takeDirectory outfp) [takeDirectory outfp]
-  body <- liftIO $ generateTypstReport outfp mScalingCSV summary perf prop
+  body <- liftIO $ generateTypstReport outfp mScalingCSV [] summary perf prop
   dumpText "report" [body] f
     & firstExceptT (CommandError c)
   pure s
 runChainCommand _ c@RenderReport{} = missingCommandData c
-  ["single-run summary", "single-run cluster performance", "single-run block propagation"]
+  ["single-run or multi-run (variance) summary", "cluster performance", "block propagation"]
 
 runChainCommand s c@(Compare outf@(TextOutputFile outfp) runs) = do
   progress "report" (Q $ printf "rendering report for %d runs" $ length runs)

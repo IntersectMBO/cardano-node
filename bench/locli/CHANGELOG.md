@@ -17,6 +17,7 @@
 * Typst replaces Org mode for all report output; Org mode support is removed entirely (no more Emacs / LaTeX dependency for PDFs).
   - The `render-*` commands' `--typst` output: standalone single-table documents (summary, cluster performance, block propagation sections, profiling data), generated from bundled templates.
   - New CLI command `report`: a single-run Typst report, bundling the single-table files next to it.
+  - `report` also bundles a variance analysis (`wb a variance`, now its last step): the same structure, with statistics over the runs, and the runs listed in the Manifest.
   - The single-run report includes the Plutus workload calibration as an addendum, like `compare` does, if the run has the generator's budget summary (`plutus-workload-scaling.csv` is written next to the report).
   - `compare` creates its Typst report from `--typst FILE`; the `--ede`, `--template` and `--report` options are gone, as are the dumped template environment and `.ede` files.
   - Removed render formats `--org` and `--org-report`.

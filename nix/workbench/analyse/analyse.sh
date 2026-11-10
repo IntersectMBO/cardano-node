@@ -200,6 +200,8 @@ case "$op" in
             multi-summary-json
             multi-summary-report
             write-context
+
+            multi-report
         )
         verbose "analyse" "$(white variance), calling script: $(colorise ${script[*]})"
         analyse "${sargs[@]}" multi-call 'variance' "$*" ${script[*]}
@@ -515,7 +517,8 @@ case "$op" in
         vl=(${vk[@]/#write-context/                 'write-meta-genesis'   --run-metafile    $dir/meta.json --shelley-genesis $shelley_genesis })
         vm=(${vl[*]/#multi-clusterperf-snapshots/    'render-multi-clusterperf' --typst $adir/'clusterperf.snapshots.typ'    --snapshots     $multi_aspect })
         vn=(${vm[*]/#multi-clusterperf-txprocessing/ 'render-multi-clusterperf' --typst $adir/'clusterperf.txprocessing.typ' --tx-processing $multi_aspect })
-        local ops_final=(${vn[*]})
+        vo=(${vn[*]/#multi-report/ 'report' --typst $adir/report-$run.typ })
+        local ops_final=(${vo[*]})
 
         call_locli "$rtsmode" "${ops_final[@]}"
 

@@ -1,6 +1,11 @@
 // Single-run report: bundles the single table files (single_table.ede) found next to
 // this file at generation time, by importing their `locli-table` binding.
-// Re-rendering any of these table files is reflected when compiling this report again.
+// A variance report (multi-run results; `variance` lists the input runs) has the same
+// structure: its table files hold statistics over the runs.
+{% if variance %}//
+// Variance across these runs (tag, ident):
+{% for r in variance %}//   {{ r.value.tag }} ({{ r.value.ident }})
+{% endfor %}{% endif %}// Re-rendering any of these table files is reflected when compiling this report again.
 //
 // To load CDF data for plotting from the run directory, you need to make
 // the root for compiling the document somewhat more permissive:
@@ -33,7 +38,8 @@
 
   #text(size: 16pt)[
   {{ base.workload }} workload \
-  #pad(top: 50%,[
+{% if variance %}  variance across {{ variance | length }} runs \
+{% endif %}  #pad(top: 50%,[
     {{ report.author }}, Cardano Performance & Tracing \
     {{ report.date }}
   ])
@@ -54,7 +60,8 @@
 
 #pad(bottom: 10pt,[
 We analyse `{{ base.ver }}` ({{ base.meta.era | toTitle }}), under {{ base.workload }} workload. \
-_NB:_ LO stands for log object, i.e. a trace message emitted by a node.
+{% if variance %}This is the variance across {{ variance | length }} runs; each table shows statistics over the runs' results. \
+{% endif %}_NB:_ LO stands for log object, i.e. a trace message emitted by a node.
 ])
 
 {% include "import_table.ede" with file = summary %}
