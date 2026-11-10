@@ -41,7 +41,7 @@ hprop_rpc_read_era_summary :: H.Property
 hprop_rpc_read_era_summary = integrationRetryWorkspace 2 "rpc-read-era-summary" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   let conf = mkConfig tempAbsBasePath'
 
-  let era = Exp.ConwayEra
+  let era = Exp.DijkstraEra
       sbe = convert era
       creationOptions = def{creationEra = AnyShelleyBasedEra sbe}
       runtimeOptions = def{runtimeEnableRpc = RpcEnabledUnixSocket}

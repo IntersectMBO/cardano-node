@@ -61,7 +61,7 @@ hprop_rpc_eval_tx = integrationRetryWorkspace 2 "rpc-eval-tx" $ \tempAbsBasePath
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
 
   let tempBaseAbsPath = makeTmpBaseAbsPath $ TmpAbsolutePath tempAbsPath'
-      era = Exp.ConwayEra
+      era = Exp.DijkstraEra
       sbe = convert era
       anyEra = AnyCardanoEra $ toCardanoEra sbe
       creationOptions = def{creationEra = AnyShelleyBasedEra sbe}

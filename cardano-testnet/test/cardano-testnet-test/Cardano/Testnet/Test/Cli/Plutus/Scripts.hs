@@ -205,12 +205,7 @@ hprop_tx_two_script_certs_v2 = integrationRetryWorkspace 2 "tx-2-script-certs" $
 
   let
     tempBaseAbsPath = makeTmpBaseAbsPath $ TmpAbsolutePath tempAbsPath'
-    -- This test stays on Conway for now: testnets that start directly in Dijkstra
-    -- lose the PlutusV2 cost model that the Alonzo genesis provides through
-    -- extraConfig, because cardano-ledger-dijkstra 0.3's injectIntoTestState misses
-    -- the alonzoInjectCostModels step. This is fixed in cardano-ledger-dijkstra
-    -- 0.4.0.0, so this test can move to Dijkstra once the node uses ledger 0.4.
-    era = Exp.ConwayEra
+    era = Exp.DijkstraEra
     ceo = convert era
     sbe = convert era
     anyEra = AnyCardanoEra $ toCardanoEra sbe

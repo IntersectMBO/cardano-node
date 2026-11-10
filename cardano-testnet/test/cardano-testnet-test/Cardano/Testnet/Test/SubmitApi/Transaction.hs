@@ -57,7 +57,7 @@ hprop_transaction = integrationRetryWorkspace 2 "submit-api-transaction" $ \temp
   H.note_ SYS.os
   let conf@Conf { tempAbsPath } = mkConfig tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
-      sbe = ShelleyBasedEraConway
+      sbe = ShelleyBasedEraDijkstra
       eraString = eraToString sbe
       tempBaseAbsPath = makeTmpBaseAbsPath $ TmpAbsolutePath tempAbsPath'
       creationOptions = def

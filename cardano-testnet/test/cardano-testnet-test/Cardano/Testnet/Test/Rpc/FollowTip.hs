@@ -47,7 +47,7 @@ hprop_rpc_follow_tip :: H.Property
 hprop_rpc_follow_tip = integrationRetryWorkspace 2 "rpc-follow-tip" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   let conf = mkConfig tempAbsBasePath'
 
-  let era = Exp.ConwayEra
+  let era = Exp.DijkstraEra
       sbe = convert era
       creationOptions = def{creationEra = AnyShelleyBasedEra sbe}
       runtimeOptions = def{runtimeEnableRpc = RpcEnabledUnixSocket}

@@ -41,7 +41,7 @@ prop_check_if_treasury_is_growing = integrationRetryWorkspace 2 "growing-treasur
   let conf@Conf{tempAbsPath=TmpAbsolutePath tempAbsPath'} = TN.mkConfig tempAbsBasePath'
   let tempBaseAbsPath = makeTmpBaseAbsPath $ tempAbsPath conf
 
-  let era = ConwayEra
+  let era = DijkstraEra
       sbe = ShelleyBasedEraDijkstra
       creationOptions = def
         { creationEra = AnyShelleyBasedEra sbe -- TODO: We should only support the latest era and the upcoming era

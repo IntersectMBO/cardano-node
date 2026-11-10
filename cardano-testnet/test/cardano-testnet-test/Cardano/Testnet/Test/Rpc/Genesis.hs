@@ -48,7 +48,7 @@ hprop_rpc_read_genesis :: H.Property
 hprop_rpc_read_genesis = integrationRetryWorkspace 2 "rpc-read-genesis" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   let conf = mkConfig tempAbsBasePath'
 
-  let era = Exp.ConwayEra
+  let era = Exp.DijkstraEra
       sbe = convert era
       creationOptions = def{creationEra = AnyShelleyBasedEra sbe}
       runtimeOptions = def{runtimeEnableRpc = RpcEnabledHttp def}

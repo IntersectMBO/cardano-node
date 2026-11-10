@@ -58,7 +58,7 @@ import qualified Hedgehog.Extras.Test.TestWatchdog as H
 hprop_rpc_search_utxos :: Property
 hprop_rpc_search_utxos = integrationRetryWorkspace 2 "rpc-search-utxos" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   let conf = mkConfig tempAbsBasePath'
-  let era = Exp.ConwayEra
+  let era = Exp.DijkstraEra
       sbe = convert era
       creationOptions = def{creationEra = AnyShelleyBasedEra sbe}
       runtimeOptions = def{runtimeEnableRpc = RpcEnabledUnixSocket}
