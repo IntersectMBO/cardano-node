@@ -9,7 +9,7 @@ Usage: cardano-testnet cardano
     [--epoch-length SLOTS]
     [--slot-length SECONDS]
     [--active-slots-coeff DOUBLE]
-    [--params-file FILEPATH | --params-mainnet]
+    [--params-blockfrost-file FILEPATH | --params-mainnet]
     [--output-dir DIRECTORY]
   ]
   [--enable-new-epoch-state-logging]
@@ -33,7 +33,7 @@ Usage: cardano-testnet create-env
   [--epoch-length SLOTS]
   [--slot-length SECONDS]
   [--active-slots-coeff DOUBLE]
-  [--params-file FILEPATH | --params-mainnet]
+  [--params-blockfrost-file FILEPATH | --params-mainnet]
   --output DIRECTORY
   
 

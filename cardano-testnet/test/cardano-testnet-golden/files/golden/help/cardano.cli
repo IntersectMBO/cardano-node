@@ -7,7 +7,7 @@ Usage: cardano-testnet cardano
     [--epoch-length SLOTS]
     [--slot-length SECONDS]
     [--active-slots-coeff DOUBLE]
-    [--params-file FILEPATH | --params-mainnet]
+    [--params-blockfrost-file FILEPATH | --params-mainnet]
     [--output-dir DIRECTORY]
   ]
   [--enable-new-epoch-state-logging]
@@ -53,7 +53,8 @@ Available options:
   --slot-length SECONDS    Slot length. (default: 0.1)
   --active-slots-coeff DOUBLE
                            Active slots coefficient. (default: 5.0e-2)
-  --params-file FILEPATH   File containing custom on-chain parameters in
+  --params-blockfrost-file FILEPATH
+                           File containing custom on-chain parameters in
                            Blockfrost format:
                            https://docs.blockfrost.io/#tag/cardano--epochs/GET/epochs/latest/parameters
   --params-mainnet         Use mainnet on-chain parameters
