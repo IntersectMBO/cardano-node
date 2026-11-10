@@ -29,6 +29,7 @@
 * CPU 85% peaks are attributed to a cause: the epoch transition (at the epoch's first block) and other ones are reported under Resource Usage, those during ledger snapshot writes under Ledger Snapshots. Peak lengths count slots, and a gap left by slot filters ends a peak.
 * New summary row **Final UTxO size**, averaged over hosts: constant by benchmark design, so a fractional value indicates a problem. Whole-number summary averages render without decimals.
 * `Resources` samples only need CPU time, RSS and thread count; all other fields are optional (e.g. no GC fields from a runtime without GC). Metrics that can't be zero throughout if measured (network and storage I/O, GC) render as not available (`—`) when they are.
+* Documentation: `doc/locli-internals.typ` (pipeline, stages, distributions, reports, workbench mapping) replaces the outdated yEd flow chart.
 * Analysis results of an older locli still read: metrics they lack show as `—`, also when compared or combined with newer runs.
 
 ## 2.4 -- Jul 2026
