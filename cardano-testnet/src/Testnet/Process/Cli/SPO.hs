@@ -362,11 +362,28 @@ registerSingleSpo asbe identifier tap@(TmpAbsolutePath tempAbsPath') nodeConfigF
         }
   cliNodeKeyGenVrf vrfKeys
 
-  -- 5. Create registration certificate
+  -- 5. Generate BLS keys: from Dijkstra on, the registration certificate needs one
+  let blsSigningKeyFp = spoReqDir </> "pool-bls.skey"
+  blsKeyArgs <- case asbe of
+    AnyShelleyBasedEra ShelleyBasedEraShelley -> pure []
+    AnyShelleyBasedEra ShelleyBasedEraAllegra -> pure []
+    AnyShelleyBasedEra ShelleyBasedEraMary -> pure []
+    AnyShelleyBasedEra ShelleyBasedEraAlonzo -> pure []
+    AnyShelleyBasedEra ShelleyBasedEraBabbage -> pure []
+    AnyShelleyBasedEra ShelleyBasedEraConway -> pure []
+    AnyShelleyBasedEra ShelleyBasedEraDijkstra -> do
+      execCli_
+        [ anyShelleyBasedEraToString asbe, "node", "key-gen-BLS"
+        , "--verification-key-file", spoReqDir </> "pool-bls.vkey"
+        , "--signing-key-file", blsSigningKeyFp
+        ]
+      pure ["--bls-signing-key-file", blsSigningKeyFp]
+
+  -- 6. Create registration certificate
   let poolRegCertFp = spoReqDir </> "registration.cert"
 
   -- The pledge, pool cost and pool margin can all be 0
-  execCli_
+  execCli_ $
     [ anyShelleyBasedEraToString asbe
     , "stake-pool", "registration-certificate"
     , "--testnet-magic", show @Int testnetMag
@@ -378,7 +395,7 @@ registerSingleSpo asbe identifier tap@(TmpAbsolutePath tempAbsPath') nodeConfigF
     , "--reward-account-verification-key-file", verificationKeyFp poolOwnerStakeKeys
     , "--pool-owner-stake-verification-key-file", verificationKeyFp poolOwnerStakeKeys
     , "--out-file", poolRegCertFp
-    ]
+    ] <> blsKeyArgs
 
   -- Create pledge delegation certificate
   -- NB: Pledger and owner can be the same
