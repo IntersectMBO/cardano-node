@@ -65,8 +65,8 @@ let
           actionlint
           shellcheck
           stylish-haskell
-        ]
-        ++ lib.optional (herald != null) herald;
+          config.hsPkgs.generate-release-changelog-links.components.exes.generate-release-changelog-links
+        ] ++ lib.optional (herald != null) herald;
 
         withHoogle = true;
 
