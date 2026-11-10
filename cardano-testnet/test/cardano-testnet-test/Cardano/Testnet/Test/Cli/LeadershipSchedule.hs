@@ -110,7 +110,7 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "leadership-schedule" $ \
   epochStateView <- getEpochStateView configurationFile node1SocketPath
   keyDeposit <- getKeyDeposit epochStateView ceo
   (stakePoolIdNewSpo, KeyPair{signingKey=File stakePoolColdSigningKey, verificationKey=File stakePoolColdVKey}, KeyPair{signingKey=File vrfSkey})
-    <- registerSingleSpo asbe 1 tempAbsPath
+    <- registerSingleSpo era 1 tempAbsPath
          configurationFile
          node1SocketPath
          (EpochNo 10)

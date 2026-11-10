@@ -99,7 +99,7 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
   epochStateView <- getEpochStateView configurationFile node1SocketPath
   keyDeposit <- getKeyDeposit epochStateView ceo
   (stakePoolId, KeyPair{signingKey=File stakePoolColdSigningKey, verificationKey=File stakePoolColdVKey}, _)
-    <- registerSingleSpo asbe 1 tempAbsPath
+    <- registerSingleSpo era 1 tempAbsPath
          configurationFile
          node1SocketPath
          termEpoch
