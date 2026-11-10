@@ -33,8 +33,9 @@ module Main (main) where
 
 import           GHC.Debug.Client
 import           GHC.Debug.Snapshot (makeSnapshot)
+import           GHC.Debug.Types.Ptr (InfoTablePtr (..))
 import           GHC.Debug.Profile (censusClosureType, closureCensusBy, writeCensusByClosureType)
-import           GHC.Debug.Retainers (addLocationToStack, displayRetainerStack, findRetainersOfArrWords)
+import           GHC.Debug.Retainers (addLocationToStack, displayRetainerStack, findRetainersOfArrWords, findRetainersOfInfoTable)
 
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Builder as BB
@@ -43,6 +44,7 @@ import           Data.List (sortBy)
 import qualified Data.Map as Map
 import           Data.Monoid (Sum (..))
 import           Data.Ord (Down (..), comparing)
+import           Data.Word (Word64)
 import           Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
@@ -50,6 +52,7 @@ import qualified Data.Text.Encoding.Error as TEE
 import           System.Environment (getArgs, lookupEnv)
 import           System.Exit (die)
 import           System.IO (hPutStrLn, stderr)
+import           Text.Read (readMaybe)
 
 main :: IO ()
 main = do
@@ -61,6 +64,9 @@ main = do
       retainMode snap (maybe 20 read (listToMaybe rest))
                       (maybe 0 read (listToMaybe (drop 1 rest)))
     ("threads"  : snap : _)    -> threadsMode snap
+    ["retain-info", snap, addr] -> retainInfoMode snap addr "3"
+    ["retain-info", snap, addr, limit] -> retainInfoMode snap addr limit
+    ["census-info", snap] -> censusInfoMode snap
     _ -> die usage
   where
     listToMaybe (x:_) = Just x
@@ -71,6 +77,8 @@ main = do
       , "  cardano-debug census   <snap> [out.tsv]  closure-type census (offline)"
       , "  cardano-debug retain   <snap> [maxPaths] [minBytes]  ARR_WORDS retainer chains (offline)"
       , "  cardano-debug threads  <snap>            TSO census by why_blocked|label (offline)"
+      , "  cardano-debug retain-info <snap> <info-address> [maxPaths]  targeted retainer paths (offline; default 3)"
+      , "  cardano-debug census-info <snap>         counts/bytes/source by snapshot info-table address"
       ]
 
 -- | Connect to a live debuggee, pause it, write a self-contained snapshot, exit.
@@ -119,6 +127,44 @@ retainMode snap maxPaths minBytes = do
   hPutStrLn stderr ("ghc-debug: " <> show (length stacks) <> " retainer chains")
   displayRetainerStack
     (zipWith (\i s -> ("ARR_WORDS retainer #" <> show i, s)) [(1 :: Int) ..] stacks)
+
+-- | Find paths to closures allocated at one info table, including thunks.
+-- Addresses belong to the captured binary; paths are examples, not exhaustive
+-- ownership or retained-size estimates. Keep the result limit small.
+retainInfoMode :: FilePath -> String -> String -> IO ()
+retainInfoMode snap addrArg limitArg = do
+  addr <- maybe (die "invalid info-table address (expected decimal or 0x-prefixed hex)") pure
+                (readMaybe addrArg :: Maybe Word64)
+  limit <- case readMaybe limitArg :: Maybe Int of
+    Just n | n > 0 -> pure n
+    _ -> die "maxPaths must be a positive integer"
+  hPutStrLn stderr ("ghc-debug: loading snapshot " <> snap)
+  hPutStrLn stderr ("ghc-debug: finding up to " <> show limit <> " paths to info table " <> addrArg)
+  stacks <- snapshotRun snap $ \e -> run e $ do
+    _ <- precacheBlocks
+    roots <- gcRoots
+    paths <- findRetainersOfInfoTable (Just limit) roots (InfoTablePtr addr)
+    mapM addLocationToStack paths
+  hPutStrLn stderr ("ghc-debug: " <> show (length stacks) <> " retainer paths")
+  displayRetainerStack
+    (zipWith (\i s -> ("Info-table retainer #" <> show i, s)) [(1 :: Int) ..] stacks)
+
+-- | Resolve allocation sites using the snapshot itself, rather than assuming
+-- an address from another artifact uses the same pointer convention/build.
+censusInfoMode :: FilePath -> IO ()
+censusInfoMode snap = snapshotRun snap $ \e -> do
+  rows <- run e $ do
+    _ <- precacheBlocks
+    roots <- gcRoots
+    counts <- closureCensusBy
+      (\_ c -> let Size bytes = dcSize c
+                in pure (Just (tableId (info (noSize c)), (Sum (1 :: Int), Sum bytes)))) roots
+    mapM (\(ptr, counts') -> do
+      loc <- getSourceInfo ptr
+      pure (ptr, counts', loc)) (Map.toList counts)
+  putStrLn "info_table\tcount\tbytes\tsource"
+  mapM_ (\(ptr, (Sum n, Sum bytes), loc) ->
+    putStrLn (show ptr <> "\t" <> show n <> "\t" <> show bytes <> "\t" <> show loc)) rows
 
 -- | Census every TSO by (why_blocked | threadLabel): count + total stack bytes.
 threadsMode :: FilePath -> IO ()

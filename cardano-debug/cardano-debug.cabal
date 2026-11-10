@@ -30,6 +30,7 @@ executable cardano-debug
   ghc-options:        -threaded -rtsopts -Wall -with-rtsopts=-N64 -g3
   build-depends:      base
                     , ghc-debug-client
+                    , ghc-debug-common
                     , containers
                     , bytestring
                     , text

@@ -131,7 +131,7 @@ sending: `zstd leak-2026-07-15.snapshot`.
 A snapshot is analysed with **no live process** via
 `GHC.Debug.Snapshot.snapshotRun`. Analyse with the **same GHC (9.6.7)** the node
 was built with so heap layout interpretation matches. The `cardano-debug` binary
-carries three offline subcommands (they only read the snapshot file, no live
+carries five offline subcommands (they only read the snapshot file, no live
 node):
 
 ```sh
@@ -143,6 +143,13 @@ cardano-debug census  leak.snapshot [census.tsv]
 # GC roots, annotated with IPE source locations — what holds the byte buffers.
 cardano-debug retain  leak.snapshot [maxPaths] [minBytes]
 
+# Resolve info-table pointers, counts, bytes and source from the snapshot.
+cardano-debug census-info leak.snapshot +RTS -N1 -M8G -RTS > info.tsv
+
+# Find paths to a specific info table reported by census-info.
+# Useful for thunks as well as byte buffers. Defaults to three paths.
+cardano-debug retain-info leak.snapshot 0x2937058 3 +RTS -N1 -M8G -RTS
+
 # Census every TSO by (why_blocked | threadLabel) — what the (leaked) threads
 # ARE and what they are blocked on; ouroboros labels its mini-protocol threads.
 cardano-debug threads leak.snapshot
@@ -151,3 +158,13 @@ cardano-debug threads leak.snapshot
 This is the step that turns "the leak is raw byte buffers + thread stacks" into
 "this structure / these threads retain them" — which the `-hi` profile alone
 cannot tell us.
+
+`retain-info` reports example paths from GC roots, not every owner or a
+dominator/retained-size calculation. Use small limits: adjacent matches can be
+members of the same long thunk chain. Info-table addresses must come from the
+snapshot; they are not portable across builds. Eventlog labels may use a
+different address convention: in the investigated GHC 9.6.7 build, the two
+targeted snapshot pointers were 16 bytes above their eventlog labels. Resolve
+the source using `census-info` rather than applying that offset blindly.
+Analysis can consume
+substantial local memory even with a small result limit. Keep output private.
