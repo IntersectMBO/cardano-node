@@ -144,6 +144,7 @@
           # Add some executables from other relevant packages
           inherit (bech32.components.exes) bech32;
           inherit (dmq-node.components.exes) dmq-node;
+          inherit (caliper.components.exes) caliper;
           inherit (ouroboros-consensus.components.exes) db-analyser db-synthesizer db-truncater snapshot-converter;
           inherit (kes-agent.components.exes) kes-agent kes-agent-control;
           # Add cardano-node, cardano-cli and tx-generator with their git revision stamp.

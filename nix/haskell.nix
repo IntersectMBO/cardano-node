@@ -264,6 +264,9 @@ let
             packages.ghc-debug-common.components.library.ghcOptions = [ "-g3" "-Wwarn" ];
             packages.ghc-debug-stub.components.library.ghcOptions = [ "-Wwarn" ];
             packages.ghc-debug-convention.components.library.ghcOptions = [ "-Wwarn" ];
+            # Caliper's checkout expects the later NonEmpty retainer API.
+            # Keep W44's deployed ghc-debug pin and adapt Caliper to its lists.
+            packages.caliper.patches = [ ./caliper-ghc-debug-w44.patch ];
           })
           ({ lib, pkgs, ... }: {
             # Use the VRF fork of libsodium

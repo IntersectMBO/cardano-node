@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 -- | @cardano-debug@ — a tiny ghc-debug tool for cardano-node debug builds.
@@ -32,15 +33,19 @@
 module Main (main) where
 
 import           GHC.Debug.Client
-import           GHC.Debug.Snapshot (makeSnapshot)
+import qualified GHC.Debug.Snapshot as Snapshot
 import           GHC.Debug.Types.Ptr (InfoTablePtr (..))
+import           GHC.Debug.Types.Version (Version (..))
 import           GHC.Debug.Profile (censusClosureType, closureCensusBy, writeCensusByClosureType)
 import           GHC.Debug.Retainers (addLocationToStack, displayRetainerStack, findRetainersOfArrWords, findRetainersOfInfoTable)
 
+import           Control.Exception (bracket_)
+import           Control.Monad (when)
+import           Data.Aeson (encode, object, (.=))
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Builder as BB
 import qualified Data.ByteString.Lazy as BL
-import           Data.List (sortBy)
+import           Data.List (isPrefixOf, sortBy)
 import qualified Data.Map as Map
 import           Data.Monoid (Sum (..))
 import           Data.Ord (Down (..), comparing)
@@ -49,6 +54,9 @@ import           Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import qualified Data.Text.Encoding.Error as TEE
+import           Data.Time.Clock (getCurrentTime)
+import           GHC.Clock (getMonotonicTimeNSec)
+import           System.Directory (doesPathExist, getFileSize)
 import           System.Environment (getArgs, lookupEnv)
 import           System.Exit (die)
 import           System.IO (hPutStrLn, stderr)
@@ -58,7 +66,8 @@ main :: IO ()
 main = do
   args <- getArgs
   case args of
-    ("snapshot" : out : rest)  -> snapshotMode out (listToMaybe rest)
+    ["snapshot", "--help"]    -> putStrLn snapshotUsage
+    ("snapshot" : out : rest)  -> snapshotMode out rest
     ("census"   : snap : rest) -> censusMode snap (listToMaybe rest)
     ("retain"   : snap : rest) ->
       retainMode snap (maybe 20 read (listToMaybe rest))
@@ -73,7 +82,8 @@ main = do
     listToMaybe []    = Nothing
     usage = unlines
       [ "usage:"
-      , "  cardano-debug snapshot <out> [sock]      capture a live heap snapshot (field)"
+      , "  cardano-debug snapshot <out> [sock] [options]  capture snapshot + .capture.json (field)"
+      , "    See cardano-debug snapshot --help for optional capture context."
       , "  cardano-debug census   <snap> [out.tsv]  closure-type census (offline)"
       , "  cardano-debug retain   <snap> [maxPaths] [minBytes]  ARR_WORDS retainer chains (offline)"
       , "  cardano-debug threads  <snap>            TSO census by why_blocked|label (offline)"
@@ -81,20 +91,75 @@ main = do
       , "  cardano-debug census-info <snap>         counts/bytes/source by snapshot info-table address"
       ]
 
+snapshotUsage :: String
+snapshotUsage = unlines
+  [ "usage: cardano-debug snapshot <out> [sock] [options]"
+  , "The socket defaults to GHC_DEBUG_SOCKET. Existing output files are refused."
+  , "Writes <out>.capture.json after resuming, including pause-window seconds."
+  , "Optional context (operator-supplied, not inferred from the node):"
+  , "  --node-revision REV   deployed node's git revision"
+  , "  --node-rts FLAGS      deployed node's RTS flags (quote as one argument)"
+  , "  --tip TIP            chain tip at capture (e.g. slot/block/hash)"
+  , "  --workload TEXT      load and peer context"
+  , "  --reason TEXT        why this capture was taken"
+  ]
+
 -- | Connect to a live debuggee, pause it, write a self-contained snapshot, exit.
-snapshotMode :: FilePath -> Maybe FilePath -> IO ()
-snapshotMode out mSockArg = do
+-- The sidecar deliberately contains no additional heap analysis.
+snapshotMode :: FilePath -> [String] -> IO ()
+snapshotMode out args = do
+  let (mSockArg, opts) = case args of
+        s : rest | not ("--" `isPrefixOf` s) -> (Just s, rest)
+        _ -> (Nothing, args)
+      sidecar = out <> ".capture.json"
+  context <- parseContext Map.empty opts
+  mapM_ (\path -> do
+    exists <- doesPathExist path
+    when exists (die ("Refusing to overwrite " <> path))) [out, sidecar]
   sock <- case mSockArg of
     Just s  -> pure s
     Nothing ->
       lookupEnv "GHC_DEBUG_SOCKET"
         >>= maybe (die "GHC_DEBUG_SOCKET is unset; pass the socket path as the 2nd argument") pure
   hPutStrLn stderr ("ghc-debug: connecting to debuggee socket " <> sock)
-  withDebuggeeConnect sock $ \e -> do
+  (started, finished, seconds, ver) <- withDebuggeeConnect sock $ \e -> do
+    ver <- run e version
     hPutStrLn stderr ("ghc-debug: pausing process, writing snapshot to " <> out)
-    makeSnapshot e out
-    hPutStrLn stderr "ghc-debug: snapshot written"
+    started <- getCurrentTime
+    t0 <- getMonotonicTimeNSec
+    bracket_ (pause e) (resume e) (run e (Snapshot.snapshot out))
+    t1 <- getMonotonicTimeNSec
+    finished <- getCurrentTime
+    pure (started, finished, fromIntegral (t1 - t0) / 1e9 :: Double, ver)
   hPutStrLn stderr "ghc-debug: connection closed (process resumed)"
+  hPutStrLn stderr ("ghc-debug: pause window = " <> show seconds <> " seconds (includes pause/resume handshakes)")
+  bytes <- getFileSize out
+  BL.writeFile sidecar $ encode $ object
+    [ "schema_version" .= (1 :: Int)
+    , "snapshot" .= out
+    , "snapshot_bytes" .= bytes
+    , "socket" .= sock
+    , "pause_requested_at" .= started
+    , "resumed_at" .= finished
+    , "pause_window_seconds" .= seconds
+    , "target_rts" .= object
+        [ "version_major" .= v_major ver
+        , "version_patch" .= v_patch ver
+        , "profiling_mode" .= fmap show (v_profiling ver)
+        , "tables_next_to_code" .= v_tntc ver
+        ]
+    , "operator_context" .= context
+    ]
+  hPutStrLn stderr ("ghc-debug: wrote capture metadata to " <> sidecar)
+  where
+    parseContext :: Map.Map String String -> [String] -> IO (Map.Map String String)
+    parseContext ctx [] = pure ctx
+    parseContext ctx (key : value : rest)
+      | key `elem` ["--node-revision", "--node-rts", "--tip", "--workload", "--reason"] =
+          if Map.member (drop 2 key) ctx
+          then die ("Duplicate option: " <> key)
+          else parseContext (Map.insert (drop 2 key) value ctx) rest
+    parseContext _ _ = die snapshotUsage
 
 -- | Closure-type census written to a TSV (key:total:count:max:avg).
 censusMode :: FilePath -> Maybe FilePath -> IO ()

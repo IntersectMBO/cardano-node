@@ -29,6 +29,9 @@ executable cardano-debug
   -- backtrace with Haskell-level frames. Debug aid; bloats the binary.
   ghc-options:        -threaded -rtsopts -Wall -with-rtsopts=-N64 -g3
   build-depends:      base
+                    , aeson
+                    , directory
+                    , time
                     , ghc-debug-client
                     , ghc-debug-common
                     , containers

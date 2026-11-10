@@ -16,9 +16,9 @@ import           System.Environment (lookupEnv)
 -- | When built with the @ghc-debug@ cabal flag, serve the ghc-debug protocol so
 -- the heap can be snapshotted -- but only when @GHC_DEBUG_SOCKET@ is set. The
 -- stub is always linked in ghc-debug builds; gating on the env var at runtime
--- means a node with no socket configured behaves exactly like an uninstrumented
--- one (no surprise socket created under the XDG data dir). Without the flag
--- this is the identity.
+-- avoids starting the server or creating a socket under the XDG data dir.
+-- Build-time instrumentation such as IPE remains when the socket is unset.
+-- Without the flag this is the identity.
 withGhcDebugIfEnabled :: IO a -> IO a
 #ifdef GHC_DEBUG
 withGhcDebugIfEnabled act = do

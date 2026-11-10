@@ -36,6 +36,7 @@ where GHC records it.
 ```sh
 nix build .#cardano-node-debug   # instrumented node (IPE + ghc-debug stub)
 nix build .#cardano-debug        # snapshot / analysis client
+nix build .#caliper              # Javier's offline analysis companion
 ```
 
 The `jl/leios-w44-debug` branch ports the instrumentation onto the W44 node
@@ -69,8 +70,9 @@ are reused. Keep the same RTS heap/GC settings as the comparison node.
 
 On this branch the `ghc-debug` cabal flag is enabled project-wide (it has to be,
 so `ghc-debug-stub` lands in the install plan), so the stub is linked into
-*every* build — but it stays **dormant unless `GHC_DEBUG_SOCKET` is set**, so a
-node with no socket configured behaves exactly like an uninstrumented one. What
+*every* build — but it stays **dormant unless `GHC_DEBUG_SOCKET` is set**. This
+avoids starting the debug server; it does not undo the IPE instrumentation or
+its effects on code size, allocation and performance. What
 makes `cardano-node-debug` distinct is that it is built `infoTableMapped` (see
 above), so it also serves as the plain IPE build for `-hi` profiling when the
 socket is unset.
@@ -95,7 +97,11 @@ Run the client as a user that can read/write the socket (e.g. the node user):
 ```sh
 sudo -u cardano-node cardano-debug snapshot \
   /var/lib/cardano-node/leak-$(date -u +%FT%TZ).snapshot \
-  "$GHC_DEBUG_SOCKET"
+  "$GHC_DEBUG_SOCKET" \
+  --node-revision '<deployed-node-revision>' \
+  --node-rts '<deployed-node-RTS-flags>' \
+  --reason 'memory growth investigation' \
+  +RTS -N1 -RTS
 ```
 
 > **Operational caveat:** capturing pauses the node (stop-the-world) for the
@@ -107,6 +113,25 @@ The snapshot client caches the **entire heap in its own RAM** before writing the
 file, so make sure the host has heap-sized headroom (or run the client on
 another machine, below) and disk space larger than the node's heap.
 
+The client reports a monotonic **pause window** covering the pause request,
+snapshot transfer/write and resume acknowledgement. It brackets pause/resume
+so a snapshot exception attempts to resume the target before connection cleanup.
+After resuming, it writes `<snapshot>.capture.json` with UTC timestamps, pause
+duration, file size and RTS version/profiling information reported by the stub.
+Optional `--node-revision`, `--node-rts`, `--tip`, `--workload` and `--reason`
+values are recorded separately as operator-supplied context; omitted values
+are left absent, not inferred. See `cardano-debug snapshot --help`.
+Existing snapshot or sidecar paths are refused. A failed capture can leave a
+partial snapshot without a sidecar; do not treat that file as a successful capture.
+If only writing the sidecar fails, the snapshot has already completed and the
+target has resumed; the command still exits with an error.
+
+`cardano-debug` retains its existing `-N64` default. Choose the client capability
+count explicitly for the host: `+RTS -N1 -RTS` limits traversal concurrency,
+while more capabilities may shorten the pause at the cost of more client memory.
+`-N1` does not eliminate the heap cache. These are **client** flags, separate
+from the deployed node's RTS flags recorded by `--node-rts`.
+
 ## Capture from another host
 
 ghc-debug speaks a **unix socket**, so the client can also run off-host —
@@ -115,7 +140,7 @@ against the forwarded socket:
 
 ```sh
 ssh -L /tmp/ghcdbg.sock:/run/cardano-node/ghc-debug.socket <host>
-cardano-debug snapshot /tmp/heap.snapshot /tmp/ghcdbg.sock
+cardano-debug snapshot /tmp/heap.snapshot /tmp/ghcdbg.sock +RTS -N1 -RTS
 ```
 
 Either way the node only pays the stop-the-world pause and streams its heap out;
@@ -125,6 +150,31 @@ the heap-sized client cache lives on whatever host runs the binary.
 
 Snapshots are self-contained but can be large (heap-sized). Compress before
 sending: `zstd leak-2026-07-15.snapshot`.
+Keep its `.capture.json` sidecar alongside it.
+
+## Caliper companion
+
+The `caliper` flake output pins Javier's source at
+`3ea7f23b4e452cbc6abecc79f52a0087ecb3e4c7` and uses the same ghc-debug revision
+(`2b8cf733f079af6e88eb4d9fa65b1215cc24ebc4`) and GHC as `cardano-debug`.
+The Nix package applies a small patch adapting Caliper's non-empty retainer
+path types to this revision's list API; the node/stub pin is unchanged.
+It can read our raw snapshots for its census, comparison and retainer tools:
+
+```sh
+nix run .#caliper -- --help
+nix run .#caliper -- census /path/to/heap.snapshot --from-roots +RTS -N1 -RTS
+nix run .#caliper -- retainers /path/to/heap.snapshot --match ARR_WORDS --limit 1 +RTS -N1 -RTS
+```
+
+Our `.capture.json` is a lightweight capture record, **not** Caliper's `.json`
+manifest and is not automatically imported by Caliper. For comparisons, use
+Caliper's `manifest backfill` command with the known deployment/input context;
+consult `manifest backfill --help`. Backfilling can derive heap facts, but it
+cannot recover unrecorded historical RTS flags or workload conditions.
+Do not assume that sharing the snapshot format makes two captures comparable.
+Keep our thread-label census and targeted info-table commands for the existing
+W44 investigation; Caliper provides additional offline analysis.
 
 ## Offline analysis (our side)
 

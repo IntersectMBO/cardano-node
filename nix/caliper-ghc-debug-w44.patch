@@ -1,0 +1,27 @@
+--- a/src/Caliper/Census.hs
++++ b/src/Caliper/Census.hs
+@@ -46,3 +46,2 @@
+ import           Data.List (sortOn)
+-import           Data.List.NonEmpty (NonEmpty (..))
+ import qualified Data.Map.Monoidal.Strict as MMap
+@@ -107,3 +106,3 @@
+   -> Maybe (Int -> IO ())   -- ^ Called with the running match count.
+-  -> DebugM ([ClosurePtr], [NonEmpty ClosurePtr], Truncation)
++  -> DebugM ([ClosurePtr], [[ClosurePtr]], Truncation)
+ locate m lim onFound = do
+@@ -117,3 +116,3 @@
+   stacks <- reverse <$> unsafeLiftIO (readIORef acc)
+-  let ptrs = dedup [p | (p :| _) <- stacks]
++  let ptrs = dedup [p | (p : _) <- stacks]
+   pure (ptrs, stacks, truncatedTo lim (length stacks))
+--- a/src/Caliper/Snapshot.hs
++++ b/src/Caliper/Snapshot.hs
+@@ -58,3 +58,2 @@
+ import           Data.List (foldl', nub, sort, sortOn)
+-import           Data.List.NonEmpty (NonEmpty (..))
+ import           Data.Word (Word64)
+@@ -362,3 +361,3 @@
+   stacks <- findRetainers (Just n) (PureFilter True) roots
+-  cs <- mapM dereferenceClosure (take n [p | (p :| _) <- stacks])
++  cs <- mapM dereferenceClosure (take n [p | (p : _) <- stacks])
+   locs <- mapM (getSourceInfo . tableId . info . noSize) cs

@@ -36,8 +36,8 @@ package acts
 -- (and its --exact-configuration --dependency list) is computed from this file
 -- with the flag at its default, so the stub would be missing at configure.
 -- The stub is always linked in builds off this branch, but `main` only starts
--- the ghc-debug socket server when GHC_DEBUG_SOCKET is set, so a node with no
--- socket configured behaves exactly like an uninstrumented one.
+-- the ghc-debug socket server when GHC_DEBUG_SOCKET is set. This runtime gate
+-- does not remove build-time instrumentation such as IPE.
 package cardano-node
   flags: +ghc-debug
 
@@ -64,7 +64,7 @@ packages:
   cardano-debug
 
 -- Needed when cross compiling
-extra-packages: alex, dmq-node
+extra-packages: alex, dmq-node, caliper
 
 -- TODO: allow warnings in leios-prototype
 -- program-options
@@ -302,3 +302,11 @@ source-repository-package
 -- (ghc-debug 0.8's source trips -Werror; that's relaxed to -Wwarn for its libs
 -- in nix/haskell.nix, since cabal.project per-package ghc-options don't reach
 -- the source-repository-package build.)
+
+-- Offline analysis companion. Use the ghc-debug SRP above so Caliper and
+-- cardano-debug share the exact decoder/snapshot format, not just a version.
+source-repository-package
+  type: git
+  location: https://git.sagredo.dev/caliper.git
+  tag: 3ea7f23b4e452cbc6abecc79f52a0087ecb3e4c7
+  --sha256: sha256-aG/BSnPvQ0p1DSlsmwcoQZmB0gOheAlxeQkp53lzU5I=
