@@ -13,13 +13,11 @@ import Data.Map                         qualified as Map
 import Data.Text                        (pack)
 import Data.Text                        qualified as T
 import Data.Text.Lazy                   qualified as LT
-import Data.Text.Short                  (toText)
 import Data.Time.Clock
 import Data.Tuple.Extra                 (both)
 import Options.Applicative
 import Options.Applicative              qualified as Opt
 
-import System.Directory                 (doesFileExist)
 import System.FilePath
 import System.Mem                       qualified as Mem (performGC)
 
@@ -57,7 +55,6 @@ data ChainCommand
   |        DumpLogObjects
   |             PrepareDB   String [TextInputFile] SqliteOutputFile
   |               UnlogDB   (JsonInputFile (RunLogs ()))
-  |    ValidateHashTimeline (JsonInputFile [LogObject])
   |          DumpTraceFreqs
 
   |        BuildMachViews
@@ -140,9 +137,6 @@ parseChainCommand =
        <*> optSqliteOutputFile        "db"              "DB output file")
    , op "dump-logobjects" "Dump lifted log object streams, alongside input files"
      (DumpLogObjects & pure)
-   , op "hash-timeline" "Quickly validate timeline by hashes"
-     (ValidateHashTimeline
-        <$> optJsonInputFile  "timeline"     "Hash timeline (JSON from prepare step)")
    , op "dump-tracefreqs" "Dump host trace frequencies to JSON"
      (DumpTraceFreqs & pure)
    ]) <|>
@@ -480,22 +474,6 @@ runChainCommand s
     prepareDB machName (map unTextInputFile inFiles) (unSqliteOutputFile outFile)
       & firstExceptT (CommandError c . pack)
     pure s
-
-runChainCommand s
-  c@(ValidateHashTimeline timelineJson) = do
-  progress "logs" (Q $ printf "validating hash timeline")
-  let f = unJsonInputFile timelineJson
-  hashTimeline <- liftIO $
-    doesFileExist f >>= bool
-      (return [])
-      (readLogObjectStream f False Nothing)
-  case (hashTimeline, checkAllForgersKnown hashTimeline) of
-    ([], _)           -> progress "logs" (Q $ printf "%s not found - skipping" f)
-    (_, Nothing)      -> progress "logs" (Q $ printf "all forgers known")
-    (_, Just (x, h))  -> throwE $ CommandError c $
-                          "unknown forger for block hash " <> (toText . unHash) h
-                          <> " in:\n" <> LT.toStrict (Aeson.encodeToLazyText x)
-  pure s
 
 runChainCommand s@State{sRun=Just run, sRunLogs=Just (rlLogs -> objs)}
   BuildMachViews = do

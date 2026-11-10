@@ -213,7 +213,6 @@ case "$op" in
 
     standard | full | std )
         local script=(
-            hash-timeline
             logs               $(test -n "$dump_logobjects" && echo 'dump-logobjects')
             read-context       $(test $storage -eq 1 && echo 'dump-tracefreqs')      # with DB storage backend, *.tracefreq.json isn't created with jq, needs to be dumped in an extra step
 
@@ -427,8 +426,7 @@ case "$op" in
         vq=("${vp[@]/#read-summaries/       'read-summaries'        --summary \"$adir\"/summary.json }")
         vr=("${vq[@]/#summary-json/         'render-summary'           --json \"$adir\"/summary.json }")
         vs=("${vr[@]/#summary-report/       'render-summary' --typst \"$adir\"/summary.typ            ${locli_render[*]}}")
-        vt=("${vs[@]/#hash-timeline/        'hash-timeline'        --timeline \"$adir\"/hash-timeline.json }")
-        vu=("${vt[@]/#report/               'report'                  --typst \"$adir\"/report-$run.typ }")
+        vu=("${vs[@]/#report/               'report'                  --typst \"$adir\"/report-$run.typ }")
         vv=("${vu[@]/#clusterperf-snapshots/    'render-clusterperf' --typst \"$adir\"/clusterperf.snapshots.typ    ${locli_render[*]} --snapshots }")
         vw=("${vv[@]/#clusterperf-txprocessing/ 'render-clusterperf' --typst \"$adir\"/clusterperf.txprocessing.typ ${locli_render[*]} --tx-processing }")
         local ops_final=()
@@ -441,7 +439,6 @@ case "$op" in
                                     fgrep -v -e '.flt.json'             \
                                              -e '.logobjs.json'         \
                                              -e 'chain.json'            \
-                                             -e 'hash-timeline.json'    \
                                              -e 'log-manifest.json'     \
                                              -e 'log-manifest-db.json'  \
                                              -e 'mach-views.json'       \
@@ -633,14 +630,7 @@ case "$op" in
            ' --sort-keys                                                         \
              --arg               mach          $mach                             \
              --slurpfile         freqs "$adir"/logs-$mach.tracefreq.json
-        done
-
-        local ht_json=$adir/hash-timeline.json
-        if test "$(ls 2>/dev/null --sort=time $adir/logs-*.flt.json $ht_json | head -n1)" = "$ht_json"
-        then progress "analyse" "hash timeline up to date"
-        else progress "analyse" "building hash timeline"
-          grep -h 'TraceForgedBlock\|DownloadedHeader' $adir/logs-*.flt.json | sort > $ht_json
-        fi;;
+        done;;
 
     prepare-db | prep-db )
         local usage="USAGE: wb analyse $op [--force] [[IDENT:]RUN-NAME=current].."
