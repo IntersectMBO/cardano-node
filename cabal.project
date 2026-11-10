@@ -154,7 +154,7 @@ if impl(ghc >= 9.14)
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-network
-  tag: 9c8c08c215611fce8225774216c26fda709d6375
+  tag: b373416145a7f52503952f2092da90c33a071358
   subdir:
     network-mux
     ouroboros-network
