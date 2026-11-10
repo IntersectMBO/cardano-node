@@ -95,10 +95,12 @@ prop_LogObject_sqlite_roundtrip = withTests 1 $ property $ do
 -- written first and last, must not be picked.
 prop_last_utxo_size_from_db = withTests 1 $ property $ do
   logObjects <- evalIO $ readLogObjectStream fixtureFile False Nothing
-  let metrics = [ (loAt, lo, loUtxoSize) | lo@LogObject{loAt, loBody = LOLedgerMetrics{loUtxoSize}} <- logObjects ]
-  (latestAt, latest, latestUtxo) <- maybe failure pure . lastMay $ sortBy (comparing (\(at, _, _) -> at)) metrics
+  let metrics = [ (loAt, lo, slot, utxo, density)
+                | lo@LogObject{loAt, loBody = LOLedgerMetrics slot utxo density} <- logObjects ]
+  (latestAt, latest, slot, latestUtxo, density) <-
+    maybe failure pure . lastMay $ sortBy (comparing (\(at, _, _, _, _) -> at)) metrics
   let earlier h = latest { loAt   = addUTCTime (- (3600 * fromIntegral h)) latestAt
-                         , loBody = (loBody latest) { loUtxoSize = latestUtxo + h } }
+                         , loBody = LOLedgerMetrics slot (latestUtxo + h) density }
 
   (noMetrics, lastUtxo) <- evalIO $ withDb ":memory:" $ do
     mapM_ run createSchema
