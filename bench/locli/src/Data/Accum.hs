@@ -42,12 +42,17 @@ mulAccum :: Accum a Word64 -> Word64 -> Accum a Word64
 mulAccum a@Accum{..} n =
   a { aUpdate = \dt prev val -> aUpdate dt prev val * n }
 
+-- | The first sample is only the baseline: a counter's value then is its total since process
+--   start, not an increase over one sampling interval (e.g. the whole node startup, at slot 0).
+--   It yields what an unchanged value would: no increase for counters, the value for gauges.
 updateAccum :: UTCTime -> a -> Accum a b -> Accum a b
 updateAccum now val a@Accum{..} =
   a
   { aPrevStamp = now
   , aPrevValue = val
-  , aCurrent   = aUpdate elapsed aPrevValue val
+  , aCurrent   = if aPrevStamp == zeroUTCTime
+                 then aUpdate 1 val val
+                 else aUpdate elapsed aPrevValue val
   }
   where elapsed = now `diffUTCTime` aPrevStamp
 

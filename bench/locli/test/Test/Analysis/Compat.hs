@@ -7,13 +7,14 @@ module Test.Analysis.Compat where
 
 import           Cardano.Prelude
 
-import           Data.Aeson (Value (..), eitherDecodeFileStrict, eitherDecode, encode, toJSON)
+import           Data.Aeson (eitherDecodeFileStrict, eitherDecode, encode)
 import           Data.Aeson.Key (Key)
 import qualified Data.Aeson.KeyMap as KeyMap
 
 import           Cardano.Analysis.API
 import           Cardano.Analysis.MachPerf (summariseMultiClusterPerf)
 import           Cardano.Analysis.Summary (summariseMultiSummary)
+import           Cardano.Util
 
 import           Hedgehog
 
@@ -107,6 +108,26 @@ prop_summary_2x_readable = withTests 1 $ property $ do
    asObject x = case toJSON x of
      Object o -> o
      _        -> KeyMap.empty
+
+-- | The forger's phases after forging may be missing (no downstream peers, or adopted only
+--   after a chain switch): they encode as null and read back as missing, while a `chain.json`
+--   written before (numbers) reads them as present.
+prop_blockForge_optional_phases = withTests 1 $ property $ do
+  let bf = BlockForge
+        { bfForger = Host "node-0", bfSlotStart = SlotStart zeroUTCTime, bfBlockGap = 1, bfBlockSize = 100
+        , bfStarted = 0.1, bfBlkCtx = SNothing, bfLgrState = SNothing, bfLgrView = SNothing, bfLeading = 0.2
+        , bfTicked = SNothing, bfMemSnap = SNothing, bfForged = 0.3
+        , bfAnnounced = SNothing, bfAnnouncedCum = SNothing, bfSending = SNothing, bfAdopted = SNothing
+        , bfChainDelta = 1 }
+      phases b = [bfAnnounced b, bfAnnouncedCum b, bfSending b, bfAdopted b]
+  back <- evalEither (eitherDecode (encode bf))
+  phases back === replicate 4 SNothing
+  o <- case toJSON bf of
+    Object o -> pure o
+    _        -> failure
+  older <- evalEither . eitherDecode . encode . Object $
+    foldr (\k -> KeyMap.insert k (Number 0.01)) o ["bfAnnounced", "bfAnnouncedCum", "bfSending", "bfAdopted"]
+  phases older === replicate 4 (SJust 0.01)
 
 -- | Leniency is limited to the CDFs: other missing keys still fail.
 prop_clusterPerf_requires_version = withTests 1 $ property $ do

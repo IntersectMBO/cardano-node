@@ -282,10 +282,12 @@ data BlockForge
   , bfTicked       :: !(SMaybe NominalDiffTime) -- ^ Since leading
   , bfMemSnap      :: !(SMaybe NominalDiffTime) -- ^ Since ticked
   , bfForged       :: !NominalDiffTime -- ^ Since ticked OR loop start
-  , bfAnnounced    :: !NominalDiffTime -- ^ Since forging
-  , bfAnnouncedCum :: !NominalDiffTime -- ^ Since slot start
-  , bfSending      :: !NominalDiffTime -- ^ Since announcement
-  , bfAdopted      :: !NominalDiffTime -- ^ Since announcement
+  -- The phases after forging are missing for a forger without downstream peers (a solo node),
+  -- or that adopted the block only later, after a chain switch.
+  , bfAnnounced    :: !(SMaybe NominalDiffTime) -- ^ Since forging
+  , bfAnnouncedCum :: !(SMaybe NominalDiffTime) -- ^ Since slot start
+  , bfSending      :: !(SMaybe NominalDiffTime) -- ^ Since announcement
+  , bfAdopted      :: !(SMaybe NominalDiffTime) -- ^ Since announcement
   , bfChainDelta   :: !Int             -- ^ ChainDelta during adoption
   }
   deriving (Generic, FromJSON, ToJSON, Show)
@@ -302,10 +304,10 @@ allBlockForgeTimes  f BlockForge{..}
   <> smaybe mempty (f "bfTicked")   bfTicked
   <> smaybe mempty (f "bfMemSnap")  bfMemSnap
   <>                f "bfForged"    bfForged
-  <>                f "bfAnnounced" bfAnnounced
-  <>                f "bfAnnouncedCum" bfAnnouncedCum
-  <>                f "bfSending"   bfSending
-  <>                f "bfAdopted"   bfAdopted
+  <> smaybe mempty (f "bfAnnounced") bfAnnounced
+  <> smaybe mempty (f "bfAnnouncedCum") bfAnnouncedCum
+  <> smaybe mempty (f "bfSending")   bfSending
+  <> smaybe mempty (f "bfAdopted")   bfAdopted
 
 data BlockObservation
   =  BlockObservation

@@ -8,7 +8,8 @@ module Test.Report where
 
 import           Cardano.Prelude
 
-import           Data.Aeson (FromJSON, eitherDecodeFileStrict)
+import           Data.Aeson (FromJSON, Value (..), eitherDecodeFileStrict)
+import qualified Data.Aeson.KeyMap as KeyMap
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import           System.Directory (createDirectory)
@@ -109,6 +110,20 @@ prop_unreported_zeros_unavailable = withTests 1 $ property $ do
   firstValue "Network writes" table === Just "—"
   assert $ firstValue "Filesystem writes" table `notElem` [Nothing, Just "—"]
   assert $ firstValue "RTS GC CPU usage" table `notElem` [Nothing, Just "—"]
+
+-- | Storage reads can be zero throughout (a node with its data in the page cache reads
+--   nothing): measured, so shown as 0, unlike network I/O.
+prop_zero_storage_reads_shown = withTests 1 $ property $ do
+  o <- evalEither =<< evalIO (eitherDecodeFileStrict clusterPerfFixture)
+  res <- case KeyMap.lookup "mpResourceCDFs" o of
+    Just (Object r) -> pure r
+    _               -> failure
+  allZero <- maybe failure pure (KeyMap.lookup "NetRd" res)
+  cp <- evalEither . decodeClusterPerf $
+    KeyMap.insert "mpResourceCDFs" (Object (KeyMap.insert "FsRd" allZero res)) o
+  table <- evalIO (generateTypstCDFs typstCfg anchor (dFields mtFieldsReport) OfOverallDataset cp)
+  firstValue "Filesystem reads" table === Just "0.0"
+  firstValue "Network reads"    table === Just "—"
 
 -- | Template main_single.ede: the single-run report, with and without its table files.
 prop_single_run_report_renders = withTests 1 $ property $ do

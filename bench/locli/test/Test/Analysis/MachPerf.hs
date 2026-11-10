@@ -11,7 +11,7 @@ import           Data.Time.Calendar (fromGregorian)
 
 import           Cardano.Analysis.API
 import           Cardano.Analysis.MachPerf (slotStatsMachPerf, summariseClusterPerf)
-import           Cardano.Unlog.Resources (Resources (..))
+import           Cardano.Unlog.Resources (Resources (..), extractResAccums, mkResAccums, updateResAccums)
 import           Cardano.Util
 
 import           Hedgehog
@@ -170,6 +170,19 @@ prop_clusterPerf_skips_empty_hosts = withTests 1 $ property $ do
   sizeAvg2 (cdfLiveMajGcOutside cp) === (2, 300)   -- host a only
   sizeAvg2 (cdfLiveMajGcDuring cp)  === (4, 250)   -- both hosts
   sizeAvg2 (cdfTxsProcessed cp)     === (2, 15)
+
+-- | Resource samples: the first one only sets the baseline. A counter's first value is its
+--   total since process start (e.g. a whole node startup), not one sampling interval's
+--   increase: counters and CPU shares read 0, gauges their value; later samples, differences.
+prop_resources_first_sample_is_baseline = withTests 1 $ property $ do
+  let sample cpu gcs alloc rss = (pure 0 :: Resources Word64)
+        { rCentiCpu = cpu, rGcsMinor = gcs, rAlloc = alloc, rRSS = rss }
+      mib = 1048576
+      sample1 = updateResAccums t0                  (sample 50000 6000 (200000 * mib) (7000 * mib)) mkResAccums
+      sample2 = updateResAccums (1 `addUTCTime` t0) (sample 50050 6004 (200100 * mib) (7010 * mib)) sample1
+      view r = (rCentiCpu r, rGcsMinor r, rAlloc r, rRSS r)
+  view (extractResAccums sample1) === (0,  0, 0,   7000)
+  view (extractResAccums sample2) === (50, 4, 100, 7010)
 
 tests :: IO Bool
 tests =

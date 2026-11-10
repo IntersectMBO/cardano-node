@@ -404,26 +404,12 @@ rebuildChain Run{genesis} flts _fltNames (fmap snd -> machViews) =
           , bfTicked     = bfeTicked
           , bfMemSnap    = bfeMemSnap
           , bfForged     = bfeForged    & handleMiss "dt Forged"
-          -- NOTE (XXX, TODO, FIXME):
-          --    1. we need to get to the bottom of this
-          --    2. this happens sufficiently rarely (2500+ blocks in an affected run)
-          --       that it has no impact on statistics, quite frankly
-          , bfAnnounced  = bfeAnnounced
-                           <|> (if True -- bfeBlockNo == 0 -- silliness
-                                then SJust 0.01 else SNothing)
-                           & handleMiss "dt Announced (forger)"
+          -- Missing for a forger without downstream peers (a solo node), or that adopted
+          -- the block only later, after a chain switch: not available, not an error.
+          , bfAnnounced    = bfeAnnounced
           , bfAnnouncedCum = bfeAnnouncedCum
-                           <|> (if True -- bfeBlockNo == 0 -- silliness
-                                then SJust 0.01 else SNothing)
-                           & handleMiss "dt AnnouncedCum (forger)"
-          , bfSending    = bfeSending
-                           <|> (if True -- bfeBlockNo == 0 -- silliness
-                                then SJust 0.01 else SNothing)
-                           & handleMiss "dt Sending (forger)"
-          , bfAdopted    = bfeAdopted
-                           <|> (if True -- bfeBlockNo == 0 -- silliness
-                                then SJust 0.01 else SNothing)
-                           & handleMiss "dt Adopted (forger)"
+          , bfSending      = bfeSending
+          , bfAdopted      = bfeAdopted
           , bfChainDelta = bfeChainDelta
           }
         , beForks = unsafeCoerceCount $ countListAll otherBlocks
@@ -528,10 +514,10 @@ blockProp _ Chain{..} = do
     , cdfForgerTicked      = forgerCDF c           (bfTicked    . beForge)
     , cdfForgerMemSnap     = forgerCDF c           (bfMemSnap   . beForge)
     , cdfForgerForge       = forgerCDF c   (SJust . bfForged    . beForge)
-    , cdfForgerAnnounce    = forgerCDF c   (SJust . bfAnnounced . beForge)
-    , cdfForgerAnnounceCum = forgerCDF c   (SJust . bfAnnouncedCum . beForge)
-    , cdfForgerSend        = forgerCDF c   (SJust . bfSending   . beForge)
-    , cdfForgerAdoption    = forgerCDF c   (SJust . bfAdopted   . beForge)
+    , cdfForgerAnnounce    = forgerCDF c   (bfAnnounced . beForge)
+    , cdfForgerAnnounceCum = forgerCDF c   (bfAnnouncedCum . beForge)
+    , cdfForgerSend        = forgerCDF c   (bfSending   . beForge)
+    , cdfForgerAdoption    = forgerCDF c   (bfAdopted   . beForge)
     , cdfPeerNoticeFirst   = observerCDF c (SJust . boNoticed)    earliest "noticed"
     , cdfPeerFetchFirst    = observerCDF c (SJust . boFetchedCum) earliest "fetched"
     , cdfPeerRequest       = observerCDF c (SJust . boRequested) each "requested"

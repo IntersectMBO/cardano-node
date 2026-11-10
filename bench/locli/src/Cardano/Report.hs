@@ -184,11 +184,12 @@ fieldsWarnIfZero = [ "cdfSnapTaken" ]
 
 -- | Metrics that can't be zero over a whole run if they're measured: a 0 there means the
 --   node didn't report the field (optional in the observability spec), so it renders as
---   not available. A running node always does network and storage I/O; the GC fields are
---   only reported by a managed runtime.
+--   not available. A running node always does network I/O and writes to storage; the GC
+--   fields are only reported by a managed runtime. Not storage reads: with its data in the
+--   page cache, a node can read nothing from storage throughout.
 fieldsZeroIsUnreported :: [FieldName]
 fieldsZeroIsUnreported =
-  [ "NetRd", "NetWr", "FsRd", "FsWr"
+  [ "NetRd", "NetWr", "FsWr"
   , "CentiGC", "CentiMut", "GcsMajor", "GcsMinor", "Alloc", "Live", "Heap", "cdfGcPerTx", "cdfMutPerTx" ]
 
 -- | A metric without data (e.g. missing from an older run's analysis), or one of

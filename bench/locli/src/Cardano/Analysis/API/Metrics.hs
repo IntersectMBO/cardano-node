@@ -374,10 +374,10 @@ instance TimelineFields BlockEvents where
     , fGrp' "bfTicked"      "LgrTck" (IDeltaTM (bfTicked  .beForge)) "" ""
     , fGrp' "bfMemSnap"     "MemSna" (IDeltaTM (bfMemSnap .beForge)) "" ""
     , fGrp' "bfForged"      "Forge"  (IDeltaT (bfForged   .beForge)) "" ""
-    , fGrp' "bfAnnounced"   "Announ" (IDeltaT (bfAnnounced.beForge)) "" ""
-    , fGrp' "bfSending"     "Sendin" (IDeltaT (bfSending  .beForge)) "" ""
-    , fGrp' "bfAdopted"     "Adopt"  (IDeltaT (bfAdopted  .beForge)) "" ""
-    , fGrp' "bfAnnouncedCum" "AnnCum"(IDeltaT (bfAnnouncedCum.beForge)) "" ""
+    , fGrp' "bfAnnounced"   "Announ" (IDeltaTM (bfAnnounced.beForge)) "" ""
+    , fGrp' "bfSending"     "Sendin" (IDeltaTM (bfSending  .beForge)) "" ""
+    , fGrp' "bfAdopted"     "Adopt"  (IDeltaTM (bfAdopted  .beForge)) "" ""
+    , fGrp' "bfAnnouncedCum" "AnnCum"(IDeltaTM (bfAnnouncedCum.beForge)) "" ""
     ]
    <> fGrp "-- Peer event dt averages: --"
             W4 Sec P3 Log Free
