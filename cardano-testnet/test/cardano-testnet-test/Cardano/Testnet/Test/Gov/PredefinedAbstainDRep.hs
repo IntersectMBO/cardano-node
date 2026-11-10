@@ -305,7 +305,7 @@ voteChangeProposal :: (MonadTest m, MonadIO m, MonadCatch m, H.MonadAssertion m)
   => H.ExecConfig -- ^ Specifies the CLI execution configuration.
   -> EpochStateView -- ^ Current epoch state view for transaction building. It can be obtained
                     -- using the 'getEpochStateView' function.
-  -> ShelleyBasedEra TestEra -- ^ The Shelley-based witness for ConwayEra (i.e: ShelleyBasedEraDijkstra).
+  -> ShelleyBasedEra TestEra -- ^ The Shelley-based witness for the test era.
   -> FilePath -- ^ Base directory path where the subdirectory with the intermediate files will be created.
   -> String -- ^ Name for the subdirectory that will be created for storing the intermediate files.
   -> TxId -- ^ Transaction id of the governance action to vote.
