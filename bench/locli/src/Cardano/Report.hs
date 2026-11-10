@@ -14,6 +14,7 @@ module Cardano.Report
   , generateTypstReport
   , generateTypstProfiling
   , fieldsWarnIfZero
+  , fieldsZeroIsUnreported
   , Section (sTypstFile, sTitle)
   , summaryReportSection
   , analysesReportSections
@@ -180,6 +181,25 @@ analysesReportSections mp bp =
 --   not a measurement: their cells are rendered as a warning.
 fieldsWarnIfZero :: [FieldName]
 fieldsWarnIfZero = [ "cdfSnapTaken" ]
+
+-- | Metrics that can't be zero over a whole run if they're measured: a 0 there means the
+--   node didn't report the field (optional in the observability spec), so it renders as
+--   not available. A running node always does network and storage I/O; the GC fields are
+--   only reported by a managed runtime.
+fieldsZeroIsUnreported :: [FieldName]
+fieldsZeroIsUnreported =
+  [ "NetRd", "NetWr", "FsRd", "FsWr"
+  , "CentiGC", "CentiMut", "GcsMajor", "GcsMinor", "Alloc", "Live", "Heap", "cdfGcPerTx", "cdfMutPerTx" ]
+
+-- | A metric without data (e.g. missing from an older run's analysis), or one of
+--   'fieldsZeroIsUnreported' that is zero throughout.
+notAvailable :: forall p a. a p -> Field DSelect p a -> Bool
+notAvailable x fld@Field{fId} =
+  mapField x cdfSize fld == 0
+  || (FieldName fId `elem` fieldsZeroIsUnreported && mapField x allZero fld)
+ where
+   allZero :: forall v. Divisible v => CDF p v -> Bool
+   allZero CDF{cdfRange = Interval lo hi} = toDouble lo == 0 && toDouble hi == 0
 
 sectionRowDescs :: Section -> [Text]
 sectionRowDescs = sTable >>> \case
@@ -371,7 +391,7 @@ extractAverage :: forall p a. (CDFFields a p, KnownCDF p)
     => (Field DSelect p a -> Bool) -> a p -> [NumField]
 extractAverage fieldSelr x =
   fields' <&> \fld@Field{fId, fWidth} ->
-    let avg = if mapField x cdfSize fld == 0 then nan else f fld
+    let avg = if notAvailable x fld then nan else f fld
     in ( (avg, succ <$> unWidth fWidth)
        , if FieldName fId `elem` fieldsWarnIfZero && avg == 0 then Yellow else NoCol )
  where
@@ -495,11 +515,10 @@ generateTypstCDFs rc anchor fieldSelr aspect x =
                    (colPrecs f)
                    (values f))
  where
-   -- A CDF without data (e.g. a metric missing from an older run's analysis) renders as
-   -- not available, except for its size.
+   -- A metric not available ('notAvailable') renders as such, except for its precision and size.
    values :: Field DSelect p a -> [Double]
    values f
-     | mapField x cdfSize f == 0 = (nan <$ [1 .. 6 :: Int]) <> drop 6 (mapFieldWithKey x (snd hdrsProjs) f)
+     | notAvailable x f          = (nan <$ [1 .. 6 :: Int]) <> drop 6 (mapFieldWithKey x (snd hdrsProjs) f)
      | otherwise                 = mapFieldWithKey x (snd hdrsProjs) f
 
    -- Columns 0 and 2: average and min.

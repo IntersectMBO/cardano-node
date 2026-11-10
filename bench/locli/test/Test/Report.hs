@@ -87,6 +87,26 @@ prop_single_tables_render = withTests 1 $ property $ do
   assertRendered snapshots2x
   assertContains "—" snapshots2x
 
+-- | The first value cell of the table row labelled with the given metric description.
+firstValue :: Text -> Text -> Maybe Text
+firstValue rowLabel t =
+  head [ T.takeWhile (/= ']') (T.drop 1 (T.dropWhile (/= '[') rest))
+       | l <- T.lines t
+       , let (pre, rest0) = T.breakOn ("[" <> rowLabel <> ",") l
+       , not (T.null rest0), T.all (== ' ') pre
+       , let rest = T.drop 1 (T.dropWhile (/= ']') rest0) ]
+
+-- | Metrics that can't be zero throughout if measured render as not available when they
+--   are: the fixture run's nodes report no network I/O at all ('fieldsZeroIsUnreported').
+--   Measured ones keep their values, even with many zero samples (GC time).
+prop_unreported_zeros_unavailable = withTests 1 $ property $ do
+  (_, cp, _) <- fixtureRun
+  table <- evalIO (generateTypstCDFs typstCfg anchor (dFields mtFieldsReport) OfOverallDataset cp)
+  firstValue "Network reads" table === Just "—"
+  firstValue "Network writes" table === Just "—"
+  assert $ firstValue "Filesystem writes" table `notElem` [Nothing, Just "—"]
+  assert $ firstValue "RTS GC CPU usage" table `notElem` [Nothing, Just "—"]
+
 -- | Template main_single.ede: the single-run report, with and without its table files.
 prop_single_run_report_renders = withTests 1 $ property $ do
   (summ, cp, bp) <- fixtureRun

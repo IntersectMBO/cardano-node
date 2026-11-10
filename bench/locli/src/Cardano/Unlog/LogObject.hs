@@ -448,20 +448,24 @@ instance FromJSON LogObject where
             Just interp -> interp body
             Nothing -> pure $ LOAny LANoInterpreter v
 
+-- | Only what locli can't do without is required: CPU time, RSS and thread count.
+--   Everything else is optional (the observability spec's GC fields only exist for a managed
+--   runtime) and reads as 0 when absent; reports tell such a 0 from a measured one by
+--   plausibility ('Cardano.Report.fieldsZeroIsUnreported').
 parsePartialResourceStates :: Value -> Parser (Resources Word64)
 parsePartialResourceStates =
   AE.withObject "NodeSetup" $
     \o -> do
       rCentiCpu   <- o .:  "CentiCpu"
-      rCentiGC    <- o .:  "CentiGC"
-      rCentiMut   <- o .:  "CentiMut"
-      rGcsMajor   <- o .:  "GcsMajor"
-      rGcsMinor   <- o .:  "GcsMinor"
-      rAlloc      <- o .:  "Alloc"
-      rLive       <- o .:  "Live"
+      rCentiGC    <- o .:? "CentiGC"    .!= 0
+      rCentiMut   <- o .:? "CentiMut"   .!= 0
+      rGcsMajor   <- o .:? "GcsMajor"   .!= 0
+      rGcsMinor   <- o .:? "GcsMinor"   .!= 0
+      rAlloc      <- o .:? "Alloc"      .!= 0
+      rLive       <- o .:? "Live"       .!= 0
       rHeap       <- o .:? "Heap"       .!= 0
       rRSS        <- o .:  "RSS"
-      rCentiBlkIO <- o .:  "CentiBlkIO"
+      rCentiBlkIO <- o .:? "CentiBlkIO" .!= 0
       rNetRd      <- o .:? "NetRd"      .!= 0
       rNetWr      <- o .:? "NetWr"      .!= 0
       rFsRd       <- o .:? "FsRd"       .!= 0

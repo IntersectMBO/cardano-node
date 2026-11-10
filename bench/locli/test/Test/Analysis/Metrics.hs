@@ -12,7 +12,7 @@ import qualified Data.Set as Set
 import qualified Data.Text as T
 
 import           Cardano.Analysis.API
-import           Cardano.Report (fieldsWarnIfZero)
+import           Cardano.Report (fieldsWarnIfZero, fieldsZeroIsUnreported)
 import           Cardano.Util (I)
 
 import           Hedgehog
@@ -32,6 +32,7 @@ prop_selected_fields_are_defined = withTests 1 $ property $ do
   undefinedIn machPerfIds  mtFieldsSnapshots     === []
   undefinedIn machPerfIds  mtFieldsTxProcessing  === []
   undefinedIn machPerfIds  fieldsWarnIfZero      === []
+  undefinedIn machPerfIds  fieldsZeroIsUnreported === []
   undefinedIn blockPropIds bpFieldsControl       === []
   undefinedIn blockPropIds bpFieldsForger        === []
   undefinedIn blockPropIds bpFieldsPeers         === []

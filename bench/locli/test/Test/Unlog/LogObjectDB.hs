@@ -9,6 +9,7 @@ import           Cardano.Unlog.BackendDB (LoadLogObjects (..), getLastUTxOSize, 
 import           Cardano.Unlog.BackendFile (readLogObjectStream)
 import           Cardano.Unlog.LogObject
 import           Cardano.Unlog.LogObjectDB
+import           Cardano.Unlog.Resources (Resources (..))
 import           Cardano.Util (zeroUTCTime)
 
 import           Data.Time.Clock (NominalDiffTime, addUTCTime, diffUTCTime)
@@ -147,6 +148,25 @@ prop_hostLogs_without_db_fields_readable = withTests 1 $ property $ do
     foldr KeyMap.delete obj ["hlRawLastUTxOSize", "hlLoadedCount"]
   hlRawLastUTxOSize back === Nothing
   hlLoadedCount back     === Nothing
+
+-- A `Resources` sample with only the fields the observability spec requires (e.g. from a
+-- runtime without GC) parses; the absent ones read as 0, also after a round-trip through the
+-- DB. Without `CentiCpu`, it doesn't parse.
+prop_resources_optional_fields = withTests 1 $ property $ do
+  let line fields = "{\"at\":\"2026-11-10T10:00:00Z\",\"ns\":\"Resources\",\"data\":{\"kind\":\"Resources\"" <> fields <> "},\"sev\":\"Info\",\"thread\":\"1\",\"host\":\"node-x\"}"
+  lo <- evalEither (AE.eitherDecodeStrict (line ",\"CentiCpu\":7,\"RSS\":1000,\"Threads\":4") :: Either [Char] LogObject)
+  case loBody lo of
+    LOResources r -> do
+      (rCentiCpu r, rRSS r, rThreads r) === (7, 1000, 4)
+      [rCentiGC r, rCentiMut r, rGcsMajor r, rGcsMinor r, rAlloc r, rLive r, rHeap r, rCentiBlkIO r, rNetRd r, rNetWr r, rFsRd r, rFsWr r]
+        === replicate 12 0
+    other -> annotateShow other >> failure
+  back <- evalIO $ withDb ":memory:" $ do
+    mapM_ run createSchema
+    mapM_ runSqlRunnable (logObjectToSql lo)
+    map (sqlToLogObject fixtureSummary) <$> run selectAll
+  map loBody back === [loBody lo]
+  assert . isLeft $ (AE.eitherDecodeStrict (line ",\"RSS\":1000,\"Threads\":4") :: Either [Char] LogObject)
 
 -- This property ensures every namespace `locli` interprets is backed by a
 -- real log line in the fixture, so an interpreter can't be added or renamed
