@@ -13,6 +13,7 @@ module Cardano.Testnet.Test.Node.Shutdown
 import           Cardano.Api
 
 import           Cardano.Testnet
+import           Cardano.Testnet.Test.Utils (testEra)
 
 import           Prelude
 
@@ -71,7 +72,7 @@ hprop_shutdown = integrationRetryWorkspace 2 "shutdown" $ \tempAbsBasePath' -> H
       logDir' = makeLogDir $ tempAbsPath conf
       socketDir' = makeSocketDir $ tempAbsPath conf
       testnetMagic' = defaultTestnetMagic
-      sbe = ShelleyBasedEraDijkstra
+      sbe = convert testEra
 
   -- TODO: We need to uniformly create these directories
   H.createDirectoryIfMissing_ logDir'

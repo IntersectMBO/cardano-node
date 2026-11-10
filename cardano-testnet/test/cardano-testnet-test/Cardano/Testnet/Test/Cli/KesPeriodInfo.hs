@@ -12,11 +12,11 @@ module Cardano.Testnet.Test.Cli.KesPeriodInfo
   ) where
 
 import           Cardano.Api as Api
-import qualified Cardano.Api.Experimental as Exp
 
 import           Cardano.CLI.Type.Output
 import           Cardano.Testnet
 import           Cardano.Testnet.Test.Misc
+import           Cardano.Testnet.Test.Utils (testEra)
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
 
 import           Prelude
@@ -64,7 +64,7 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
   let conf@Conf { tempAbsPath=tempAbsPath@(TmpAbsolutePath work) } = mkConfig tempAbsBasePath'
 
   let tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
-      era = Exp.DijkstraEra
+      era = testEra
       ceo = convert era
       sbe = convert era
       asbe = AnyShelleyBasedEra sbe

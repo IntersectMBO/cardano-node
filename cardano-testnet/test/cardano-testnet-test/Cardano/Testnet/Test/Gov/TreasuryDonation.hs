@@ -10,11 +10,11 @@ module Cardano.Testnet.Test.Gov.TreasuryDonation
   ) where
 
 import           Cardano.Api
-import qualified Cardano.Api.Experimental as Exp
 import           Cardano.Api.Ledger
 
 import qualified Cardano.Ledger.Coin as L
 import           Cardano.Testnet
+import           Cardano.Testnet.Test.Utils (testEra)
 
 import           Prelude
 
@@ -45,7 +45,7 @@ hprop_ledger_events_treasury_donation = integrationRetryWorkspace 2 "treasury-do
   let conf@Conf { tempAbsPath=tempAbsPath@(TmpAbsolutePath work) } = mkConfig tempAbsBasePath'
   let tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
 
-  let era = Exp.DijkstraEra
+  let era = testEra
       sbe = convert era
       creationOptions = def
         { creationEra = AnyShelleyBasedEra sbe

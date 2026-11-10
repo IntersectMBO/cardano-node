@@ -16,7 +16,6 @@ module Cardano.Testnet.Test.Cli.Query (
 
 import           Cardano.Api as Api hiding (txId)
 import           Cardano.Api.Experimental (Some (..))
-import qualified Cardano.Api.Experimental as Exp
 import           Cardano.Api.Ledger (EpochInterval (..), unboundRational)
 import qualified Cardano.Api.Ledger as L
 
@@ -25,6 +24,7 @@ import           Cardano.CLI.Type.Key (VerificationKeyOrFile (VerificationKeyFil
 import           Cardano.CLI.Type.Output (QueryTipLocalStateOutput)
 import qualified Cardano.Ledger.BaseTypes as L
 import           Cardano.Testnet
+import           Cardano.Testnet.Test.Utils (testEra)
 
 import           Prelude
 
@@ -82,7 +82,7 @@ hprop_cli_queries = integrationRetryWorkspace 2 "cli-queries" $ \tempAbsBasePath
   let conf@Conf { tempAbsPath=tempAbsPath@(TmpAbsolutePath work) } = mkConfig tempAbsBasePath'
   let tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
 
-  let era = Exp.DijkstraEra
+  let era = testEra
       sbe = convert era
       asbe = AnyShelleyBasedEra sbe
       cEra = AnyCardanoEra $ toCardanoEra sbe

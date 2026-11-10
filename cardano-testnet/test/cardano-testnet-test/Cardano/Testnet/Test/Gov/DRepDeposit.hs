@@ -6,10 +6,10 @@ module Cardano.Testnet.Test.Gov.DRepDeposit
 
 import           Cardano.Api
 import           Cardano.Api.Experimental (Some (..))
-import qualified Cardano.Api.Experimental as Exp
 import qualified Cardano.Api.Ledger as L
 
 import           Cardano.Testnet
+import           Cardano.Testnet.Test.Utils (testEra)
 
 import           Prelude
 
@@ -43,7 +43,7 @@ hprop_ledger_events_drep_deposits = integrationRetryWorkspace 2 "drep-deposits" 
 
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
 
-  let era = Exp.DijkstraEra
+  let era = testEra
       ceo = convert era
       sbe = convert era
       cEra = AnyCardanoEra $ toCardanoEra sbe

@@ -20,6 +20,7 @@ import qualified Cardano.Api.UTxO as Utxo
 
 import           Cardano.Ledger.Plutus.Data (hashData)
 import           Cardano.Testnet
+import           Cardano.Testnet.Test.Utils (TestEra, testEra)
 
 import           Prelude
 
@@ -58,7 +59,7 @@ hprop_tx_refin_datum :: Property
 hprop_tx_refin_datum = integrationRetryWorkspace 2 "api-tx-refin-dat" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   let conf = mkConfig tempAbsBasePath'
 
-  let era = Exp.DijkstraEra
+  let era = testEra
       sbe = convert era
       ceo = convert era
       beo = convert ceo
@@ -121,7 +122,7 @@ hprop_tx_refin_datum = integrationRetryWorkspace 2 "api-tx-refin-dat" $ \tempAbs
 
     -- prepare txout
     let txOutValue = lovelaceToTxOutValue sbe 100_000_000
-        txOuts :: [TxOut CtxTx DijkstraEra]
+        txOuts :: [TxOut CtxTx TestEra]
         txOuts =
           [ TxOut addr1 txOutValue txDatum1 ReferenceScriptNone
           , TxOut addr1 txOutValue txDatum2 ReferenceScriptNone
@@ -133,7 +134,7 @@ hprop_tx_refin_datum = integrationRetryWorkspace 2 "api-tx-refin-dat" $ \tempAbs
         -- toCtxUTxOTxOut strips the TxOutSupplementalDatum marker, so we must pass
         -- supplemental datums explicitly
         supplementalDatums = Exp.obtainCommonConstraints era $ M.fromList
-          [ let ledgerData = toAlonzoData @(ShelleyLedgerEra DijkstraEra) sd
+          [ let ledgerData = toAlonzoData @(ShelleyLedgerEra TestEra) sd
             in (hashData ledgerData, ledgerData)
           | sd <- [scriptData3]
           ]
@@ -149,7 +150,7 @@ hprop_tx_refin_datum = integrationRetryWorkspace 2 "api-tx-refin-dat" $ \tempAbs
 
     (unsignedTx@(Exp.UnsignedTx ledgerTx), _finalContent) <-
       H.leftFail $
-        Exp.makeTransactionBodyAutoBalance @DijkstraEra
+        Exp.makeTransactionBodyAutoBalance @TestEra
           systemStart
           epochInfo
           (unLedgerProtocolParameters pparams)
@@ -220,7 +221,7 @@ hprop_tx_refin_datum = integrationRetryWorkspace 2 "api-tx-refin-dat" $ \tempAbs
         -- add actual datum values for the two reference inputs via supplemental datums
         ledgerPparams = unLedgerProtocolParameters pparams
         supplementalDatums = Exp.obtainCommonConstraints era $ M.fromList
-          [ let ledgerData = toAlonzoData @(ShelleyLedgerEra DijkstraEra) sd
+          [ let ledgerData = toAlonzoData @(ShelleyLedgerEra TestEra) sd
             in (hashData ledgerData, ledgerData)
           | sd <- [scriptData1, scriptData3, scriptData4]
           ]
@@ -276,7 +277,7 @@ hprop_tx_refin_datum = integrationRetryWorkspace 2 "api-tx-refin-dat" $ \tempAbs
         -- add one reference input with datum hash and its datum, and one superfluous datum
         ledgerPparams3 = unLedgerProtocolParameters pparams
         supplementalDatums3 = Exp.obtainCommonConstraints era $ M.fromList
-          [ let ledgerData = toAlonzoData @(ShelleyLedgerEra DijkstraEra) sd
+          [ let ledgerData = toAlonzoData @(ShelleyLedgerEra TestEra) sd
             in (hashData ledgerData, ledgerData)
           | sd <- [scriptData1, scriptData3]
           ]

@@ -10,9 +10,9 @@ module Cardano.Testnet.Test.Gov.Transaction.HashMismatch
   ) where
 
 import           Cardano.Api as Api
-import qualified Cardano.Api.Experimental as Exp
 
 import           Cardano.Testnet
+import           Cardano.Testnet.Test.Utils (testEra)
 
 import           Prelude
 
@@ -48,7 +48,7 @@ hprop_transaction_build_wrong_hash = integrationRetryWorkspace 2 "wrong-hash" $ 
 
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
 
-  let era = Exp.DijkstraEra
+  let era = testEra
 
       ceo = convert era
       sbe = convert era

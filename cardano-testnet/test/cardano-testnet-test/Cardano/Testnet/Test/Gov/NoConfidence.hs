@@ -10,7 +10,6 @@ module Cardano.Testnet.Test.Gov.NoConfidence
 
 import           Cardano.Api
 import           Cardano.Api.Experimental (Some (..), obtainCommonConstraints)
-import qualified Cardano.Api.Experimental as Exp
 import           Cardano.Api.Ledger
 
 import qualified Cardano.Ledger.Conway.Genesis as L
@@ -18,6 +17,7 @@ import qualified Cardano.Ledger.Conway.Governance as L
 import qualified Cardano.Ledger.Credential as L
 import qualified Cardano.Ledger.Shelley.LedgerState as L
 import           Cardano.Testnet
+import           Cardano.Testnet.Test.Utils (testEra)
 
 import           Prelude
 
@@ -64,7 +64,7 @@ hprop_gov_no_confidence = integrationRetryWorkspace 2 "no-confidence" $ \tempAbs
 
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
 
-  let era = Exp.DijkstraEra
+  let era = testEra
 
       ceo = convert era
       sbe = convert era

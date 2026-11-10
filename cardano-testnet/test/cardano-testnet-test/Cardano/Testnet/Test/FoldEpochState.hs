@@ -7,6 +7,7 @@ import           Cardano.Api hiding (cardanoEra)
 import qualified Cardano.Api as Api
 
 import           Cardano.Testnet as TN
+import           Cardano.Testnet.Test.Utils (testEra)
 
 import           Prelude
 
@@ -30,7 +31,7 @@ prop_foldEpochState = integrationRetryWorkspace 2 "foldEpochState" $ \tempAbsBas
   let conf = TN.mkConfig tempAbsBasePath'
 
   let tempAbsPath' = unTmpAbsPath $ tempAbsPath conf
-      sbe = ShelleyBasedEraDijkstra
+      sbe = convert testEra
       creationOptions = def { creationEra = AnyShelleyBasedEra sbe }
 
   runtime@TestnetRuntime{configurationFile} <- createAndRunTestnet creationOptions def conf

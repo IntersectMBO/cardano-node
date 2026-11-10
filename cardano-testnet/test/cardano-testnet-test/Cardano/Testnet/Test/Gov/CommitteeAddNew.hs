@@ -19,6 +19,7 @@ import qualified Cardano.Ledger.Conway.Governance as L
 import qualified Cardano.Ledger.Credential as L
 import qualified Cardano.Ledger.Shelley.LedgerState as L
 import           Cardano.Testnet
+import           Cardano.Testnet.Test.Utils (testEra)
 
 import           Prelude
 
@@ -76,7 +77,7 @@ hprop_constitutional_committee_add_new = integrationRetryWorkspace 2 "constituti
       mkVotes votes = zip (concatMap (uncurry replicate) votes) [1..]
       nDrepVotes = length drepVotes
       nSpos = fromIntegral $ creationNumPools creationOptions
-      era = Exp.DijkstraEra
+      era = testEra
       ceo = convert era
       sbe = convert era
       cEra = AnyCardanoEra $ toCardanoEra sbe

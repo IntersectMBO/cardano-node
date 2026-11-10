@@ -12,10 +12,10 @@ module Cardano.Testnet.Test.Cli.Transaction.WithdrawalReward
   ) where
 
 import           Cardano.Api as Api
-import qualified Cardano.Api.Experimental as Exp
 import qualified Cardano.Api.Ledger as L
 
 import           Cardano.Testnet
+import           Cardano.Testnet.Test.Utils (testEra)
 
 import           Prelude
 
@@ -59,7 +59,7 @@ hprop_tx_withdrawal_reward = integrationRetryWorkspace 2 "tx-withdrawal-reward" 
 
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
 
-  let era = Exp.DijkstraEra
+  let era = testEra
       sbe = convert era
       eraName = eraToString sbe
       creationOptions = def
@@ -134,7 +134,7 @@ hprop_tx_withdrawal_reward_plutus_v3 = integrationRetryWorkspace 2 "tx-withdrawa
 
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
 
-  let era = Exp.DijkstraEra
+  let era = testEra
       sbe = convert era
       eraName = eraToString sbe
       creationOptions = def

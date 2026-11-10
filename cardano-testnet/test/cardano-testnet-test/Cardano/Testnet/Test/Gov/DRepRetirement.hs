@@ -14,6 +14,7 @@ import           Cardano.Api
 import qualified Cardano.Api.Experimental as Exp
 
 import           Cardano.Testnet
+import           Cardano.Testnet.Test.Utils (TestEra, testEra)
 
 import           Prelude
 import           Control.Monad (void)
@@ -36,10 +37,10 @@ import qualified Hedgehog as H
 import qualified Hedgehog.Extras as H
 
 -- | The era in which this test runs
-era :: Exp.Era DijkstraEra
-era = Exp.DijkstraEra
+era :: Exp.Era TestEra
+era = testEra
 
-sbe :: ShelleyBasedEra DijkstraEra
+sbe :: ShelleyBasedEra TestEra
 sbe = convert era
 
 -- Execute this test with:

@@ -15,6 +15,7 @@ import           Cardano.Api as A
 import qualified Cardano.Api.Ledger as L
 
 import           Cardano.Testnet
+import           Cardano.Testnet.Test.Utils (testEra)
 
 import           Prelude
 
@@ -57,7 +58,7 @@ hprop_transaction = integrationRetryWorkspace 2 "submit-api-transaction" $ \temp
   H.note_ SYS.os
   let conf@Conf { tempAbsPath } = mkConfig tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
-      sbe = ShelleyBasedEraDijkstra
+      sbe = convert testEra
       eraString = eraToString sbe
       tempBaseAbsPath = makeTmpBaseAbsPath $ TmpAbsolutePath tempAbsPath'
       creationOptions = def

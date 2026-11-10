@@ -10,7 +10,6 @@ module Cardano.Testnet.Test.Gov.ProposeNewConstitution
 
 import           Cardano.Api as Api hiding (txId)
 import           Cardano.Api.Experimental (Some (..), obtainCommonConstraints)
-import qualified Cardano.Api.Experimental as Exp
 import           Cardano.Api.Ledger (EpochInterval (..))
 
 import qualified Cardano.Crypto.Hash as L
@@ -21,6 +20,7 @@ import qualified Cardano.Ledger.Conway.PParams as L
 import qualified Cardano.Ledger.Hashes as L
 import qualified Cardano.Ledger.Shelley.LedgerState as L
 import           Cardano.Testnet
+import           Cardano.Testnet.Test.Utils (testEra)
 
 import           Prelude
 
@@ -91,7 +91,7 @@ hprop_ledger_events_propose_new_constitution = integrationRetryWorkspace 2 "prop
       numVotes = length allVotes
   annotateShow numVotes
 
-  let era = Exp.DijkstraEra
+  let era = testEra
 
       ceo = convert era
       sbe = convert era

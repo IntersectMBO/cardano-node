@@ -13,6 +13,7 @@ import           Cardano.Api.Ledger (EpochInterval (..))
 import           Cardano.Api.UTxO (difference, size)
 
 import           Cardano.Testnet
+import           Cardano.Testnet.Test.Utils (testEra)
 
 import           Prelude
 
@@ -47,7 +48,7 @@ hprop_ref_simple_script_mint = integrationRetryWorkspace 2 "ref-simple-script" $
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
 
   let
-    sbe = ShelleyBasedEraDijkstra
+    sbe = convert testEra
     era = toCardanoEra sbe
     cEra = AnyCardanoEra era
     eraName = eraToString era

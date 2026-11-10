@@ -12,10 +12,10 @@ module Cardano.Testnet.Test.Cli.Plutus.Scripts
   ) where
 
 import           Cardano.Api
-import qualified Cardano.Api.Experimental as Exp
 import qualified Cardano.Api.Ledger as L
 
 import           Cardano.Testnet
+import           Cardano.Testnet.Test.Utils (testEra)
 
 import           Prelude
 
@@ -55,7 +55,7 @@ hprop_plutus_purposes_v3 = integrationRetryWorkspace 2 "all-plutus-script-purpos
 
   let
     tempBaseAbsPath = makeTmpBaseAbsPath $ TmpAbsolutePath tempAbsPath'
-    era = Exp.DijkstraEra
+    era = testEra
     ceo = convert era
     sbe = convert era
     anyEra = AnyCardanoEra $ toCardanoEra sbe
@@ -205,7 +205,7 @@ hprop_tx_two_script_certs_v2 = integrationRetryWorkspace 2 "tx-2-script-certs" $
 
   let
     tempBaseAbsPath = makeTmpBaseAbsPath $ TmpAbsolutePath tempAbsPath'
-    era = Exp.DijkstraEra
+    era = testEra
     ceo = convert era
     sbe = convert era
     anyEra = AnyCardanoEra $ toCardanoEra sbe

@@ -11,10 +11,10 @@ module Cardano.Testnet.Test.Gov.GovActionTimeout
   ) where
 
 import           Cardano.Api as Api
-import qualified Cardano.Api.Experimental as Exp
 import           Cardano.Api.Ledger (EpochInterval (..))
 
 import           Cardano.Testnet
+import           Cardano.Testnet.Test.Utils (testEra)
 
 import           Prelude
 
@@ -50,7 +50,7 @@ hprop_check_gov_action_timeout = integrationRetryWorkspace 2 "gov-action-timeout
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
 
   -- Create default testnet
-  let era = Exp.DijkstraEra
+  let era = testEra
       ceo = convert era
       sbe = convert era
       eraName = eraToString sbe

@@ -11,6 +11,7 @@ import qualified Cardano.Api as Api
 import qualified Cardano.Ledger.Shelley.LedgerState as L
 import qualified Cardano.Ledger.State as L
 import           Cardano.Testnet as TN
+import           Cardano.Testnet.Test.Utils (testEra)
 
 import           Prelude
 
@@ -41,8 +42,8 @@ prop_check_if_treasury_is_growing = integrationRetryWorkspace 2 "growing-treasur
   let conf@Conf{tempAbsPath=TmpAbsolutePath tempAbsPath'} = TN.mkConfig tempAbsBasePath'
   let tempBaseAbsPath = makeTmpBaseAbsPath $ tempAbsPath conf
 
-  let era = DijkstraEra
-      sbe = ShelleyBasedEraDijkstra
+  let era = testEra
+      sbe = convert era
       creationOptions = def
         { creationEra = AnyShelleyBasedEra sbe -- TODO: We should only support the latest era and the upcoming era
         , creationGenesisOptions = def { genesisEpochLength = 100

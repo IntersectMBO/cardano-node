@@ -14,10 +14,10 @@ module Cardano.Testnet.Test.Cli.LeadershipSchedule
   ) where
 
 import           Cardano.Api
-import qualified Cardano.Api.Experimental as Exp
 import qualified Cardano.Api as Api
 
 import           Cardano.Testnet
+import           Cardano.Testnet.Test.Utils (testEra)
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
 
 import           Prelude
@@ -65,7 +65,7 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "leadership-schedule" $ \
   H.note_ SYS.os
   let conf@Conf { tempAbsPath=tempAbsPath@(TmpAbsolutePath work) } = mkConfig tempAbsBasePath'
   let tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
-      era = Exp.DijkstraEra
+      era = testEra
       ceo = convert era
       sbe = convert era
       asbe = AnyShelleyBasedEra sbe

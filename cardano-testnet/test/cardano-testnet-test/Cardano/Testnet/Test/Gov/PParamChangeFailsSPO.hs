@@ -16,6 +16,7 @@ import qualified Cardano.Api.Experimental as Exp
 import           Cardano.Api.Ledger (EpochInterval (..))
 
 import           Cardano.Testnet
+import           Cardano.Testnet.Test.Utils (testEra)
 
 import           Prelude
 
@@ -59,7 +60,7 @@ hprop_check_pparam_fails_spo = integrationRetryWorkspace 2 "test-pparam-spo" $ \
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
 
   -- Create default testnet
-  let era = Exp.DijkstraEra
+  let era = testEra
       ceo = convert era
       sbe = convert era
       asbe = AnyShelleyBasedEra sbe

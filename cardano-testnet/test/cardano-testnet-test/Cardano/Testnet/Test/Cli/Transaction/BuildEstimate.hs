@@ -9,9 +9,9 @@ module Cardano.Testnet.Test.Cli.Transaction.BuildEstimate
   ) where
 
 import           Cardano.Api as Api
-import qualified Cardano.Api.Experimental as Exp
 
 import           Cardano.Testnet
+import           Cardano.Testnet.Test.Utils (testEra)
 
 import           Prelude
 
@@ -47,7 +47,7 @@ hprop_tx_build_estimate = integrationRetryWorkspace 2 "transaction-build-estimat
 
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
 
-  let era = Exp.DijkstraEra
+  let era = testEra
 
       ceo = convert era
       sbe = convert era

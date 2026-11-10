@@ -14,7 +14,6 @@ module Cardano.Testnet.Test.Rpc.Eval
 where
 
 import           Cardano.Api
-import qualified Cardano.Api.Experimental as Exp
 import qualified Cardano.Api.Ledger as L
 
 import           Cardano.Rpc.Client (Proto (..))
@@ -23,6 +22,7 @@ import qualified Cardano.Rpc.Proto.Api.UtxoRpc.Query as U5c hiding (cardano)
 import qualified Cardano.Rpc.Proto.Api.UtxoRpc.Submit as U5c
 import           Cardano.Rpc.Server.Internal.UtxoRpc.Type (utxoRpcBigIntToInteger)
 import           Cardano.Testnet
+import           Cardano.Testnet.Test.Utils (testEra)
 
 import           Prelude
 
@@ -61,7 +61,7 @@ hprop_rpc_eval_tx = integrationRetryWorkspace 2 "rpc-eval-tx" $ \tempAbsBasePath
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
 
   let tempBaseAbsPath = makeTmpBaseAbsPath $ TmpAbsolutePath tempAbsPath'
-      era = Exp.DijkstraEra
+      era = testEra
       sbe = convert era
       anyEra = AnyCardanoEra $ toCardanoEra sbe
       creationOptions = def{creationEra = AnyShelleyBasedEra sbe}

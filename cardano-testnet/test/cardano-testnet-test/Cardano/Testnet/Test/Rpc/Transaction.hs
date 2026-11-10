@@ -25,6 +25,7 @@ import qualified Cardano.Rpc.Proto.Api.UtxoRpc.Submit as UtxoRpc
 import           Cardano.Rpc.Server.Internal.UtxoRpc.Predicate (exactAddressPredicate)
 import           Cardano.Rpc.Server.Internal.UtxoRpc.Type
 import           Cardano.Testnet
+import           Cardano.Testnet.Test.Utils (testEra)
 
 import           Prelude
 
@@ -47,7 +48,7 @@ import qualified Hedgehog.Extras.Test.TestWatchdog as H
 hprop_rpc_transaction :: Property
 hprop_rpc_transaction = integrationRetryWorkspace 2 "rpc-tx" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   let conf = mkConfig tempAbsBasePath'
-  let era = Exp.DijkstraEra
+  let era = testEra
       sbe = convert era
       creationOptions = def{creationEra = AnyShelleyBasedEra sbe}
       runtimeOptions = def{runtimeEnableRpc = RpcEnabledUnixSocket}

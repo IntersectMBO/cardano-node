@@ -19,6 +19,7 @@ import           Cardano.Ledger.Conway.Governance (ConwayGovState, cgsCurPParams
 import           Cardano.Ledger.Core (EraPParams)
 import           Cardano.Ledger.Shelley.LedgerState (epochStateGovStateL, nesEpochStateL)
 import           Cardano.Testnet
+import           Cardano.Testnet.Test.Utils (TestEra, testEra)
 
 import           Prelude
 
@@ -73,7 +74,7 @@ hprop_check_predefined_abstain_drep = H.integrationRetryWorkspace 2 "test-activi
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
 
   -- Create default testnet with 3 DReps and 3 stake holders delegated, one to each DRep.
-  let era = Exp.DijkstraEra
+  let era = testEra
       sbe = convert era
       creationOptions = def
         { creationEra = AnyShelleyBasedEra sbe
@@ -171,7 +172,7 @@ desiredPoolNumberProposalTest
   :: (HasCallStack, MonadTest m, MonadIO m, H.MonadAssertion m, MonadCatch m, Foldable t)
   => H.ExecConfig -- ^ Specifies the CLI execution configuration.
   -> EpochStateView -- ^ Current epoch state view for transaction building. It can be obtained
-  -> Exp.Era DijkstraEra -- ^ The era in which the test runs
+  -> Exp.Era TestEra -- ^ The era in which the test runs
   -> FilePath -- ^ Base directory path where generated files will be stored.
   -> String -- ^ Name for the subfolder that will be created under 'work' folder.
   -> PaymentKeyInfo -- ^ Wallet that will pay for the transaction.
@@ -218,7 +219,7 @@ makeDesiredPoolNumberChangeProposal
   :: (HasCallStack, H.MonadAssertion m, MonadTest m, MonadCatch m, MonadIO m)
   => H.ExecConfig -- ^ Specifies the CLI execution configuration.
   -> EpochStateView -- ^ Current epoch state view for transaction building. It can be obtained
-  -> Exp.Era DijkstraEra -- ^ The era in which the transaction will be constructed.
+  -> Exp.Era TestEra -- ^ The era in which the transaction will be constructed.
   -> FilePath -- ^ Base directory path where generated files will be stored.
   -> String -- ^ Name for the subfolder that will be created under 'work' folder.
   -> Maybe (String, Word16) -- ^ The transaction identifier and index of the previous passed
@@ -304,7 +305,7 @@ voteChangeProposal :: (MonadTest m, MonadIO m, MonadCatch m, H.MonadAssertion m)
   => H.ExecConfig -- ^ Specifies the CLI execution configuration.
   -> EpochStateView -- ^ Current epoch state view for transaction building. It can be obtained
                     -- using the 'getEpochStateView' function.
-  -> ShelleyBasedEra DijkstraEra -- ^ The Shelley-based witness for ConwayEra (i.e: ShelleyBasedEraDijkstra).
+  -> ShelleyBasedEra TestEra -- ^ The Shelley-based witness for ConwayEra (i.e: ShelleyBasedEraDijkstra).
   -> FilePath -- ^ Base directory path where the subdirectory with the intermediate files will be created.
   -> String -- ^ Name for the subdirectory that will be created for storing the intermediate files.
   -> TxId -- ^ Transaction id of the governance action to vote.

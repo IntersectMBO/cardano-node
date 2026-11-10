@@ -19,6 +19,7 @@ import           Cardano.Ledger.Conway.Core (EraGov, curPParamsGovStateL)
 import           Cardano.Ledger.Conway.PParams (ConwayEraPParams, ppDRepActivityL)
 import           Cardano.Ledger.Shelley.LedgerState (epochStateGovStateL, nesEpochStateL)
 import           Cardano.Testnet
+import           Cardano.Testnet.Test.Utils (testEra)
 
 import           Prelude
 
@@ -61,7 +62,7 @@ hprop_check_drep_activity = integrationRetryWorkspace 2 "test-activity" $ \tempA
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
 
   -- Create default testnet with 3 DReps and 3 stake holders delegated, one to each DRep.
-  let era = Exp.DijkstraEra
+  let era = testEra
       ceo = convert era
       sbe = convert era
       creationOptions = def

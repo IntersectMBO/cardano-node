@@ -22,6 +22,7 @@ import           Cardano.Rpc.Server.Internal.UtxoRpc.Predicate (exactAddressPred
 import           Cardano.Rpc.Server.Internal.UtxoRpc.Type (txoRefUtxoRpcToTxIn,
                    utxoRpcBigIntToInteger, utxoRpcPParamsToProtocolParams)
 import           Cardano.Testnet
+import           Cardano.Testnet.Test.Utils (testEra)
 
 import           Prelude
 
@@ -47,7 +48,7 @@ hprop_rpc_follow_tip :: H.Property
 hprop_rpc_follow_tip = integrationRetryWorkspace 2 "rpc-follow-tip" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   let conf = mkConfig tempAbsBasePath'
 
-  let era = Exp.DijkstraEra
+  let era = testEra
       sbe = convert era
       creationOptions = def{creationEra = AnyShelleyBasedEra sbe}
       runtimeOptions = def{runtimeEnableRpc = RpcEnabledUnixSocket}
