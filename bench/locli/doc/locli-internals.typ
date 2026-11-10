@@ -193,6 +193,8 @@ Some CDFs are kept in the JSON on purpose without being reported (slots analysed
 
 `blockProp` derives the CDFs over the chain's accepted blocks: the forger's loop phases, each observer's notice, fetch and adoption delays, and the end-to-end propagation, i.e. when a given fraction of the cluster has adopted the block. A forged block that lacks one of the forger's events is an analysis error that names block, forger and the missing event.
 
+*Battles.* The chain holds only the winning blocks; `rebuildChain` finds each chain block's rivals among all blocks any node has seen or forged: blocks forged for the same slot, at any height (a slot battle: several leaders in one slot), and blocks at the same height forged for another slot (a height battle: a forger that hadn't yet seen its predecessor). Their counts are per block (`beSlotBattle`, `beHeightBattle`). Their CDFs (Anomaly control) cover the chain blocks that pass the slot conditions only: block conditions would bias them, as a contested block is often adopted later, by fewer nodes, or through a chain switch (failing `unitary`).
+
 = The summary
 
 `computeSummary` (`Cardano.Analysis.Summary`) collects what describes the run as a whole: metadata and manifest (`meta.json`), genesis parameters, workload, the filters applied, the slot and block domains before and after filtering, the nodes' start and stop spread, log object counts, the chain's rejected blocks, the final UTxO size (each node's last `LedgerMetrics`, averaged over nodes), and profiling data if the nodes were profiled. It reads the per-node values loaded with the logs (@sec-ingest), never the log objects themselves.
@@ -224,7 +226,7 @@ Some metrics have no samples on a node, e.g. "Live after major GC outside snapsh
 
 Reports read combined results in one of two aspects (`CDF2Aspect`): `--overall` treats all samples as one population, `--inter-cdf` (the workbench's default for multi-run results) describes the spread between the inputs.
 
-*Reading older results.* A `clusterperf.json` or `summary.json` written by an older `locli` lacks the CDFs added since. Decoding is lenient towards missing CDFs (`withEmptyCDFs`): they read as empty, and reports show them as not available (`—`), so older runs can still be compared against and combined with newer ones. Anything else missing still fails.
+*Reading older results.* A `clusterperf.json`, `blockprop.json` or `summary.json` written by an older `locli` lacks the CDFs added since. Decoding is lenient towards missing CDFs (`withEmptyCDFs`): they read as empty, and reports show them as not available (`—`), so older runs can still be compared against and combined with newer ones. Anything else missing still fails.
 
 = Metric definitions
 

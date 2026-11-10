@@ -12,6 +12,7 @@ import           Data.Aeson.Key (Key)
 import qualified Data.Aeson.KeyMap as KeyMap
 
 import           Cardano.Analysis.API
+import           Cardano.Analysis.BlockProp (summariseMultiBlockProp)
 import           Cardano.Analysis.MachPerf (summariseMultiClusterPerf)
 import           Cardano.Analysis.Summary (summariseMultiSummary)
 import           Cardano.Util
@@ -105,6 +106,39 @@ prop_summary_2x_readable = withTests 1 $ property $ do
   cdfAverageVal (cdfUtxoFinal mixed) === cdfAverageVal (cdfUtxoFinal full)
  where
    asObject :: SummaryOne -> KeyMap.KeyMap Value
+   asObject x = case toJSON x of
+     Object o -> o
+     _        -> KeyMap.empty
+
+-- | Real block propagation results of a locli 3.0 analysis.
+blockPropFixture :: FilePath
+blockPropFixture = "test/data/analysis/blockprop.json"
+
+-- | The keys 'BlockProp' gained in locli 3.0 (fixed history, as 'addedIn3_0'); they replace
+--   2.x's "cdfBlockBattle", which is ignored when read.
+blockPropAddedIn3_0 :: [Key]
+blockPropAddedIn3_0 = [ "cdfSlotBattle", "cdfHeightBattle" ]
+
+decodeBlockProp :: KeyMap.KeyMap Value -> Either [Char] BlockPropOne
+decodeBlockProp = eitherDecode . encode . Object
+
+-- | Block propagation results as written by locli 2.x read like the cluster performance results,
+--   and combine with 3.0 ones.
+prop_blockProp_2x_readable = withTests 1 $ property $ do
+  o :: KeyMap.KeyMap Value <- evalEither =<< evalIO (eitherDecodeFileStrict blockPropFixture)
+  filter (not . (`KeyMap.member` o)) blockPropAddedIn3_0 === []
+  battle <- maybe failure pure $ KeyMap.lookup "cdfSlotBattle" o
+  let o2x = KeyMap.insert "cdfBlockBattle" battle (withoutKeys blockPropAddedIn3_0 o)
+
+  full <- evalEither $ decodeBlockProp o
+  old  <- evalEither $ decodeBlockProp o2x
+  (cdfSize (cdfSlotBattle old), cdfSize (cdfHeightBattle old)) === (0, 0)
+  withoutKeys blockPropAddedIn3_0 (asObject old) === withoutKeys blockPropAddedIn3_0 (asObject full)
+
+  mixed <- evalEither . first (show @_ @Text) $ summariseMultiBlockProp (nEquicentiles 7) [full, old]
+  cdfAverageVal (cdfSlotBattle mixed) === cdfAverageVal (cdfSlotBattle full)
+ where
+   asObject :: BlockPropOne -> KeyMap.KeyMap Value
    asObject x = case toJSON x of
      Object o -> o
      _        -> KeyMap.empty

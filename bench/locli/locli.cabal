@@ -227,7 +227,8 @@ test-suite test-locli
                       , text-short
                       , time
 
-  other-modules:        Test.Analysis.CDF
+  other-modules:        Test.Analysis.BlockProp
+                        Test.Analysis.CDF
                         Test.Analysis.Compat
                         Test.Analysis.MachPerf
                         Test.Analysis.Metrics

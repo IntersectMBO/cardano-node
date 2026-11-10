@@ -214,7 +214,7 @@ propSubsetFn = \case
 
 bpFieldsControl, bpFieldsForger, bpFieldsPeers, bpFieldsEndToEnd, bpFieldsEndToEndBrief :: [FieldName]
 bpFieldsControl =
-  [ "cdfBlocksPerHost", "cdfBlocksFilteredRatio", "cdfBlocksChainedRatio", "cdfBlockBattle", "cdfBlockSize" ]
+  [ "cdfBlocksPerHost", "cdfBlocksFilteredRatio", "cdfBlocksChainedRatio", "cdfSlotBattle", "cdfHeightBattle", "cdfBlockSize" ]
 bpFieldsForger =
   [ "cdfForgerStart", "cdfForgerBlkCtx", "cdfForgerLgrState", "cdfForgerLgrView", "cdfForgerLead", "cdfForgerTicked", "cdfForgerMemSnap", "cdfForgerForge", "cdfForgerAnnounce", "cdfForgerSend", "cdfForgerAdoption", "cdfForgerAnnounceCum" ]
 bpFieldsPeers =
@@ -334,9 +334,13 @@ instance CDFFields BlockProp p where
       "Chained to forged blocks"
       "For each host, ratio of blocks that made into chain / all forged"]
 
-   <> fBoth "cdfBlockBattle"  "Battl" " #" W4 Blk P0 Lin Free (DInt cdfBlockBattle)
-      "Height & slot battles"
-      "For a given block, number of all abandoned blocks at its block height.  Sum of height and slot battles"
+   <> fBoth "cdfSlotBattle"   "SlotB" " #" W4 Blk P0 Lin Free (DInt cdfSlotBattle)
+      "Slot battles"
+      "For a given block on chain, number of other blocks forged for the same slot, at any height"
+
+   <> fBoth "cdfHeightBattle" "HghtB" " #" W4 Blk P0 Lin Free (DInt cdfHeightBattle)
+      "Height battles"
+      "For a given block on chain, number of other blocks at the same height, forged for another slot"
 
    <> fBoth "cdfBlockSize"  "Size" "bytes" W9 B   P0 Lin Free (DInt cdfBlockSize)
       "Block size"

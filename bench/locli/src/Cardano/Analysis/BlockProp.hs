@@ -9,7 +9,8 @@
 
 module Cardano.Analysis.BlockProp
   ( summariseMultiBlockProp
-  , MachView
+  , MachView(..)
+  , MachBlockEvents(..)
   , buildMachViews
   , rebuildChain
   , blockProp
@@ -55,7 +56,8 @@ summariseMultiBlockProp centiles bs@(headline:_) = do
   cdfPeerAdoption           <- cdf2OfCDFs comb $ bs <&> cdfPeerAdoption
   cdfPeerAnnounce           <- cdf2OfCDFs comb $ bs <&> cdfPeerAnnounce
   cdfPeerSend               <- cdf2OfCDFs comb $ bs <&> cdfPeerSend
-  cdfBlockBattle            <- cdf2OfCDFs comb $ bs <&> cdfBlockBattle
+  cdfSlotBattle             <- cdf2OfCDFs comb $ nonEmptyCDFs $ bs <&> cdfSlotBattle
+  cdfHeightBattle           <- cdf2OfCDFs comb $ nonEmptyCDFs $ bs <&> cdfHeightBattle
   cdfBlockSize              <- cdf2OfCDFs comb $ bs <&> cdfBlockSize
   cdfBlocksPerHost          <- cdf2OfCDFs comb $ bs <&> cdfBlocksPerHost
   cdfBlocksFilteredRatio    <- cdf2OfCDFs comb $ bs <&> cdfBlocksFilteredRatio
@@ -367,6 +369,14 @@ rebuildChain Run{genesis} flts _fltNames (fmap snd -> machViews) =
                    accHost))
        (mempty, mempty) machViews
 
+   -- Blocks by the slot they were forged for: one entry per forge, i.e. per block.
+   slotMap      :: Map SlotNo (Set Hash)
+   slotMap
+     = Map.fromListWith (<>)
+       [ (bfeSlotNo, Set.singleton bfeBlock)
+       | MachView{mvHashBlocks} <- machViews
+       , ForgerEvents{bfeSlotNo, bfeBlock} <- mapMaybe mbeForge (Map.elems mvHashBlocks) ]
+
    doRebuildChain :: [MachHashBlockEvents NominalDiffTime] -> Hash -> [BlockEvents]
    doRebuildChain machBlockMaps chainTipHash = go (Just chainTipHash) []
     where go Nothing  acc = acc
@@ -412,7 +422,8 @@ rebuildChain Run{genesis} flts _fltNames (fmap snd -> machViews) =
           , bfAdopted      = bfeAdopted
           , bfChainDelta = bfeChainDelta
           }
-        , beForks = unsafeCoerceCount $ countListAll otherBlocks
+        , beSlotBattle   = unsafeCoerceCount $ countListAll slotRivals
+        , beHeightBattle = unsafeCoerceCount $ countListAll heightRivals
         , beObservations =
             catSMaybes $
             os <&> \ObserverEvents{..}->
@@ -449,9 +460,14 @@ rebuildChain Run{genesis} flts _fltNames (fmap snd -> machViews) =
                       let forger = findForger blk in
                       (forger,
                        fail' (bfeHost forger) bfeBlock (BPEFork blk))
-      otherBlockHashes = Map.lookup bfeBlockNo heightMap
-                         & strictMaybe
-                         & handleMiss "height map"
+      -- Rivals: other blocks forged for the same slot (at any height: a slot battle), or at
+      -- the same height for another slot (a height battle).
+      (slotRivals, heightRivals) =
+        partition (\(ForgerEvents{bfeSlotNo = slot}, _) -> slot == bfeSlotNo) otherBlocks
+      otherBlockHashes = (Map.lookup bfeBlockNo heightMap
+                          & strictMaybe
+                          & handleMiss "height map")
+                         <> Map.findWithDefault mempty bfeSlotNo slotMap
                          & Set.delete bfeBlock
                          & Set.toList
 
@@ -529,7 +545,8 @@ blockProp _ Chain{..} = do
       [ ( T.pack $ printf "cdf%.2f" p'
         , forgerCDF c (SJust . unI . projectCDF' "bePropagation" p . bePropagation))
       | p@(Centile p') <- adoptionCentiles <> [Centile 1.0] ]
-    , cdfBlockBattle         = forgerCDF c (SJust . unCount . beForks)
+    , cdfSlotBattle          = forgerCDF battles (SJust . unCount . beSlotBattle)
+    , cdfHeightBattle        = forgerCDF battles (SJust . unCount . beHeightBattle)
     , cdfBlockSize           = forgerCDF c (SJust . bfBlockSize . beForge)
     , bpVersion              = getLocliVersion
     , cdfBlocksPerHost       = cdf stdCentiles (hostBlockStats
@@ -547,6 +564,12 @@ blockProp _ Chain{..} = do
     }
  where
    hostBlockStats = Map.elems cHostBlockStats
+
+   -- Battles are counted over the chain blocks in the analysed slots: only slot conditions
+   -- (e.g. epoch3+) apply. Block conditions (adoptions, size, unitary chain delta) concern how
+   -- a block propagated or what it contains, and would bias the counts: a contested block is
+   -- often adopted later, by fewer nodes, or through a fork switch.
+   battles = filter (all snd . filter (cfIsSlotCond . fst) . beAcceptance) cMainChain
 
    boFetchedCum :: BlockObservation -> NominalDiffTime
    boFetchedCum BlockObservation{..} = boNoticed + boRequested + boFetched

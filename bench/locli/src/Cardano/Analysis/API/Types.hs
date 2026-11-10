@@ -128,17 +128,22 @@ data BlockProp f
     , cdfBlocksPerHost       :: !(CDF f Int)
     , cdfBlocksFilteredRatio :: !(CDF f Double)
     , cdfBlocksChainedRatio  :: !(CDF f Double)
-    , cdfBlockBattle         :: !(CDF f Int)
+    , cdfSlotBattle          :: !(CDF f Int)
+    , cdfHeightBattle        :: !(CDF f Int)
     , cdfBlockSize           :: !(CDF f Int)
     , bpPropagation          :: !(Map Text (CDF f NominalDiffTime))
     }
   deriving (Generic)
-deriving instance
+-- | Lenient on missing CDFs, as 'MachPerf'.
+instance
   ( forall a. FromJSON a => FromJSON (f a)
   , FromJSON (CDFList f (DataDomain I SlotNo))
   , FromJSON (CDFList f (DataDomain I BlockNo))
+  , forall a. ToJSON a => ToJSON (f a), KnownCDF f
   ) =>
-  FromJSON (BlockProp f)
+  FromJSON (BlockProp f) where
+  parseJSON = AE.withObject "BlockProp" $
+    AE.genericParseJSON AE.defaultOptions . AE.Object . withEmptyCDFs (Proxy @(BlockProp f)) (Proxy @f)
 deriving instance
   ( forall a. ToJSON a => ToJSON (f a)
   , ToJSON (CDFList f (DataDomain I SlotNo))
@@ -257,7 +262,10 @@ data BlockEvents
   , beEpochSafeInt  :: !EpochSafeInt
   , beForge         :: !BlockForge
   , beObservations  :: ![BlockObservation]
-  , beForks         :: !(Count BlockEvents)
+  , beSlotBattle    :: !(Count BlockEvents)
+                       -- ^ Other blocks forged for this block's slot, at any height
+  , beHeightBattle  :: !(Count BlockEvents)
+                       -- ^ Other blocks at this block's height, forged for another slot
   , bePropagation   :: !(CDF I NominalDiffTime)
                        -- ^ CDF of slot-start-to-adoptions on cluster
   , beOtherBlocks   :: ![Hash]
