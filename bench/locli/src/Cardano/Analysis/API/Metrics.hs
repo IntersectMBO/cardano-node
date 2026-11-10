@@ -563,7 +563,7 @@ instance CDFFields MachPerf p where
       "Length of over-85% CPU usage peaks (consecutive slots), slots: all of them, whatever their cause"
 
     , fGrp' "cdfSpanLensCpuEpoch" "Epoch" (DInt cdfSpanLensCpuEpoch)
-      "CPU 85% peaks, epoch transition"
+      "CPU 85% peaks, ep. trans."
       "Length of the over-85% CPU usage peak ending at most 3 slots before the epoch's first block is adopted (the ledger's epoch transition), counted from the epoch's first slot, slots"
 
     , fGrp' "cdfSpanLensCpuOther" "Other" (DInt cdfSpanLensCpuOther)
@@ -640,7 +640,8 @@ instance TimelineFields (SlotStats NominalDiffTime) where
    <> fW64' "epoch"       "ep"      "#" W2 Epo (IWord64 (unEpochNo     .slEpoch))
    <> fW64' "safetyInt"   "saf"   "int" W3 Ix  (IWord64 (unEpochSafeInt.slEpochSafeInt))
    <> fGrp "block"                      W4 Blk P0 Lin Free
-    [ fGrp' "block"                 "no."      (IWord64 (unBlockNo.slBlockNo)) "" ""
+    -- Before the first block, BlockContext's tip block number is -1 (wrapped to maxBound).
+    [ fGrp' "block"                 "no."      (IText (blockNoOrNone.slBlockNo)) "" ""
     , fGrp' "blockGap"              "gap"      (IWord64 slBlockGap) "" ""
     ]
    <> fGrp2                             W3 Ev  P0 Lin Free
@@ -688,6 +689,7 @@ instance TimelineFields (SlotStats NominalDiffTime) where
    <> fBoth "mempoolTxs" "Mempool" "txs" W7 Uni P0 Lin Free (IWord64 slMempoolTxs) "" ""
    <> fBoth "utxoSize"  "UTxO" "entries" W9 Uni P0 Lin Free (IWord64 slUtxoSize) "" ""
    where fm = fmap
+         blockNoOrNone (BlockNo n) = if n == maxBound then "---" else showText n
 
   data TimelineComments (SlotStats NominalDiffTime)
     = SSLogObjects

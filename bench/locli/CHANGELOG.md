@@ -31,7 +31,7 @@
 * `Resources` samples only need CPU time, RSS and thread count; all other fields are optional (e.g. no GC fields from a runtime without GC). Metrics that can't be zero throughout if measured (network and storage I/O, GC) render as not available (`—`) when they are.
 * Anomaly control: "Height & slot battles" is split into **Slot battles** (other blocks for a chain block's slot, at any height) and **Height battles** (other blocks at its height, for another slot). Both cover the chain blocks in the analysed slots: slot conditions (e.g. `epoch3+`) apply, block conditions (adoptions, size, unitary chain delta) don't, as contested blocks often fail them.
 * Documentation: `doc/locli-internals.typ` (pipeline, stages, distributions, reports, workbench mapping) replaces the outdated yEd flow chart.
-* Fixed: a forger's announcement, sending and self-adoption, when missing (e.g. a node without downstream peers), are not available instead of a fixed 0.01 s; the first resource sample no longer counts a node's whole startup as one sample; storage reads that are zero throughout show as 0.
+* Fixed: a forger's announcement, sending and self-adoption, when missing (e.g. a node without downstream peers), are not available instead of a fixed 0.01 s; the first resource sample no longer counts a node's whole startup as one sample; storage reads that are zero throughout show as 0; the machine timeline shows no block number (`---`) before the first block, instead of 2^64-1.
 * Analysis results of an older locli still read: metrics they lack show as `—`, also when compared or combined with newer runs.
 
 ## 2.4 -- Jul 2026
