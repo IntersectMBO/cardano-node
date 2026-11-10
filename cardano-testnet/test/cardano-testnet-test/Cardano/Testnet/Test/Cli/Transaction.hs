@@ -14,6 +14,7 @@ import qualified Cardano.Api.Ledger as L
 import           Cardano.CLI.Type.Common
 import           Cardano.Crypto.Hash.Class (hashToStringAsHex)
 import           Cardano.Testnet
+import           Cardano.Testnet.Test.Utils (testEra)
 
 import           Prelude
 
@@ -50,7 +51,7 @@ hprop_transaction = integrationRetryWorkspace 2 "simple transaction build" $ \te
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
 
   let
-    sbe = ShelleyBasedEraConway
+    sbe = convert testEra
     era = toCardanoEra sbe
     cEra = AnyCardanoEra era
     tempBaseAbsPath = makeTmpBaseAbsPath $ TmpAbsolutePath tempAbsPath'

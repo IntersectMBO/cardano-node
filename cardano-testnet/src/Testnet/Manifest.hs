@@ -361,7 +361,7 @@ removeStaleManifest outputDir = do
 --
 -- The era is passed in because @cardanoTestnet@ does not receive it as a
 -- parameter — both CLI paths (creation and node-env) go through it.  For
--- now the only supported era is Conway ('defaultEra').
+-- now the only supported era is 'defaultEra'.
 buildManifest
   :: FilePath          -- ^ Output directory (the @tmpAbsPath@ inside @cardanoTestnet@)
   -> TestnetRuntime    -- ^ The runtime returned after readiness checks pass

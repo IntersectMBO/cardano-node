@@ -11,6 +11,7 @@ module Cardano.Testnet.Test.Cli.Transaction.BuildEstimate
 import           Cardano.Api as Api
 
 import           Cardano.Testnet
+import           Cardano.Testnet.Test.Utils (testEra)
 
 import           Prelude
 
@@ -46,8 +47,10 @@ hprop_tx_build_estimate = integrationRetryWorkspace 2 "transaction-build-estimat
 
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
 
-  let ceo = ConwayEraOnwardsConway
-      sbe = convert ceo
+  let era = testEra
+
+      ceo = convert era
+      sbe = convert era
       eraName = eraToString sbe
       creationOptions = def
         { creationEra = AnyShelleyBasedEra sbe

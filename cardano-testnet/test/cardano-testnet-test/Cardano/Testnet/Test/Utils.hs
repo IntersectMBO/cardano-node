@@ -4,10 +4,13 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.Testnet.Test.Utils
-  ( nodesProduceBlocks
+  ( TestEra
+  , testEra
+  , nodesProduceBlocks
   ) where
 
-import           Cardano.Api (BlockNo (..), ChainTip (..), MonadIO)
+import           Cardano.Api (BlockNo (..), ChainTip (..), DijkstraEra, MonadIO)
+import qualified Cardano.Api.Experimental as Exp
 
 import           Cardano.CLI.Type.Output (QueryTipLocalStateOutput (..))
 
@@ -27,6 +30,12 @@ import           Testnet.Types (TestnetNode (..), TestnetRuntime (..), isTestnet
 import           Hedgehog ((===))
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras as H
+
+-- | The era the tests run in.
+type TestEra = DijkstraEra
+
+testEra :: Exp.Era TestEra
+testEra = Exp.useEra
 
 -- | Checks that nodes are running as expected and producing blocks
 nodesProduceBlocks :: ()

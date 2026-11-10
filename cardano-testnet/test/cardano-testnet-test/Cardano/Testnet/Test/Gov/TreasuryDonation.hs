@@ -14,6 +14,7 @@ import           Cardano.Api.Ledger
 
 import qualified Cardano.Ledger.Coin as L
 import           Cardano.Testnet
+import           Cardano.Testnet.Test.Utils (testEra)
 
 import           Prelude
 
@@ -44,8 +45,8 @@ hprop_ledger_events_treasury_donation = integrationRetryWorkspace 2 "treasury-do
   let conf@Conf { tempAbsPath=tempAbsPath@(TmpAbsolutePath work) } = mkConfig tempAbsBasePath'
   let tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
 
-  let ceo = ConwayEraOnwardsConway
-      sbe = convert ceo
+  let era = testEra
+      sbe = convert era
       creationOptions = def
         { creationEra = AnyShelleyBasedEra sbe
         , creationGenesisOptions = def { genesisEpochLength = 100 }
@@ -109,7 +110,7 @@ doTreasuryDonation sbe execConfig work epochStateView wallet0 idx currentTreasur
   txIn0 <- findLargestUtxoForPaymentKey epochStateView sbe wallet0
 
   (exitCode, stdout, stderr) <- execCliAny execConfig
-    [ "conway", "transaction", "build"
+    [ eraToString sbe, "transaction", "build"
     , "--tx-in", Text.unpack $ renderTxIn txIn0
     , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet0
     , "--treasury-donation", show treasuryDonation
@@ -136,7 +137,7 @@ doTreasuryDonation sbe execConfig work epochStateView wallet0 idx currentTreasur
         , "--output-json", "--out-file", txViewFp]
 
       H.noteM_ $ execCli' execConfig
-        [ "conway", "transaction", "sign"
+        [ eraToString sbe, "transaction", "sign"
         , "--tx-body-file", txBodyFp
         , "--signing-key-file", signingKeyFp $ paymentKeyInfoPair wallet0
         , "--out-file", signedTxFp
@@ -146,7 +147,7 @@ doTreasuryDonation sbe execConfig work epochStateView wallet0 idx currentTreasur
         [ "debug", "transaction", "view" , "--tx-file", signedTxFp ]
 
       H.noteM_ $ execCli' execConfig
-        [ "conway", "transaction", "submit" , "--tx-file", signedTxFp ]
+        [ eraToString sbe, "transaction", "submit" , "--tx-file", signedTxFp ]
 
       let expectedTreasury = L.Coin $ currentTreasury + toInteger treasuryDonation
       void $ retryUntilM epochStateView (WaitForEpochs $ EpochInterval 10)

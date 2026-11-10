@@ -1,0 +1,7 @@
+pr: 6716
+kind:
+  - breaking
+description: |
+  - `cardano-testnet` now starts testnets in the Dijkstra era by default: `defaultEra` and the default `creationEra` are Dijkstra instead of Conway.
+  - The default node configuration enables `ExperimentalHardForksEnabled`, which the node needs to produce blocks in Dijkstra.
+  - `registerSingleSpo` takes an `Era` from `Cardano.Api.Experimental` instead of an `AnyShelleyBasedEra`. It generates a BLS key and uses it in the stake pool registration certificate when the era is Dijkstra.

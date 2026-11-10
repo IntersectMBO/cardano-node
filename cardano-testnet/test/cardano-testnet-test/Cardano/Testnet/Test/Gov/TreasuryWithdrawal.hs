@@ -22,6 +22,7 @@ import qualified Cardano.Ledger.Coin as L
 import qualified Cardano.Ledger.Conway.Governance as L
 import qualified Cardano.Ledger.Shelley.LedgerState as L
 import           Cardano.Testnet
+import           Cardano.Testnet.Test.Utils (testEra)
 
 import           Prelude
 
@@ -63,9 +64,10 @@ hprop_ledger_events_treasury_withdrawal = integrationRetryWorkspace 2  "treasury
 
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
 
-  let ceo = ConwayEraOnwardsConway
-      sbe = convert ceo
-      era = toCardanoEra sbe
+  let era = testEra
+
+      ceo = convert era
+      sbe = convert era
       eraName = eraToString era
 
       creationOptions = def

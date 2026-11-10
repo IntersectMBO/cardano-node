@@ -11,6 +11,7 @@ module Cardano.Testnet.Test.Cli.Plutus.MultiAssetReturnCollateral
 import           Cardano.Api
 
 import           Cardano.Testnet
+import           Cardano.Testnet.Test.Utils (testEra)
 
 import           Prelude
 
@@ -42,10 +43,9 @@ hprop_collateral_with_tokens = integrationRetryWorkspace 2 "collateral-with-toke
 
   let
     tempBaseAbsPath = makeTmpBaseAbsPath $ TmpAbsolutePath tempAbsPath'
-    ceo = ConwayEraOnwardsConway
-    sbe = convert ceo
-    era = toCardanoEra sbe
-    anyEra = AnyCardanoEra era
+    era = testEra
+    sbe = convert era
+    anyEra = AnyCardanoEra $ toCardanoEra sbe
     creationOptions = def { creationEra = AnyShelleyBasedEra sbe }
 
   TestnetRuntime

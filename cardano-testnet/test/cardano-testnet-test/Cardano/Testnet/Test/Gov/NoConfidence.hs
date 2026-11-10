@@ -17,6 +17,7 @@ import qualified Cardano.Ledger.Conway.Governance as L
 import qualified Cardano.Ledger.Credential as L
 import qualified Cardano.Ledger.Shelley.LedgerState as L
 import           Cardano.Testnet
+import           Cardano.Testnet.Test.Utils (testEra)
 
 import           Prelude
 
@@ -63,11 +64,12 @@ hprop_gov_no_confidence = integrationRetryWorkspace 2 "no-confidence" $ \tempAbs
 
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
 
-  let ceo = ConwayEraOnwardsConway
-      sbe = convert ceo
+  let era = testEra
+
+      ceo = convert era
+      sbe = convert era
       asbe = AnyShelleyBasedEra sbe
-      era = toCardanoEra sbe
-      cEra = AnyCardanoEra era
+      cEra = AnyCardanoEra $ toCardanoEra sbe
       creationOptions = def { creationEra = asbe, creationGenesisOptions = def { genesisEpochLength = 200 } }
 
   execConfigOffline <- H.mkExecConfigOffline tempBaseAbsPath

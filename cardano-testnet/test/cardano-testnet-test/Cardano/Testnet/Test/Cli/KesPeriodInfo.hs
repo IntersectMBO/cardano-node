@@ -16,6 +16,7 @@ import           Cardano.Api as Api
 import           Cardano.CLI.Type.Output
 import           Cardano.Testnet
 import           Cardano.Testnet.Test.Misc
+import           Cardano.Testnet.Test.Utils (testEra)
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
 
 import           Prelude
@@ -63,8 +64,9 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
   let conf@Conf { tempAbsPath=tempAbsPath@(TmpAbsolutePath work) } = mkConfig tempAbsBasePath'
 
   let tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
-      ceo = ConwayEraOnwardsConway
-      sbe = convert ceo
+      era = testEra
+      ceo = convert era
+      sbe = convert era
       asbe = AnyShelleyBasedEra sbe
       eraString = eraToString sbe
       cTestnetOptions = def { creationEra = asbe }
@@ -97,7 +99,7 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
   epochStateView <- getEpochStateView configurationFile node1SocketPath
   keyDeposit <- getKeyDeposit epochStateView ceo
   (stakePoolId, KeyPair{signingKey=File stakePoolColdSigningKey, verificationKey=File stakePoolColdVKey}, _)
-    <- registerSingleSpo asbe 1 tempAbsPath
+    <- registerSingleSpo era 1 tempAbsPath
          configurationFile
          node1SocketPath
          termEpoch

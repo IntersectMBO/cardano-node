@@ -2,9 +2,9 @@
     "contents": {
         "contents": {
             "contents": {
-                "era": "ShelleyBasedEraConway",
+                "era": "ShelleyBasedEraDijkstra",
                 "error": [
-                    "ConwayMempoolFailure \"All inputs are spent. Transaction has probably already been included\""
+                    "AllInputsAreSpent"
                 ],
                 "kind": "ShelleyTxValidationError"
             },

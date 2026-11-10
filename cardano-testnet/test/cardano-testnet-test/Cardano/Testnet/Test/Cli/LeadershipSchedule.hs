@@ -17,6 +17,7 @@ import           Cardano.Api
 import qualified Cardano.Api as Api
 
 import           Cardano.Testnet
+import           Cardano.Testnet.Test.Utils (testEra)
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
 
 import           Prelude
@@ -64,8 +65,9 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "leadership-schedule" $ \
   H.note_ SYS.os
   let conf@Conf { tempAbsPath=tempAbsPath@(TmpAbsolutePath work) } = mkConfig tempAbsBasePath'
   let tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
-      ceo = ConwayEraOnwardsConway
-      sbe = convert ceo
+      era = testEra
+      ceo = convert era
+      sbe = convert era
       asbe = AnyShelleyBasedEra sbe
       cTestnetOptions = def
         { creationEra = asbe
@@ -108,7 +110,7 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "leadership-schedule" $ \
   epochStateView <- getEpochStateView configurationFile node1SocketPath
   keyDeposit <- getKeyDeposit epochStateView ceo
   (stakePoolIdNewSpo, KeyPair{signingKey=File stakePoolColdSigningKey, verificationKey=File stakePoolColdVKey}, KeyPair{signingKey=File vrfSkey})
-    <- registerSingleSpo asbe 1 tempAbsPath
+    <- registerSingleSpo era 1 tempAbsPath
          configurationFile
          node1SocketPath
          (EpochNo 10)

@@ -16,6 +16,7 @@ module Testnet.Process.Cli.SPO
   ) where
 
 import           Cardano.Api hiding (cardanoEra)
+import qualified Cardano.Api.Experimental as Exp
 import           Cardano.Api.Experimental.Certificate (PoolId)
 import qualified Cardano.Api.Ledger as L
 
@@ -31,6 +32,7 @@ import qualified Data.Map.Strict as Map
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import qualified Data.Text as Text
+import           Data.Typeable (Typeable)
 import           Data.Word (Word16)
 import           GHC.Stack (HasCallStack)
 import qualified GHC.Stack as GHC
@@ -281,8 +283,8 @@ createStakeKeyDeregistrationCertificate tempAbsP sbe (File stakeVerKey) (L.Coin 
 
 -- | Related documentation: https://github.com/input-output-hk/cardano-node-wiki/blob/main/docs/stake-pool-operations/8_register_stakepool.md
 registerSingleSpo
-  :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
-  => AnyShelleyBasedEra
+  :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack, Typeable era)
+  => Exp.Era era
   -> Int -- ^ Identifier for stake pool
   -> TmpAbsolutePath
   -> NodeConfigFile 'In
@@ -299,7 +301,7 @@ registerSingleSpo
          --   1. String: Registered stake pool ID
          --   2. Stake pool cold keys
          --   3. Stake pool VRF keys
-registerSingleSpo asbe identifier tap@(TmpAbsolutePath tempAbsPath') nodeConfigFile socketPath termEpoch testnetMag keyDeposit execConfig
+registerSingleSpo era identifier tap@(TmpAbsolutePath tempAbsPath') nodeConfigFile socketPath termEpoch testnetMag keyDeposit execConfig
                   (fundingInput, File fundingSigninKey, changeAddr) = GHC.withFrozenCallStack $ do
   workDir <- H.note tempAbsPath'
 
@@ -362,12 +364,24 @@ registerSingleSpo asbe identifier tap@(TmpAbsolutePath tempAbsPath') nodeConfigF
         }
   cliNodeKeyGenVrf vrfKeys
 
-  -- 5. Create registration certificate
+  -- 5. Generate BLS keys: from Dijkstra on, the registration certificate needs one
+  let blsSigningKeyFp = spoReqDir </> "pool-bls.skey"
+  blsKeyArgs <- case era of
+    Exp.ConwayEra -> pure []
+    Exp.DijkstraEra -> do
+      execCli_
+        [ eraToString era, "node", "key-gen-BLS"
+        , "--verification-key-file", spoReqDir </> "pool-bls.vkey"
+        , "--signing-key-file", blsSigningKeyFp
+        ]
+      pure ["--bls-signing-key-file", blsSigningKeyFp]
+
+  -- 6. Create registration certificate
   let poolRegCertFp = spoReqDir </> "registration.cert"
 
   -- The pledge, pool cost and pool margin can all be 0
-  execCli_
-    [ anyShelleyBasedEraToString asbe
+  execCli_ $
+    [ eraToString era
     , "stake-pool", "registration-certificate"
     , "--testnet-magic", show @Int testnetMag
     , "--pool-pledge", "0"
@@ -378,19 +392,19 @@ registerSingleSpo asbe identifier tap@(TmpAbsolutePath tempAbsPath') nodeConfigF
     , "--reward-account-verification-key-file", verificationKeyFp poolOwnerStakeKeys
     , "--pool-owner-stake-verification-key-file", verificationKeyFp poolOwnerStakeKeys
     , "--out-file", poolRegCertFp
-    ]
+    ] <> blsKeyArgs
 
   -- Create pledge delegation certificate
   -- NB: Pledger and owner can be the same
 
   -- Create pledger registration certificate
-  createStakeKeyRegistrationCertificate tap asbe
+  createStakeKeyRegistrationCertificate tap (AnyShelleyBasedEra (convert era))
     (verificationKey poolOwnerStakeKeys)
     keyDeposit
     (workDir </> "pledger.regcert")
 
   void $ execCli' execConfig
-    [ anyShelleyBasedEraToString asbe
+    [ eraToString era
     , "transaction", "build"
     , "--change-address", changeAddr
     , "--tx-in", Text.unpack $ renderTxIn fundingInput

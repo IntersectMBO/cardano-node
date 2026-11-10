@@ -16,6 +16,7 @@ import qualified Cardano.Api.Ledger as L
 import           Cardano.Api.UTxO (difference, size)
 
 import           Cardano.Testnet
+import           Cardano.Testnet.Test.Utils (testEra)
 
 import           Prelude
 
@@ -45,10 +46,10 @@ hprop_simple_script_mint = integrationRetryWorkspace 2 "simple-script-mint" $ \t
 
   let
     tempBaseAbsPath = makeTmpBaseAbsPath $ TmpAbsolutePath tempAbsPath'
-    ceo = ConwayEraOnwardsConway
-    sbe = convert ceo
-    era = toCardanoEra sbe
-    anyEra = AnyCardanoEra era
+    era = testEra
+    ceo = convert era
+    sbe = convert era
+    anyEra = AnyCardanoEra $ toCardanoEra sbe
     creationOptions = def { creationEra = AnyShelleyBasedEra sbe }
 
   TestnetRuntime

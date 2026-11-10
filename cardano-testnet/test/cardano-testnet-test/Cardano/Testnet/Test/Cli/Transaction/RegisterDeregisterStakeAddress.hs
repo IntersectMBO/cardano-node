@@ -12,6 +12,7 @@ import           Cardano.Api as Api
 
 import           Cardano.CLI.Type.Key (SomeSigningKey (AStakeSigningKey))
 import           Cardano.Testnet
+import           Cardano.Testnet.Test.Utils (testEra)
 
 import           Prelude
 
@@ -49,8 +50,10 @@ hprop_tx_register_deregister_stake_address = integrationRetryWorkspace 2 "regist
 
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
 
-  let ceo = ConwayEraOnwardsConway
-      sbe = convert ceo
+  let era = testEra
+
+      ceo = convert era
+      sbe = convert era
       eraName = eraToString sbe
       creationOptions = def
         { creationEra = AnyShelleyBasedEra sbe
