@@ -46,7 +46,7 @@ import qualified Hedgehog.Extras as H
 -- @TASTY_PATTERN='/RPC ReadGenesis/' cabal test cardano-testnet-test@
 hprop_rpc_read_genesis :: H.Property
 hprop_rpc_read_genesis = integrationRetryWorkspace 2 "rpc-read-genesis" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
-  conf <- mkConf tempAbsBasePath'
+  let conf = mkConfig tempAbsBasePath'
 
   let era = Exp.ConwayEra
       sbe = convert era

@@ -27,7 +27,7 @@ module Cardano.Testnet (
   TmpAbsolutePath(..),
   NodeConfiguration,
   NodeConfigurationYaml,
-  mkConf,
+  mkConfig,
   makeLogDir,
   makeSocketDir,
   makeTmpBaseAbsPath,

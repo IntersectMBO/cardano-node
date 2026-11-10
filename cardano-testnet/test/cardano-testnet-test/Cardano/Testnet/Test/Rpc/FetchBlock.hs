@@ -58,7 +58,7 @@ import qualified Hedgehog.Extras as H
 -- @TASTY_PATTERN='/RPC FetchBlock/' cabal test cardano-testnet-test@
 hprop_rpc_fetch_block :: H.Property
 hprop_rpc_fetch_block = integrationRetryWorkspace 2 "rpc-fetch-block" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
-  conf@Conf{tempAbsPath} <- mkConf tempAbsBasePath'
+  let conf@Conf{tempAbsPath} = mkConfig tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
 
   let era = Exp.ConwayEra

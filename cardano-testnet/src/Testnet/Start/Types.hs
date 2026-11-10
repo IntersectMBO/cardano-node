@@ -45,8 +45,8 @@ module Testnet.Start.Types
   , Conf(..)
   , NodeConfiguration
   , NodeConfigurationYaml
-  , mkConf
-  , mkConfigAbs
+  , mkConfig
+  , mkConfigAbsolute
   , defaultTestnetDir
   ) where
 
@@ -69,16 +69,12 @@ import           Data.List.NonEmpty (NonEmpty ((:|)))
 import qualified Data.List.NonEmpty as NEL
 import qualified Data.Text as Text
 import           Data.Word
-import           GHC.Stack
 import qualified Network.HTTP.Simple as HTTP
 import           Network.Socket (PortNumber)
 import           System.Directory (createDirectory, doesDirectoryExist, makeAbsolute)
 import           System.FilePath (addTrailingPathSeparator)
 
 import           Testnet.Filepath
-
-import           Hedgehog (MonadTest)
-import qualified Hedgehog.Extras as H
 
 -- | The default value for the --testnet-magic option for `cardano-testnet`
 defaultTestnetMagic :: Int
@@ -346,15 +342,9 @@ data Conf = Conf
   , updateTimestamps :: UpdateTimestamps
   } deriving (Eq, Show)
 
--- |  Same as mkConfig except that it renders the path
--- when failing in a property test.
-mkConf :: (HasCallStack, MonadTest m) => FilePath -> m Conf
-mkConf tempAbsPath' = withFrozenCallStack $ do
-  H.note_ tempAbsPath'
-  pure $ mkConfig tempAbsPath'
-
 -- | Create a 'Conf' from a temporary absolute path, with updating time stamps
--- disabled.
+-- disabled. This function is pure: the directory is
+-- neither created nor checked for existence.
 mkConfig :: FilePath -> Conf
 mkConfig tempAbsPath' =
   Conf
@@ -367,9 +357,10 @@ mkConfig tempAbsPath' =
 defaultTestnetDir :: FilePath
 defaultTestnetDir = "./testnet"
 
--- | Create a 'Conf' from an absolute path, with updating time stamps disabled.
-mkConfigAbs :: FilePath -> IO Conf
-mkConfigAbs userOutputDir = do
+-- | Like 'mkConfig', except that the path is first made absolute, and the
+-- directory is created if it doesn't exist yet.
+mkConfigAbsolute :: FilePath -> IO Conf
+mkConfigAbsolute userOutputDir = do
   absUserOutputDir <-  makeAbsolute userOutputDir
   dirExists <- doesDirectoryExist absUserOutputDir
   let conf = mkConfig absUserOutputDir

@@ -50,7 +50,7 @@ newtype AdditionalCatcher
 hprop_ledger_events_sanity_check :: Property
 hprop_ledger_events_sanity_check = integrationRetryWorkspace 2 "ledger-events-sanity-check" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   -- Start a local test net
-  conf <- mkConf tempAbsBasePath'
+  let conf = mkConfig tempAbsBasePath'
 
   let creationOptions = def
         { creationGenesisOptions = def

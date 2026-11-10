@@ -39,7 +39,7 @@ eraNamesInOrder = ["byron", "shelley", "allegra", "mary", "alonzo", "babbage", "
 -- @TASTY_PATTERN='/RPC ReadEraSummary/' cabal test cardano-testnet-test@
 hprop_rpc_read_era_summary :: H.Property
 hprop_rpc_read_era_summary = integrationRetryWorkspace 2 "rpc-read-era-summary" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
-  conf <- mkConf tempAbsBasePath'
+  let conf = mkConfig tempAbsBasePath'
 
   let era = Exp.ConwayEra
       sbe = convert era

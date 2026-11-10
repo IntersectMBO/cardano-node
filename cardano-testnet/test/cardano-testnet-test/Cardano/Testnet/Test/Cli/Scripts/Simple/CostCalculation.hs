@@ -42,7 +42,7 @@ import qualified Hedgehog.Extras.Test.TestWatchdog as H
 hprop_ref_simple_script_mint :: Property
 hprop_ref_simple_script_mint = integrationRetryWorkspace 2 "ref-simple-script" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   H.note_ SYS.os
-  conf@Conf{tempAbsPath} <- mkConf tempAbsBasePath'
+  let conf@Conf{tempAbsPath} = mkConfig tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
 

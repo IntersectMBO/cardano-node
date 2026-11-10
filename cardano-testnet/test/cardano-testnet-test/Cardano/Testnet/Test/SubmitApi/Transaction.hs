@@ -55,7 +55,7 @@ import qualified Hedgehog.Extras.Test.TestWatchdog as H
 hprop_transaction :: Property
 hprop_transaction = integrationRetryWorkspace 2 "submit-api-transaction" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   H.note_ SYS.os
-  conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
+  let conf@Conf { tempAbsPath } = mkConfig tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
       sbe = ShelleyBasedEraConway
       eraString = eraToString sbe

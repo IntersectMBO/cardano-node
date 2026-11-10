@@ -9,7 +9,7 @@ module Cardano.Testnet.Test.Manifest
   ) where
 
 import           Cardano.Testnet (createAndRunTestnet, createTestnetEnv, defaultManifestFile,
-                   mkConf)
+                   mkConfig)
 
 import           Prelude
 
@@ -32,7 +32,7 @@ import qualified Hedgehog.Extras as H
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/Manifest/"'@
 hprop_manifest :: Property
 hprop_manifest = integrationRetryWorkspace 2 "manifest" $ \tmpDir -> H.runWithDefaultWatchdog_ $ do
-  conf <- mkConf tmpDir
+  let conf = mkConfig tmpDir
   _runtime <- createAndRunTestnet def def conf
 
   manifest <- H.readJsonFileOk @Manifest $ tmpDir </> defaultManifestFile
@@ -86,7 +86,7 @@ hprop_manifest_stale = integrationRetryWorkspace 2 "manifest-stale" $ \tmpDir ->
 
   -- createTestnetEnv deletes any pre-existing manifest first thing.
   -- It does NOT write a new one -- manifests are only written at cluster readiness.
-  conf <- mkConf tmpDir
+  let conf = mkConfig tmpDir
   liftToIntegration $ createTestnetEnv def conf
 
   -- The stale manifest must be gone.
