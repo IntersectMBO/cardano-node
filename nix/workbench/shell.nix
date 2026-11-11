@@ -35,7 +35,6 @@ project.shellFor {
     progress "deployment name"         $WB_DEPLOYMENT_NAME
     progress "WB_SHELL_PROFILE_DATA="  $WB_SHELL_PROFILE_DATA
     progress "WB_BACKEND_DATA="        $WB_BACKEND_DATA
-    progress "WB_LOCLI_DB="            $WB_LOCLI_DB
     progress "WB_MODULAR_GENESIS="     $WB_MODULAR_GENESIS
     progress "WB_GENESIS_RIPPER="      $WB_GENESIS_RIPPER
 

@@ -16,15 +16,18 @@ jq_tolist() {
 jq_fmutate() {
     local f=$1; shift
     test -f "$f" || { echo '{}' > "$f"; }
-    local out
-    out=$(jq "$@" "$f") ||
+    ## Not `out`: in a nix shell, that's an exported variable (the derivation's output path),
+    ## and a local of that name stays exported -- a result over 128 KiB then makes `sponge` fail
+    ## with "Argument list too long".
+    local jq_result
+    jq_result=$(jq "$@" "$f") ||
         { msg "jq_fmutate:  jq failed, leaving unchanged:  $f"; return 1; }
-    if test -z "$out"
+    if test -z "$jq_result"
     then if test -s "$f"
          then msg "jq_fmutate:  empty result, leaving unchanged:  $f"; return 1
          else msg "jq_fmutate:  WARNING: empty file, left as is:  $f"; return 0; fi
     fi
-    printf '%s\n' "$out" | sponge "$f"
+    printf '%s\n' "$jq_result" | sponge "$f"
 }
 
 ## A JSON object, i.e. not empty, nor malformed.

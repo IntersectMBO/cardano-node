@@ -43,15 +43,12 @@ import qualified Data.Aeson as AE
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import           Data.Data (Data)
 import           Data.IntervalMap.FingerTree (Interval (..), high, low, point)
-import           Data.List (span)
 import           Data.List.Split (chunksOf)
 import           Data.SOP (I (..), unI)
 import           Data.SOP.Strict
 import qualified Data.Text as T
 import           Data.Time.Clock (NominalDiffTime, UTCTime (..), addUTCTime, diffUTCTime)
 import           Data.Time.Clock.POSIX
-import           Data.Vector (Vector)
-import qualified Data.Vector as Vec
 import           GHC.Base (build)
 import qualified GHC.Stats as RTS
 import qualified System.FilePath as F
@@ -216,17 +213,6 @@ sequenceConcurrentlyChunksOf n actions = do
   locks <- cycle <$> replicateM n newLock
   let withLockActions = zipWith ($) (map withLock locks) actions
   runConcurrently $ traverse Concurrently withLockActions
-
-spans :: forall a. (a -> Bool) -> [a] -> [Vector a]
-spans f = go []
- where
-   go :: [Vector a] -> [a] -> [Vector a]
-   go acc [] = reverse acc
-   go acc xs =
-     case span f $ dropWhile (not . f) xs of
-       ([], rest) -> go acc rest
-       (ac, rest) ->
-         go (Vec.fromList ac:acc) rest
 
 {-# INLINE norm2Tuple #-}
 norm2Tuple :: ((a, b), c) -> (a, (b, c))

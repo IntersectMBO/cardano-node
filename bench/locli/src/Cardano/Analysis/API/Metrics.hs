@@ -43,7 +43,7 @@ sumFieldsReport =
   , "ghc_version"
   ] ++ (FieldName <$> manifestPackages) ++
   [ "era"
-  , "delegators", "utxo", "dreps"
+  , "delegators", "utxo", "cdfUtxoFinal", "dreps"
   , "add_tx_size", "inputs_per_tx", "outputs_per_tx" , "tps", "tx_count"
   , "plutusScript"
   , "sumHosts", "sumLogObjectsTotal"
@@ -97,6 +97,10 @@ instance (KnownCDF f) => TimelineFields (Summary f)  where
       "Stuffed UTxO size"
       "Extra UTxO set entries (from genesis)"
 
+   <> fScalar "cdfUtxoFinal"           W12 Cnt (IFloat $ avgOrNaN.cdfUtxoFinal)
+      "Final UTxO size"
+      "UTxO set size at the end of the run: each host's last LedgerMetrics, averaged over hosts. Constant by benchmark design, so a fractional value indicates a problem"
+
    <> fScalar "dreps"                  W12 Cnt (IWord64 $          dreps.sumGenesisSpec)
       "DRep count"
       "Amount of DReps in ledger, number of DRep delegations equals number of stake delegations"
@@ -132,15 +136,15 @@ instance (KnownCDF f) => TimelineFields (Summary f)  where
       "Number of machines under analysis"
 
    <> fScalar "sumFilters"             W2  Cnt (IInt   $   length.snd.sumFilters)
-      "Number of filters applied"
+      "Filters applied, count"
       ""
 
    <> fScalar "cdfLogObjectsEmitted"   W12 Cnt (IFloat $ cdfAverageVal.cdfLogObjectsEmitted)
-      "Log objects emitted per host"
+      "LO emitted / host"
       ""
 
    <> fScalar "cdfLogObjects"          W12 Cnt (IFloat $ cdfAverageVal.cdfLogObjects)
-      "Log objects analysed per host"
+      "LO analysed / host"
       ""
 
    <> fScalar "cdfRuntime"             W7  Sec (IFloat $ cdfAverageVal.cdfRuntime)
@@ -152,7 +156,7 @@ instance (KnownCDF f) => TimelineFields (Summary f)  where
       ""
 
    <> fScalar "sumLogObjectsTotal"     W12 Cnt (IInt   $ unCount.arityProj cdfMedian.sumLogObjectsTotal)
-      "Total log objects analysed"
+      "LO analysed, total"
       ""
 
    <> fScalar "ddRawCount.sumDomainTime"      W12 Sec (IInt $ arityProj cdfMedian.ddRawCount.sumDomainTime)
@@ -187,16 +191,15 @@ instance (KnownCDF f) => TimelineFields (Summary f)  where
       "Blocks rejected"
       ""
    where
-     pkgCommit pkg = fScalar pkg W7  Ver
-                     (IText $ unCommit.ciCommit.getComponent pkg.manifest.sumMeta)
-                     (pkg <> " git") ""
-     pkgVersion pkg = fScalar pkg W12  Ver
-                     (IText $ unVersion.ciVersion.getComponent pkg.manifest.sumMeta)
-                     (pkg <> " version") ""
-     manifestFields = mconcat . mconcat $
-                       [ manifestPackages <&> pkgVersion
-                       , manifestPackages <&> pkgCommit
-                       ]
+     -- One row per package: "<version> @ <commit, shortened>".
+     pkgVersionCommit pkg = fScalar pkg Wno Ver
+                     (IText $ versionCommit.getComponent pkg.manifest.sumMeta)
+                     pkg ""
+     versionCommit ComponentInfo{ciVersion, ciCommit} =
+       unVersion ciVersion <> " @ " <> unCommit (unsafeShortenCommit 7 ciCommit)
+     manifestFields = mconcat $ manifestPackages <&> pkgVersionCommit
+     -- No samples: not available (an empty CDF's average reads 0).
+     avgOrNaN c = if cdfSize c == 0 then 0 / 0 else cdfAverageVal c
 
 -- fieldJSONOverlay f = (:[]) . tryOverlayFieldDescription f
 
@@ -211,7 +214,7 @@ propSubsetFn = \case
 
 bpFieldsControl, bpFieldsForger, bpFieldsPeers, bpFieldsEndToEnd, bpFieldsEndToEndBrief :: [FieldName]
 bpFieldsControl =
-  [ "cdfBlocksPerHost", "cdfBlocksFilteredRatio", "cdfBlocksChainedRatio", "cdfBlockBattle", "cdfBlockSize" ]
+  [ "cdfBlocksPerHost", "cdfBlocksFilteredRatio", "cdfBlocksChainedRatio", "cdfSlotBattle", "cdfHeightBattle", "cdfBlockSize" ]
 bpFieldsForger =
   [ "cdfForgerStart", "cdfForgerBlkCtx", "cdfForgerLgrState", "cdfForgerLgrView", "cdfForgerLead", "cdfForgerTicked", "cdfForgerMemSnap", "cdfForgerForge", "cdfForgerAnnounce", "cdfForgerSend", "cdfForgerAdoption", "cdfForgerAnnounceCum" ]
 bpFieldsPeers =
@@ -223,7 +226,7 @@ bpFieldsEndToEndBrief =
 
 instance CDFFields BlockProp p where
   cdfFields =
-      fGrp ",------------------ Forger event Δt: --------------------."
+      fGrp ",------------------ Forger event dt: --------------------."
             W4 Sec P3 Log Free
     [ fGrp' "cdfForgerStart"         "Loop" (DDeltaT cdfForgerStart)
       "Started forge loop iteration"
@@ -272,7 +275,7 @@ instance CDFFields BlockProp p where
       "Slot start to announced"
       "Time since slot start until header announcement (ChainSyncServerEvent.TraceChainSyncServerRead.AddBlock)"
     ]
-   <> fGrp ",------ Peer event Δt: ------."
+   <> fGrp ",------ Peer event dt: ------."
             W4 Sec P3 Log Free
     [ fGrp' "cdfPeerNoticeFirst"     "NtiF" (DDeltaT cdfPeerNoticeFirst)
       "First peer notice"
@@ -331,15 +334,19 @@ instance CDFFields BlockProp p where
       "Chained to forged blocks"
       "For each host, ratio of blocks that made into chain / all forged"]
 
-   <> fBoth "cdfBlockBattle"  "Battl" " #" W4 Blk P0 Lin Free (DInt cdfBlockBattle)
-      "Height & slot battles"
-      "For a given block, number of all abandoned blocks at its block height.  Sum of height and slot battles"
+   <> fBoth "cdfSlotBattle"   "SlotB" " #" W4 Blk P0 Lin Free (DInt cdfSlotBattle)
+      "Slot battles"
+      "For a given block on chain, number of other blocks forged for the same slot, at any height"
+
+   <> fBoth "cdfHeightBattle" "HghtB" " #" W4 Blk P0 Lin Free (DInt cdfHeightBattle)
+      "Height battles"
+      "For a given block on chain, number of other blocks at the same height, forged for another slot"
 
    <> fBoth "cdfBlockSize"  "Size" "bytes" W9 B   P0 Lin Free (DInt cdfBlockSize)
       "Block size"
       "Block size, in bytes"
    where r = nChunksEachOf (length adoptionCentiles) 5
-             ",-- Slot-rel. Δt to adoption centile: -."
+             ",-- Slot-rel. dt to adoption centile: -."
          checkCentile i centi (centi', d) =
            if T.unpack centi' == printf "cdf%.2f" centi then d
            else error $ printf "Centile mismatch: [%d]: exp=%f act=%s"
@@ -361,7 +368,7 @@ instance TimelineFields BlockEvents where
    <> fBoth' "bfBlockSize" "size"  "bytes" W6 B   P0 Lin Free (IInt    (bfBlockSize.beForge))
    <> fBoth' "bfBlockGap"  "block" "gap"   W5 Len P0 Lin Free (IDeltaT (bfBlockGap .beForge))
    <> fBoth' "bpeIsFork"   "for"  "-ks"    W3 Blk P0 Lin Free (IInt    (count bpeIsFork.beErrors))
-   <> fGrp "--------- Forger event Δt: ---------"
+   <> fGrp "--------- Forger event dt: ---------"
             W4 Sec P3 Log Free
     [ fGrp' "bfStarted"     "Start"  (IDeltaT (bfStarted  .beForge)) "" ""
     , fGrp' "bfBlkCtx"      "BlkCtx" (IDeltaTM (bfBlkCtx  .beForge)) "" ""
@@ -371,12 +378,12 @@ instance TimelineFields BlockEvents where
     , fGrp' "bfTicked"      "LgrTck" (IDeltaTM (bfTicked  .beForge)) "" ""
     , fGrp' "bfMemSnap"     "MemSna" (IDeltaTM (bfMemSnap .beForge)) "" ""
     , fGrp' "bfForged"      "Forge"  (IDeltaT (bfForged   .beForge)) "" ""
-    , fGrp' "bfAnnounced"   "Announ" (IDeltaT (bfAnnounced.beForge)) "" ""
-    , fGrp' "bfSending"     "Sendin" (IDeltaT (bfSending  .beForge)) "" ""
-    , fGrp' "bfAdopted"     "Adopt"  (IDeltaT (bfAdopted  .beForge)) "" ""
-    , fGrp' "bfAnnouncedCum" "AnnCum"(IDeltaT (bfAnnouncedCum.beForge)) "" ""
+    , fGrp' "bfAnnounced"   "Announ" (IDeltaTM (bfAnnounced.beForge)) "" ""
+    , fGrp' "bfSending"     "Sendin" (IDeltaTM (bfSending  .beForge)) "" ""
+    , fGrp' "bfAdopted"     "Adopt"  (IDeltaTM (bfAdopted  .beForge)) "" ""
+    , fGrp' "bfAnnouncedCum" "AnnCum"(IDeltaTM (bfAnnouncedCum.beForge)) "" ""
     ]
-   <> fGrp "-- Peer event Δt averages: --"
+   <> fGrp "-- Peer event dt averages: --"
             W4 Sec P3 Log Free
     [ fGrp' "boNoticed"     "Notic"  (IDeltaT (af  boNoticed   . valids)) "" ""
     , fGrp' "boRequested"   "Requd"  (IDeltaT (af  boRequested . valids)) "" ""
@@ -385,7 +392,7 @@ instance TimelineFields BlockEvents where
     , fGrp' "boSending"     "Send"   (IDeltaT (af' boSending   . valids)) "" ""
     , fGrp' "pAdopted"      "Adopt"  (IDeltaT (af' boAdopted   . valids)) "" ""
     ]
-   <> fGrp "Propagation Δt:"
+   <> fGrp "Propagation dt:"
             W4 Sec P3 Log Free
     [ fGrp' "0.50"          "0.5"  (IDeltaT (percSpec 0.50 . bePropagation)) "" ""
     , fGrp' "0.80"          "0.8"  (IDeltaT (percSpec 0.80 . bePropagation)) "" ""
@@ -447,10 +454,18 @@ perfSubsetFn :: PerfSubset -> (Field DSelect p a -> Bool)
 perfSubsetFn = \case
   PerfFull   -> const True
   PerfReport -> dFields mtFieldsReport
+  PerfSnapshots    -> dFields mtFieldsSnapshots
+  PerfTxProcessing -> dFields mtFieldsTxProcessing
 
 mtFieldsReport :: [FieldName]
 mtFieldsReport =
-  [ "CentiCpu", "CentiGC", "CentiMut", "cdfSpanLensCpu", "RSS", "Heap", "Live", "Alloc", "GcsMinor", "GcsMajor", "NetRd", "NetWr", "FsRd", "FsWr", "cdfStarts" ]
+  [ "CentiCpu", "CentiGC", "CentiMut", "cdfSpanLensCpuEpoch", "cdfSpanLensCpuOther", "RSS", "Heap", "Live", "Alloc", "GcsMinor", "GcsMajor", "NetRd", "NetWr", "FsRd", "FsWr", "cdfStarts" ]
+
+mtFieldsSnapshots, mtFieldsTxProcessing :: [FieldName]
+mtFieldsSnapshots =
+  [ "cdfSnapTaken", "cdfSnapDuration", "cdfSpanLensCpuSnap", "cdfLiveMajGcDuring", "cdfLiveMajGcOutside" ]
+mtFieldsTxProcessing =
+  [ "cdfTxsProcessed", "cdfTxsAccepted", "cdfTxsRejected", "cdfTxsRejectRatio", "cdfMempoolTxs", "cdfCpuPerTx", "cdfGcPerTx", "cdfMutPerTx" ]
 
 instance CDFFields MachPerf p where
   cdfFields =
@@ -458,7 +473,7 @@ instance CDFFields MachPerf p where
       "Forge loop starts"
       "For any given slot, how many forging loop starts were registered"
 
-   <> fGrp "----------- Δt -----------" W4 Sec P3 Log Free
+   <> fGrp "----------- dt -----------" W4 Sec P3 Log Free
     [ fGrp' "cdfStarted"     "Start"       (DDeltaT cdfStarted)
       "Forge loop tardiness"
       "Forge loop iteration start delay (TraceStartLeadershipCheck), relative to slot start"
@@ -516,7 +531,7 @@ instance CDFFields MachPerf p where
       "RTS-reported heap size, MB"
 
     , fGrp' "Live"               "Live"    (DWord64 (rLive.mpResourceCDFs))
-      "RTS live GC dateset"
+      "RTS live GC dataset"
       "RTS-reported GC live data size, MB"
     ]
    <> fBoth "Alloc"  "Alloc" "MB/s"     W5 MBs P0 Lin Free (DWord64 (rAlloc.mpResourceCDFs))
@@ -544,13 +559,71 @@ instance CDFFields MachPerf p where
 
    <> fGrp  "CPU-85%span"               W5 Slo P0 Lin Free
     [ fGrp' "cdfSpanLensCpu"        "All" (DInt cdfSpanLensCpu)
-      "CPU 85% spans"
-      "Length of over-85% CPU usage peaks, slots"
+      "CPU 85% peaks, all"
+      "Length of over-85% CPU usage peaks (consecutive slots), slots: all of them, whatever their cause"
 
     , fGrp' "cdfSpanLensCpuEpoch" "Epoch" (DInt cdfSpanLensCpuEpoch)
-      "CPU spans at Ep boundary"
-      "Length of over-85% CPU usage peaks, starting at epoch boundary, slots"
+      "CPU 85% peaks, ep. trans."
+      "Length of the over-85% CPU usage peak ending at most 3 slots before the epoch's first block is adopted (the ledger's epoch transition), counted from the epoch's first slot, slots"
+
+    , fGrp' "cdfSpanLensCpuOther" "Other" (DInt cdfSpanLensCpuOther)
+      "CPU 85% peaks, other"
+      "Length of over-85% CPU usage peaks neither at an epoch transition nor during a ledger snapshot write, slots. Unexplained saturation shows here"
     ]
+
+   -- Ledger Snapshots
+   <> fBoth "cdfSnapTaken"        "Snap" "taken" W4 Cnt P0 Lin Free (DWord64 cdfSnapTaken)
+      "Taken"
+      "Ledger snapshots taken (completed) per host, during the analysed slots. 0 most likely indicates a trace parsing failure"
+
+   <> fBoth "cdfSnapDuration"     "Snap" "dur"   W5 Sec P2 Lin Free (DDeltaT cdfSnapDuration)
+      "Duration"
+      "Time it took to write a ledger snapshot to disk (ChainDB.LedgerEvent.Snapshot.TookSnapshot)"
+
+   <> fBoth "cdfLiveMajGcDuring"  "Live"  "snap" W5 MB  P0 Lin Free (DWord64 cdfLiveMajGcDuring)
+      "Live after majGC, during"
+      "RTS-reported live data after a major GC that occurred during a ledger snapshot write (from its start until 5s after its completion)"
+
+   <> fBoth "cdfSpanLensCpuSnap"  "CPU"   "85%"  W5 Slo P0 Lin Free (DInt cdfSpanLensCpuSnap)
+      "CPU 85% peaks, snapshot"
+      "Length of over-85% CPU usage peaks overlapping a ledger snapshot write (from its start until 5s after its completion), slots. Compared to Duration: CPU-bound vs. I/O-bound snapshots. Needs snapshot durations, as stored by locli 3.0"
+
+   <> fBoth "cdfLiveMajGcOutside" "Live"  "other" W5 MB P0 Lin Free (DWord64 cdfLiveMajGcOutside)
+      "Live after majGC, outside"
+      "RTS-reported live data after a major GC that occurred outside of ledger snapshot writes. The decisive measure of retained data; usually few samples"
+
+   -- Transaction Processing
+   <> fBoth "cdfTxsProcessed"     "Txns" "proc"  W7 Cnt P0 Lin Free (DWord64 cdfTxsProcessed)
+      "Txns processed"
+      "Transactions received from peers and submitted to the mempool, per host, over the analysed slots"
+
+   <> fBoth "cdfTxsAccepted"      "Txns" "acc"   W7 Cnt P0 Lin Free (DWord64 cdfTxsAccepted)
+      "Txns accepted"
+      "Processed transactions that were added to the mempool"
+
+   <> fBoth "cdfTxsRejected"      "Txns" "rej"   W7 Cnt P0 Lin Free (DWord64 cdfTxsRejected)
+      "Txns rejected"
+      "Processed transactions not added to the mempool: invalid, or already known. Run total of processed minus accepted, as the node's per-batch count isn't reliable"
+
+   <> fBoth "cdfTxsRejectRatio"   "Txns" "rej/"  W5 Rto P3 Lin R01 (DFloat cdfTxsRejectRatio)
+      "Reject ratio"
+      "Rejected / processed transactions. Explains differences between raw and per-transaction CPU usage"
+
+   <> fBoth "cdfMempoolTxs"       "Mem"  "pool"  W5 Cnt P0 Lin Free (DWord64 cdfMempoolTxs)
+      "Mempool fill level"
+      "Transactions in the mempool, per analysed slot (time-weighted). Its fill level, not its configured capacity"
+
+   <> fBoth "cdfCpuPerTx"         "CPU"  "/tx"   W5 Ms P3 Lin Free (DFloat cdfCpuPerTx)
+      "Proc CPU ÷ txns"
+      "Kernel-reported process CPU time, divided by the transactions processed. Not a per-tx cost: includes block validation, forging, snapshots and GC"
+
+   <> fBoth "cdfGcPerTx"          "GC"   "/tx"   W5 Ms P3 Lin Free (DFloat cdfGcPerTx)
+      "GC CPU ÷ txns"
+      "RTS-reported GC CPU time, divided by the transactions processed (as above). A heap regression shows here first"
+
+   <> fBoth "cdfMutPerTx"         "MUT"  "/tx"   W5 Ms P3 Lin Free (DFloat cdfMutPerTx)
+      "Mut CPU ÷ txns"
+      "RTS-reported mutator CPU time, divided by the transactions processed (as above)"
 
   fieldJSONOverlay f kvs =
     [ overlay kvs
@@ -567,7 +640,8 @@ instance TimelineFields (SlotStats NominalDiffTime) where
    <> fW64' "epoch"       "ep"      "#" W2 Epo (IWord64 (unEpochNo     .slEpoch))
    <> fW64' "safetyInt"   "saf"   "int" W3 Ix  (IWord64 (unEpochSafeInt.slEpochSafeInt))
    <> fGrp "block"                      W4 Blk P0 Lin Free
-    [ fGrp' "block"                 "no."      (IWord64 (unBlockNo.slBlockNo)) "" ""
+    -- Before the first block, BlockContext's tip block number is -1 (wrapped to maxBound).
+    [ fGrp' "block"                 "no."      (IText (blockNoOrNone.slBlockNo)) "" ""
     , fGrp' "blockGap"              "gap"      (IWord64 slBlockGap) "" ""
     ]
    <> fGrp2                             W3 Ev  P0 Lin Free
@@ -615,6 +689,7 @@ instance TimelineFields (SlotStats NominalDiffTime) where
    <> fBoth "mempoolTxs" "Mempool" "txs" W7 Uni P0 Lin Free (IWord64 slMempoolTxs) "" ""
    <> fBoth "utxoSize"  "UTxO" "entries" W9 Uni P0 Lin Free (IWord64 slUtxoSize) "" ""
    where fm = fmap
+         blockNoOrNone (BlockNo n) = if n == maxBound then "---" else showText n
 
   data TimelineComments (SlotStats NominalDiffTime)
     = SSLogObjects

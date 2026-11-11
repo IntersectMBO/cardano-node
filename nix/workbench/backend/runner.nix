@@ -50,7 +50,6 @@ let
     export WB_DEPLOYMENT_NAME=''${WB_DEPLOYMENT_NAME:-$(basename $(pwd))}
     export WB_MODULAR_GENESIS=''${WB_MODULAR_GENESIS:-0}
     export WB_GENESIS_RIPPER=''${WB_GENESIS_RIPPER:-0}
-    export WB_LOCLI_DB=''${WB_LOCLI_DB:-1}
     if test -z "$(git status --porcelain --untracked-files=no)"
     then export WB_GITREV="$(git rev-parse HEAD)"
     else export WB_GITREV="0000000000000000000000000000000000000000"
@@ -268,7 +267,7 @@ let
             tee $out/wb-analyse.log
 
         cd $out
-        for x in $(ls *.json *.org *.txt | grep -v 'flt\.json$')
+        for x in $(ls *.json *.typ *.txt | grep -v 'flt\.json$')
         do echo "report $x $out $x" >> $out/nix-support/hydra-build-products
         done
         EOF

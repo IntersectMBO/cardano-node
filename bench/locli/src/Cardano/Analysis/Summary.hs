@@ -71,6 +71,7 @@ summariseMultiSummary sumAnalysisTime centiles xs@(headline:xss) = do
   cdfLogObjects          <- sumCDF2 $ xs <&> cdfLogObjects
   cdfRuntime             <- sumCDF2 $ xs <&> cdfRuntime
   cdfLogLineRate         <- sumCDF2 $ xs <&> cdfLogLineRate
+  cdfUtxoFinal           <- sumCDF2 $ nonEmptyCDFs $ xs <&> cdfUtxoFinal
   sumGenesis             <- find (not .genesesSameButTimeP (sumGenesis headline))
                                  (sumGenesis <$> xss)
                             & maybe (Right $ sumGenesis headline)
@@ -152,7 +153,7 @@ computeSummary sumAnalysisTime
                sumGenesis
                sumGenesisSpec
                sumWorkload
-               rl@RunLogs{..}
+               RunLogs{..}
                sumFilters
                MachPerf{..}
                BlockProp{..}
@@ -160,14 +161,15 @@ computeSummary sumAnalysisTime
   =
   Summary
   { sumHosts           = I $ countMap rlHostLogs
-  , sumLogObjectsTotal = I $ countListsAll objLists
+  , sumLogObjectsTotal = I . Count $ sum analysedCounts
   , sumBlocksRejected  = I $ countListAll cRejecta
   , sumDomainSlots     = mpDomainCDFSlots
   , sumDomainBlocks    = bpDomainCDFBlocks
   --
-  , cdfLogObjects        = cdf stdCentiles (objLists <&> length)
+  , cdfLogObjects        = cdf stdCentiles analysedCounts
   , cdfLogObjectsEmitted = cdf stdCentiles logObjectsEmitted
   , cdfRuntime           = cdf stdCentiles runtimes
+  , cdfUtxoFinal         = cdf stdCentiles (mapMaybe lastUtxoSize hostLogs)
   , ..
   }
  where
@@ -182,7 +184,20 @@ computeSummary sumAnalysisTime
      & fmap (hlRawLogObjects &&& hlRawLines)
      & unzip
 
-   objLists = rlLogs rl <&> snd
+   -- Log objects analysed per host: counted when loaded from the DB; the pass over the
+   -- host's log objects is only a fallback, should the count be missing.
+   analysedCounts :: [Int]
+   analysedCounts = hostLogs <&> \HostLogs{hlLoadedCount, hlLogs = (_, los)} -> fromMaybe (length los) hlLoadedCount
+
+   -- A host's latest evidence, also from after the analysed slots: hosts stop at different
+   -- times. Hosts without LedgerMetrics have no sample. Loaded from the DB; the pass over
+   -- the host's log objects is only a fallback, should it be missing.
+   lastUtxoSize :: HostLogs [LogObject] -> Maybe Word64
+   lastUtxoSize HostLogs{hlRawLastUTxOSize, hlLogs = (_, los)} =
+     hlRawLastUTxOSize <|>
+     case [ (loAt, loUtxoSize) | LogObject{loAt, loBody = LOLedgerMetrics{loUtxoSize}} <- los ] of
+       [] -> Nothing
+       xs -> Just . snd $ maximumBy (comparing fst) xs
 
    losFirsts, losLasts :: [UTCTime]
    losFirsts  = hostLogs <&> (\HostLogs{hlLogs, hlRawFirstAt} -> fromMaybe (loAt $ Prelude.head $ snd hlLogs) hlRawFirstAt)

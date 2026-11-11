@@ -27,6 +27,7 @@ data Range
 
 data Unit
   = Sec  -- Second
+  | Ms   -- Millisecond
   | Hz   -- Hertz
   | B    -- Byte
   | KB   -- Kibibyte: 2^10
@@ -57,6 +58,7 @@ data Unit
 renderUnit :: Unit -> Text
 renderUnit = \case
     Sec -> "s"
+    Ms  -> "ms"
     Hz  -> "Hz"
     B   -> "Bytes"
     KB  -> "KiB"
@@ -160,10 +162,6 @@ class TimelineFields a where
   timelineFields :: [Field ISelect I a]
   rtCommentary   :: a -> TimelineComments a -> [Text]
   rtCommentary _ _ = []
-
-data FSelect where
-  ISel :: TimelineFields a   => (Field ISelect I a -> Bool) -> FSelect
-  DSel :: CDFFields      a p => (Field DSelect p a -> Bool) -> FSelect
 
 data DSelect p a
   = DInt    (a p -> CDF p Int)

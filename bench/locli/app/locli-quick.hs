@@ -9,7 +9,6 @@ import           Cardano.Analysis.Reducer
 import           Cardano.Analysis.Reducer.Util
 import           Cardano.Slotting.Slot (SlotNo (..))
 import           Cardano.Unlog.BackendDB
-import           Cardano.Unlog.BackendFile (readRunLogsBare)
 import           Cardano.Unlog.LogObject (LogObject (..), RunLogs (..), rlLogs)
 import           Cardano.Unlog.LogObjectDB
 import           Cardano.Util hiding (toDouble)

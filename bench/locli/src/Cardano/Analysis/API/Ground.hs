@@ -88,9 +88,6 @@ countLists f = Count . fromIntegral . sum . fmap (count f)
 countListAll :: [a] -> Count a
 countListAll = Count . fromIntegral . length
 
-countListsAll :: [[a]] -> Count a
-countListsAll = Count . fromIntegral . sum . fmap length
-
 unsafeCoerceCount :: Count a -> Count b
 unsafeCoerceCount = Unsafe.unsafeCoerce
 
@@ -138,10 +135,6 @@ newtype JsonOutputFile (a :: Type)
 
 newtype GnuplotOutputFile
   = GnuplotOutputFile { unGnuplotOutputFile :: FilePath }
-  deriving (Show, Eq)
-
-newtype OrgOutputFile
-  = OrgOutputFile { unOrgOutputFile :: FilePath }
   deriving (Show, Eq)
 
 newtype TextInputFile

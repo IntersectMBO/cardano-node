@@ -13,9 +13,6 @@ global_basedir=${global_basedir:-$(realpath "$(dirname "$0")")}
 # Separate dataset and protocols caching using create-testnet-data
 : "${WB_GENESIS_RIPPER:=0}"
 
-# By default, enable the new database storage backend for `locli`
-: "${WB_LOCLI_DB:=1}"
-
 . "$global_basedir"/lib.sh
 . "$global_basedir"/env.sh
 . "$global_basedir"/chaindb.sh
@@ -221,7 +218,6 @@ start() {
         --analysis-can-fail | -af )      analysis_can_fail=t;;
         --dump-logobjects )              analyse_args+=($1);;
         --filters )                      analyse_args+=($1 $2); shift;;
-        --locli-file )                   export WB_LOCLI_DB=0;;         # use the legacy file backend of `locli`
 
         ## Aux
         --verbose | -v )                 export verbose=t;;

@@ -1,6 +1,7 @@
 
 module Cardano.Unlog.BackendDB
        ( prepareDB
+       , readRunLogsBare
        , runLiftLogObjectsDB
        , LoadFromDB(..)
        , LoadLogObjects(..)
@@ -8,7 +9,9 @@ module Cardano.Unlog.BackendDB
 
        -- specific SQLite queries or statements
        , getSummary
+       , getLastUTxOSize
        , getTraceFreqs
+       , selectAll
        , sqlGetEvent
        , sqlGetTxns
        , sqlGetResource
@@ -16,8 +19,8 @@ module Cardano.Unlog.BackendDB
        , sqlOrdered
        ) where
 
-import           Cardano.Analysis.API.Ground (Host (..), LogObjectSource (..))
-import           Cardano.Prelude (ExceptT, (<|>))
+import           Cardano.Analysis.API.Ground (Host (..), JsonInputFile (..), LogObjectSource (..))
+import           Cardano.Prelude (ExceptT (..), (<|>))
 import           Cardano.Unlog.LogObject (HostLogs (..), LogObject (..), RunLogs (..), fromTextRef)
 import           Cardano.Unlog.LogObjectDB
 import           Cardano.Util (sequenceConcurrentlyChunksOf, withTimingInfo)
@@ -36,6 +39,7 @@ import           Data.Maybe
 import qualified Data.Text.Short as ShortText (unpack)
 import           Data.Time.Clock (UTCTime, getCurrentTime)
 import           Data.Time.Format.ISO8601
+import           Data.Word (Word64)
 import           GHC.Conc (numCapabilities)
 import           System.Directory (removeFile)
 
@@ -81,6 +85,11 @@ instance LoadFromDB LoadSummaryOnly where
   loadQuery = const $ Just "SELECT null"
   loadConvert _ summary _ = summary
 
+
+-- | The run's log manifest, as written by `wb analyse prepare-db`: per host, its DB and raw log files.
+readRunLogsBare :: JsonInputFile a -> ExceptT String IO (RunLogs ())
+readRunLogsBare rlf =
+  ExceptT $ Aeson.eitherDecode <$> BSL.readFile (unJsonInputFile rlf)
 
 runLiftLogObjectsDB :: LoadFromDB l => l -> RunLogs a -> ExceptT String IO (RunLogs [LoadResult l])
 runLiftLogObjectsDB loadMode RunLogs{rlHostLogs, ..} = liftIO $ do
@@ -134,11 +143,11 @@ prepareFile tracefreqs log = do
     alterFunc = maybe (Just 1) (Just . succ)
 
     go acc line = case Aeson.eitherDecode line of
-      Right logObject@LogObject{loNS, loKind} -> do
+      Right logObject@LogObject{loNS} -> do
         forM_ (logObjectToSql logObject)
             runSqlRunnable
 
-        let name = fromTextRef loNS <> ":" <> fromTextRef loKind
+        let name = fromTextRef loNS
         pure $ ML.alter alterFunc name acc
 
       Left err -> runSqlRunnable (errorToSql err $ BSL.unpack line) >> pure acc
@@ -188,6 +197,12 @@ getSummary =
   fromSqlDataWithArgs . head
     <$> run "SELECT * FROM summary"
 
+-- | The UTxO size of the host's last LedgerMetrics, if any.
+getLastUTxOSize :: SQLite (Maybe Word64)
+getLastUTxOSize =
+  fmap fromSqlData . (listToMaybe <=< listToMaybe)
+    <$> run "SELECT utxo_size FROM ledgermetrics ORDER BY at DESC LIMIT 1"
+
 getTraceFreqs :: SQLite TraceFreqs
 getTraceFreqs =
   ML.fromList . map fromSqlDataPair
@@ -203,17 +218,22 @@ loadHostLogsDB loadMode HostLogs{..} =
         _ <- run createLMetricsIfNotExists
 
         summary@SummaryDB{..} <- getSummary
+        lastUTxOSize          <- getLastUTxOSize
         traceFreqs            <- if loadTraceFreqs loadMode
                                    then getTraceFreqs
                                    else pure hlRawTraceFreqs
         rows                  <- maybe (pure []) run (loadQuery loadMode)
 
-        let rows'             = map (loadConvert loadMode summary) rows
+        -- Count while the rows are at hand; forced, so the count doesn't keep them alive.
+        let !loadedCount      = length rows
+            rows'             = map (loadConvert loadMode summary) rows
 
         pure $ HostLogs
           { hlRawTraceFreqs   = traceFreqs
           , hlRawFirstAt      = Just sdbFirstAt
           , hlRawLastAt       = Just sdbLastAt
+          , hlRawLastUTxOSize = lastUTxOSize
+          , hlLoadedCount     = loadedCount <$ loadQuery loadMode  -- Nothing if the load mode runs no query
           , hlRawLines        = sdbLines
           , hlLogs            = (log, rows')
           , ..

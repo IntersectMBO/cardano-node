@@ -8,23 +8,18 @@ import Cardano.Prelude          hiding (State, toText)
 
 import Data.Aeson                       qualified as Aeson
 import Data.Aeson.Text                  qualified as Aeson
-import Data.ByteString                  qualified as BS
 import Data.ByteString.Lazy.Char8       qualified as LBS
-import Data.ByteString.Char8            qualified as BS8
 import Data.Map                         qualified as Map
 import Data.Text                        (pack)
 import Data.Text                        qualified as T
 import Data.Text.Lazy                   qualified as LT
-import Data.Text.Short                  (toText)
 import Data.Time.Clock
 import Data.Tuple.Extra                 (both)
 import Options.Applicative
 import Options.Applicative              qualified as Opt
 
-import System.Directory                 (doesFileExist)
 import System.FilePath
 import System.Mem                       qualified as Mem (performGC)
-import System.Posix.Files               qualified as IO
 
 import Cardano.Analysis.API
 import Cardano.Analysis.BlockProp
@@ -33,7 +28,6 @@ import Cardano.Analysis.Summary
 import Cardano.Render
 import Cardano.Report
 import Cardano.Unlog.BackendDB
-import Cardano.Unlog.BackendFile
 import Cardano.Unlog.LogObject
 import Cardano.Unlog.PlutusBudgetSummary
 import Cardano.Util             hiding (head)
@@ -56,11 +50,9 @@ data ChainCommand
   =        ReadMetaGenesis  (JsonInputFile  RunPartial) (JsonInputFile  Genesis)
   |        WriteMetaGenesis TextOutputFile              TextOutputFile
 
-  |                 Unlog   (JsonInputFile (RunLogs ())) Bool (Maybe [LOAnyType])
   |        DumpLogObjects
   |             PrepareDB   String [TextInputFile] SqliteOutputFile
   |               UnlogDB   (JsonInputFile (RunLogs ()))
-  |    ValidateHashTimeline (JsonInputFile [LogObject])
   |          DumpTraceFreqs
 
   |        BuildMachViews
@@ -99,7 +91,9 @@ data ChainCommand
   | ComputeMultiSummary
   |  RenderMultiSummary     RenderConfig TextOutputFile
 
-  |             Compare     InputDir (Maybe TextInputFile) TextOutputFile
+  |        RenderReport     TextOutputFile
+
+  |             Compare     TextOutputFile
                             [( JsonInputFile SomeSummary
                              , JsonInputFile ClusterPerf
                              , JsonInputFile SomeBlockProp)]
@@ -121,15 +115,6 @@ parseChainCommand =
    ]) <|>
 
   subparser (mconcat [ commandGroup "Basic log objects"
-   , op "unlog" "Read log files"
-     (Unlog
-       <$> optJsonInputFile    "run-logs"       "Run log manifest (API/Types.hs:RunLogs)"
-       <*> Opt.flag False True (Opt.long "lodecodeerror-ok"
-                                 <> Opt.help "Allow non-EOF LODecodeError logobjects")
-       <*> optional
-            (some
-             (optLOAnyType      "ok-loany"        "[MULTI] Allow a particular LOAnyType"))
-     )
    , op "unlog-db" "Read logs from DBs"
      (UnlogDB
        <$> optJsonInputFile    "run-logs"       "Run log manifest (API/Types.hs:RunLogs)"
@@ -141,9 +126,6 @@ parseChainCommand =
        <*> optSqliteOutputFile        "db"              "DB output file")
    , op "dump-logobjects" "Dump lifted log object streams, alongside input files"
      (DumpLogObjects & pure)
-   , op "hash-timeline" "Quickly validate timeline by hashes"
-     (ValidateHashTimeline
-        <$> optJsonInputFile  "timeline"     "Hash timeline (JSON from prepare step)")
    , op "dump-tracefreqs" "Dump host trace frequencies to JSON"
      (DumpTraceFreqs & pure)
    ]) <|>
@@ -259,13 +241,16 @@ parseChainCommand =
      (writerOpts RenderMultiSummary "Render")
    ]) <|>
 
+   subparser (mconcat [ commandGroup "Single-run report"
+   , op "report" "Generate a Typst report of a single run, or of a variance analysis (multi-run results), bundling the single table Typst files next to it"
+     (RenderReport
+       <$> optTextOutputFile "typst"    "Report .typ file to create.")
+   ]) <|>
+
    subparser (mconcat [ commandGroup "Run comparison"
-   , op "compare" "Generate a report comparing multiple runs"
+   , op "compare" "Generate a Typst report comparing multiple runs"
      (Compare
-       <$> optInputDir       "ede"      "Directory with EDE templates."
-       <*> optional
-           (optTextInputFile "template" "Template to use as base.")
-       <*> optTextOutputFile "report"   "Report .org file to create."
+       <$> optTextOutputFile "typst"    "Report .typ file to create."
        <*> some
        ((,,)
         <$> optJsonInputFile "summary" "JSON analysis summary input file"
@@ -279,12 +264,6 @@ parseChainCommand =
      command c $ info (p <**> helper) $
        mconcat [ progDesc descr ]
 
-   optLOAnyType :: String -> String -> Parser LOAnyType
-   optLOAnyType opt desc =
-     Opt.option Opt.auto
-     ( Opt.long opt
-       <> Opt.help desc
-       <> Opt.metavar "LOAnyType" )
 
 parseTimelineCommentsBP :: Parser (TimelineComments BlockEvents)
 parseTimelineCommentsBP =
@@ -327,8 +306,6 @@ writerOpt ctor desc rcFormat = do
    optDescSuf = \case
      AsJSON    -> (,) "json"    " results as complete JSON dump"
      AsGnuplot -> (,) "gnuplot" " as individual Gnuplot files"
-     AsOrg     -> (,) "org"     " as Org-mode table"
-     AsReport  -> (,) "org-report"  " as Org-mode summary table"
      AsPretty  -> (,) "pretty"  " as text report"
      AsTypst   -> (,) "typst"   " as typst document"
 
@@ -387,11 +364,20 @@ callComputeSummary =
    err = Left . ("Summary of a run requires " <>)
 
 stateAnchor :: [Text] -> State -> Anchor
-stateAnchor tags State{sFilters, sWhen, sClusterPerf, sChain} =
-  tagsAnchor tags sWhen sFilters
+stateAnchor tags State{sFilters, sWhen, sClusterPerf, sChain, sSummaries} =
+  tagsAnchor tags
+             (maybe sWhen    sumAnalysisTime rerendered)
+             (maybe sFilters sumFilters      rerendered)
              (join ((fmap (head . mpDomainSlots) . head) =<< sClusterPerf) <|>
               (sChain       <&> cDomSlots))
-             (sChain        <&> cDomBlocks)
+             ((sChain       <&> cDomBlocks) <|>
+              (rerendered   <&> sumDomainBlocks))
+ where
+   -- Re-rendering a single run from its analysis results (no chain built from logs):
+   -- the analysis time, filters and block domain are those of its summary.
+   rerendered = case (sChain, sSummaries) of
+     (Nothing, Just [summ]) -> Just summ
+     _                      -> Nothing
 
 sAnchor :: HasCallStack => State -> Anchor
 sAnchor s@State{sMultiSummary=Just summary}
@@ -422,18 +408,6 @@ runChainCommand s@State{sMultiSummary=Just summ@Summary{..}}
   pure s
 runChainCommand _ c@WriteMetaGenesis{} = missingCommandData c
   ["multi objects"]
-
-runChainCommand s
-  c@(Unlog rlf okDErr loAnyLimit) = do
-  progress "logs" (Q $ printf "reading run log manifest %s" $ unJsonInputFile rlf)
-  runLogsBare <- readRunLogsBare rlf
-                 & firstExceptT (CommandError c . pack)
-  progress "logs" (Q $ printf "parsing logs for %d hosts" $
-                   Map.size $ rlHostLogs runLogsBare)
-  progress "logs" (Q $ printf "LOAny constraint:  %s" (show loAnyLimit :: String))
-  runLogs <- runLiftLogObjects runLogsBare okDErr loAnyLimit
-             & firstExceptT (CommandError c . pack)
-  pure s { sRunLogs = Just runLogs }
 
 runChainCommand s
   c@(UnlogDB rlf) = do
@@ -471,22 +445,6 @@ runChainCommand s
     prepareDB machName (map unTextInputFile inFiles) (unSqliteOutputFile outFile)
       & firstExceptT (CommandError c . pack)
     pure s
-
-runChainCommand s
-  c@(ValidateHashTimeline timelineJson) = do
-  progress "logs" (Q $ printf "validating hash timeline")
-  let f = unJsonInputFile timelineJson
-  hashTimeline <- liftIO $
-    doesFileExist f >>= bool
-      (return [])
-      (readLogObjectStream f False Nothing)
-  case (hashTimeline, checkAllForgersKnown hashTimeline) of
-    ([], _)           -> progress "logs" (Q $ printf "%s not found - skipping" f)
-    (_, Nothing)      -> progress "logs" (Q $ printf "all forgers known")
-    (_, Just (x, h))  -> throwE $ CommandError c $
-                          "unknown forger for block hash " <> (toText . unHash) h
-                          <> " in:\n" <> LT.toStrict (Aeson.encodeToLazyText x)
-  pure s
 
 runChainCommand s@State{sRun=Just run, sRunLogs=Just (rlLogs -> objs)}
   BuildMachViews = do
@@ -649,13 +607,9 @@ runChainCommand _ c@ComputePropagation = missingCommandData c
   ["run metadata & genesis", "chain", "data domains for slots & blocks"]
 
 runChainCommand s@State{sBlockProp=Just [prop]}
-  c@(RenderPropagation rc@RenderConfig{..} f subset) = do
+  c@(RenderPropagation rc f subset) = do
   progress "block-propagation" $ Q "rendering block propagation CDFs"
-  forM_ (renderAnalysisCDFs
-          (sAnchor s) (propSubsetFn subset) OfOverallDataset Nothing rc prop) $
-    \(name, body) ->
-      dumpText (T.unpack name) body (modeFilename f name rcFormat)
-      & firstExceptT (CommandError c)
+  renderCDFs c rc f (sAnchor s) (propSubsetFn subset) OfOverallDataset prop
   pure s
 runChainCommand _ c@RenderPropagation{} = missingCommandData c
   ["block propagation"]
@@ -681,13 +635,9 @@ runChainCommand _ c@ComputeMultiPropagation{} = missingCommandData c
   ["block propagation"]
 
 runChainCommand s@State{sMultiBlockProp=Just prop}
-  c@(RenderMultiPropagation rc@RenderConfig{..} f subset aspect) = do
+  c@(RenderMultiPropagation rc f subset aspect) = do
   progress "block-propagations" (Q "rendering multi-run block propagation")
-  forM_ (renderAnalysisCDFs
-          (sAnchor s) (propSubsetFn subset) aspect Nothing rc prop) $
-    \(name, body) ->
-      dumpText (T.unpack name) body (modeFilename f name rcFormat)
-      & firstExceptT (CommandError c)
+  renderCDFs c rc f (sAnchor s) (propSubsetFn subset) aspect prop
   pure s
 runChainCommand _ c@RenderMultiPropagation{} = missingCommandData c
   ["multi-run block propagation"]
@@ -724,12 +674,9 @@ runChainCommand _ c@ComputeClusterPerf{} = missingCommandData c
   ["machine performance stats"]
 
 runChainCommand s@State{sClusterPerf=Just [perf]}
-  c@(RenderClusterPerf rc@RenderConfig{..} f subset) = do
+  c@(RenderClusterPerf rc f subset) = do
   progress "clusterperf" (Q $ printf "rendering cluster performance")
-  forM_ (renderAnalysisCDFs (sAnchor s) (perfSubsetFn subset) OfOverallDataset Nothing rc perf) $
-    \(name, body) ->
-      dumpText (T.unpack name) body (modeFilename f name rcFormat)
-      & firstExceptT (CommandError c)
+  renderCDFs c rc f (sAnchor s) (perfSubsetFn subset) OfOverallDataset perf
   pure s
 runChainCommand _ c@RenderClusterPerf{} = missingCommandData c
   ["multi-run block propagation"]
@@ -755,12 +702,9 @@ runChainCommand _ c@ComputeMultiClusterPerf{} = missingCommandData c
   ["cluster performance stats"]
 
 runChainCommand s@State{sMultiClusterPerf=Just (MultiClusterPerf perf)}
-  c@(RenderMultiClusterPerf rc@RenderConfig{..} f subset aspect) = do
+  c@(RenderMultiClusterPerf rc f subset aspect) = do
   progress "clusterperfs" (Q $ printf "rendering multi-run cluster performance")
-  forM_ (renderAnalysisCDFs (sAnchor s) (perfSubsetFn subset) aspect Nothing rc perf) $
-    \(name, body) ->
-      dumpText (T.unpack name) body (modeFilename f name rcFormat)
-      & firstExceptT (CommandError c)
+  renderCDFs c rc f (sAnchor s) (perfSubsetFn subset) aspect perf
   pure s
 runChainCommand _ c@RenderMultiClusterPerf{} = missingCommandData c
   ["multi-run cluster performance stats"]
@@ -774,21 +718,14 @@ runChainCommand s c@ComputeSummary = do
 
 runChainCommand s@State{sSummaries = Just (summary:_)} c@(RenderSummary rc@RenderConfig{..} f) = do
   progress "summary" (Q "rendering summary")
+  bodySummary <- case textFormat rcFormat of
+    Nothing -> liftIO $ (:[]) <$> generateTypstSummary rc anchor (iFields sumFieldsReport) summary
+    Just tf -> pure (renderSummary tf summary) & newExceptT & firstExceptT (CommandError c)
   dumpText "summary" bodySummary (modeFilename f "" rcFormat)
     & firstExceptT (CommandError c)
-  forM_ (sumProfilingData summary) $
-    \profData -> do
-      let bodyProfiling =
-            renderProfilingData rc anchor
-              (uncurry (||)
-               . both ((>= 1.0) . unI . cdfAverage)
-               . (peTime &&& peAlloc))
-              profData
-      dumpText "profiling" bodyProfiling (TextOutputFile $ replaceFileName (unTextOutputFile f) "profiling" System.FilePath.<.> "org")
-        & firstExceptT (CommandError c)
+  renderProfiling c rc anchor f (sumProfilingData summary)
   pure s
- where bodySummary = renderSummary rc anchor (iFields sumFieldsReport) summary
-       anchor = sAnchor s
+ where anchor = sAnchor s
 runChainCommand _ c@RenderSummary{} = missingCommandData c
   ["run summary"]
 
@@ -814,25 +751,44 @@ runChainCommand _ c@ComputeMultiSummary{} = missingCommandData c
 runChainCommand s@State{sMultiSummary=Just summary}
   c@(RenderMultiSummary rc@RenderConfig{..} f) = do
   progress "multi-summary" (Q "rendering multi-run summary")
+  body <- case textFormat rcFormat of
+    Nothing -> liftIO $ (:[]) <$> generateTypstSummary rc anchor (iFields sumFieldsReport) summary
+    Just tf -> pure (renderSummary tf summary) & newExceptT & firstExceptT (CommandError c)
   dumpText "multi-summary" body (modeFilename f "" rcFormat)
     & firstExceptT (CommandError c)
-  forM_ (sumProfilingData summary) $
-    \profData -> do
-      let bodyProfiling =
-            renderProfilingData rc anchor
-              (uncurry (||)
-               . both ((>= 1.0) . unI . cdfAverage)
-               . (peTime &&& peAlloc))
-              profData
-      dumpText "multi-profiling" bodyProfiling (TextOutputFile $ replaceFileName (unTextOutputFile f) "profiling" System.FilePath.<.> "org")
-        & firstExceptT (CommandError c)
+  renderProfiling c rc anchor f (sumProfilingData summary)
   pure s
- where body = renderSummary rc anchor (iFields sumFieldsReport) summary
-       anchor = sAnchor s
+ where anchor = sAnchor s
 runChainCommand _ c@RenderMultiSummary{} = missingCommandData c
   ["multi-run summary"]
 
-runChainCommand s c@(Compare ede mTmpl outf@(TextOutputFile outfp) runs) = do
+-- A variance report: the multi-run results, written into the variance run's analysis directory.
+-- Without Plutus calibration: variance requires the same workload, so it adds nothing.
+runChainCommand s@State{ sMultiSummary     = Just summary
+                       , sMultiClusterPerf = Just (MultiClusterPerf perf)
+                       , sMultiBlockProp   = Just prop
+                       , sSummaries        = Just inputs }
+  c@(RenderReport f@(TextOutputFile outfp)) = do
+  progress "report" (Q $ printf "rendering variance report of %d runs" (length inputs))
+  body <- liftIO $ generateTypstReport outfp Nothing (sumMeta <$> inputs) summary perf prop
+  dumpText "report" [body] f
+    & firstExceptT (CommandError c)
+  pure s
+runChainCommand s@State{ sSummaries   = Just [summary]
+                       , sClusterPerf = Just [perf]
+                       , sBlockProp   = Just [prop] }
+  c@(RenderReport f@(TextOutputFile outfp)) = do
+  progress "report" (Q "rendering single-run report")
+  -- The report is written into the run's analysis directory.
+  mScalingCSV <- liftIO $ writeScalingCSV (takeDirectory outfp) [takeDirectory outfp]
+  body <- liftIO $ generateTypstReport outfp mScalingCSV [] summary perf prop
+  dumpText "report" [body] f
+    & firstExceptT (CommandError c)
+  pure s
+runChainCommand _ c@RenderReport{} = missingCommandData c
+  ["single-run or multi-run (variance) summary", "cluster performance", "block propagation"]
+
+runChainCommand s c@(Compare outf@(TextOutputFile outfp) runs) = do
   progress "report" (Q $ printf "rendering report for %d runs" $ length runs)
   xs :: [(SomeSummary, ClusterPerf, SomeBlockProp)] <- forM runs $
     \(sumf,cpf,bpf)->
@@ -840,48 +796,47 @@ runChainCommand s c@(Compare ede mTmpl outf@(TextOutputFile outfp) runs) = do
       <$> readJsonData sumf (CommandError c)
       <*> readJsonData cpf  (CommandError c)
       <*> readJsonData bpf  (CommandError c)
-  (tmpl, tmplEnv, orgReport) <- case xs of
+
+  mScalingCSV <- liftIO $ writeScalingCSV (takeDirectory outfp)
+    [ takeDirectory sumf | (unJsonInputFile -> sumf, _, _) <- runs ]
+  typstReport <- case xs of
     baseline:deltas@(_:_) -> liftIO $ do
-      Cardano.Report.generateOrg ede mTmpl baseline deltas
+      Cardano.Report.generateTypst (takeFileName outfp) mScalingCSV baseline deltas
     _ -> throwE $ CommandError c $ mconcat
          [ "At least two runs required for comparison." ]
-  liftIO $
-    withFile (outfp `System.FilePath.replaceExtension` "env.json") WriteMode $
-      \hnd -> BS8.hPutStrLn hnd tmplEnv
-  dumpText "report" [orgReport] outf
-    & firstExceptT (CommandError c)
-
-  let tmplPath = Cardano.Util.replaceExtension outfp "ede"
-  liftIO . unlessM (IO.fileExist tmplPath) $
-    BS.writeFile tmplPath tmpl
-
-  -- For the time being, typst output is only used by the `compare` CLI command.
-  -- It's automatically created side-by-side with the Org mode report, and will
-  -- replace it eventually.
-  let
-    typstPath   = Cardano.Util.replaceExtension outfp "typ"
-    scalingFile = "plutus-workload-scaling.csv"
-
-  scalings :: [PlutusBudgetSummary] <- catMaybes <$> forM runs
-    (\(unJsonInputFile -> sumf, _, _) ->
-      let budgetSummary = takeDirectory sumf </> ".." </> "generator" </> "plutus-budget-summary.json"
-      in liftIO $ readBudgetSummaryMaybe budgetSummary
-    )
-  mScalingCSV <- if length scalings == length xs        -- if for every run, we also got a Plutus budget summary...
-    then liftIO (writeResultsCSV (takeDirectory outfp </> scalingFile) scalings) >> pure (Just scalingFile)
-    else pure Nothing
-  (tmplEnv', typstReport) <- case xs of
-    baseline:deltas@(_:_) -> liftIO $ do
-      Cardano.Report.generateTypst (takeFileName typstPath) mScalingCSV baseline deltas
-    _ -> throwE $ CommandError c $ mconcat
-         [ "At least two runs required for comparison." ]
-  liftIO $
-    withFile (outfp `System.FilePath.replaceExtension` "env.typ.json") WriteMode $
-      \hnd -> BS8.hPutStrLn hnd tmplEnv'
-  dumpText "report" [typstReport] (TextOutputFile typstPath)
+  dumpText "report" [typstReport] outf
     & firstExceptT (CommandError c)
 
   pure s
+
+-- | Render CDF-based analysis results; Typst output is template-based, and comes from Cardano.Report.
+renderCDFs :: (CDFFields a p, KnownCDF p, ToJSON (a p))
+  => ChainCommand -> RenderConfig -> TextOutputFile -> Anchor -> (Field DSelect p a -> Bool) -> CDF2Aspect -> a p
+  -> ExceptT CommandError IO ()
+renderCDFs c rc@RenderConfig{rcFormat} f anchor fieldSelr aspect x =
+  case textFormat rcFormat of
+    Nothing -> do
+      body <- liftIO $ generateTypstCDFs rc anchor fieldSelr aspect x
+      dumpText "" [body] f
+        & firstExceptT (CommandError c)
+    Just tf ->
+      forM_ (renderAnalysisCDFs tf anchor fieldSelr aspect Nothing rc x) $
+        \(name, body) ->
+          dumpText (T.unpack name) body (modeFilename f name rcFormat)
+          & firstExceptT (CommandError c)
+
+-- | Profiling data, if any, goes next to the summary's Typst table, as profiling.typ.
+renderProfiling :: ChainCommand -> RenderConfig -> Anchor -> TextOutputFile -> Maybe (ProfilingData (CDF I))
+  -> ExceptT CommandError IO ()
+renderProfiling c rc@RenderConfig{rcFormat} anchor f mProfData =
+  when (rcFormat == AsTypst) $
+    forM_ mProfData $ \profData -> do
+      body <- liftIO $ generateTypstProfiling rc anchor significant profData
+      dumpText "profiling" [body] (TextOutputFile $ replaceFileName (unTextOutputFile f) "profiling.typ")
+        & firstExceptT (CommandError c)
+ where
+   -- Functions taking at least 1% of either time or allocation.
+   significant = uncurry (||) . both ((>= 1.0) . unI . cdfAverage) . (peTime &&& peAlloc)
 
 missingCommandData :: ChainCommand -> [String] -> ExceptT CommandError IO a
 missingCommandData c xs =

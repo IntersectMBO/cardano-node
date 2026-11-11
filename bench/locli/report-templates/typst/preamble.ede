@@ -1,0 +1,34 @@
+// Shared by all Typst outputs of locli (main_comparison.ede, main_single.ede).
+
+// Document Styling
+//
+#set page(paper: "a4", margin: 1.5cm)
+#set text(size: 10pt)
+#set par(leading: 0.6em, spacing: 0.8em, first-line-indent: 1.8em, justify: true)
+#show heading: set block(above: 1.5em, below: 1.2em)
+#show figure.caption: emph
+
+
+// Table styling
+// No strokes inside table body; left alignment for row descriptions only; slightly smaller row descriptions
+//
+#let frame(stroke) = (x, y) => (
+  left: if x > 0 { 0pt } else { stroke },
+  right: stroke,
+  top: if y < 2 { stroke } else { 0pt },
+  bottom: stroke,
+)
+#set table(
+  stroke: frame(0.5pt),
+  align:  (x, _) => if x == 0 { left } else { right },
+)
+#show table: set text(size: 0.96em)
+#show table.cell.where(x: 0): set text(size: 0.9em)
+
+
+// Table cell coloring
+// The function names have to be in sync with Cardano.Typst.colorCode in package locli
+//
+#let gr(body) = table.cell(fill: green.lighten(60%))[#body]
+#let rd(body) = table.cell(fill: red.lighten(60%))[#body]
+#let yw(body) = table.cell(fill: yellow.lighten(40%))[#body] // warning

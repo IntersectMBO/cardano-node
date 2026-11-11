@@ -6,6 +6,8 @@ module Test.Analysis.CDF where
 import Cardano.Prelude hiding (handle, head)
 
 import Hedgehog
+import Hedgehog.Gen qualified as Gen
+import Hedgehog.Range qualified as Range
 
 import Data.CDF
 import Cardano.Util
@@ -229,6 +231,37 @@ prop_CDF_CDF_I_3x3x3_collapsed_shifted = property $ cdf2_3x3x3sh ===
         [(Centile 0.16666666666666666, I 1.0)
         ,(Centile 0.5,                 I 2.0)
         ,(Centile 0.8333333333333333,  I 3.0)]})]}
+
+-- | Combining CDFs of one sample each (e.g. a per-node count): the spread is that of
+--   the samples themselves, as the CDFs' own stddevs are undefined.
+prop_CDF_CDF_I_singletons_stddev = property $
+  cdfStddev cdf2_singletons === 1.0
+ where
+   cdf2_singletons :: CDF (CDF I) Double
+   cdf2_singletons =
+     cdf2OfCDFs (stdCombine1 centi3x3) (cdf centi3x3 . pure <$> [1, 2, 3])
+     & handle
+
+-- | The average of a CDF of CDFs is the average over all its inputs' averages, also
+--   with more inputs (hosts) than centiles (as with 52 hosts and 'stdCentiles').
+prop_CDF_CDF_I_average_52_hosts = withTests 1 $ property $
+  cdfAverageVal (hosts (pure <$> [1..52])) === 26.5
+
+prop_CDF_CDF_I_average_any_hosts = property $ do
+  xss <- forAll $ Gen.list (Range.linear 1 100) $
+           Gen.list (Range.linear 1 20) (Gen.double $ Range.linearFrac 0 1000)
+  let mean xs = sum xs / fromIntegral (length xs)
+  annotateShow (length xss)
+  assert $ abs (cdfAverageVal (hosts xss) - mean (mean <$> xss)) < 1e-9
+
+-- | A CDF of no samples is total: median and samples are 0.
+prop_CDF_I_empty = withTests 1 $ property $ do
+  let c = cdf stdCentiles ([] :: [Double])
+  (cdfSize c, cdfMedian c) === (0, 0)
+  (snd <$> cdfSamples c) === (I 0 <$ stdCentiles)
+
+hosts :: [[Double]] -> CDF (CDF I) Double
+hosts xss = cdf2OfCDFs (stdCombine1 stdCentiles) (cdf stdCentiles <$> xss) & handle
 
 tests :: IO Bool
 tests =

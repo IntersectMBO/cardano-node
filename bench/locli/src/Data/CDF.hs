@@ -51,9 +51,9 @@ module Data.CDF
   , stdCombine1
   , stdCombine2
   , CDF2
-  , collapseCDF
   , collapseCDFs
   , cdf2OfCDFs
+  , nonEmptyCDFs
   --
   , module Data.SOP.Strict
   ) where
@@ -62,7 +62,6 @@ import Prelude ((!!), show)
 import Cardano.Prelude hiding (head, show)
 
 import Data.SOP.Strict
-import Data.Tuple.Extra (both)
 import Data.Vector qualified as Vec
 import Statistics.Sample qualified as Stat
 
@@ -181,14 +180,13 @@ deriving instance (NFData a, NFData (p a), NFData (p Double)) => NFData (CDF p a
 instance (FromJSON (p a), FromJSON (p Double), FromJSON a) => FromJSON (CDF p a)
 instance (  ToJSON (p a),   ToJSON (p Double),   ToJSON a) => ToJSON   (CDF p a)
 
+-- | The average of a CDF; for a CDF of CDFs, the average over its inputs' averages
+--   (the average of 'cdfAverage', see 'cdf2OfCDFs').
 cdfAverageVal :: (KnownCDF p) => CDF p a -> Double
 cdfAverageVal =
   cdfArity
-    (toDouble . unI . cdfAverage)
-    \x ->
-      let sizes = cdfSize . snd <$> cdfSamples x
-      in
-        weightedAverage (zip sizes $ fmap (toDouble . unI . snd) . cdfSamples $ cdfAverage x)
+    (unI . cdfAverage)
+    (unI . cdfAverage . cdfAverage)
 
 centilesCDF :: CDF p a -> [Centile]
 centilesCDF = fmap fst . cdfSamples
@@ -229,7 +227,8 @@ cdf centiles (sort -> sorted) =
   CDF
   { cdfSize        = size
   , cdfAverage     = I . fromDouble $ Stat.mean doubleVec
-  , cdfMedian      = vecCentile vec size (Centile 0.5)
+  , cdfMedian      = if size == 0 then 0
+                     else vecCentile vec size (Centile 0.5)
   , cdfStddev      = Stat.stdDev doubleVec
   , cdfRange       = Interval mini maxi
   , cdfSamples =
@@ -286,19 +285,21 @@ liftCDFVal x = \case
               , cdfSamples = []
               , .. }
 
+-- | A single value for a centile sample: for a CDF (across hosts), its median.
 unliftCDFVal :: forall a p. Divisible a => CDFIx p -> p a -> a
 unliftCDFVal CDFI (I x) = x
 unliftCDFVal CDF2 CDF{cdfMedian} = (1 :: a) `divide` (1 / toDouble cdfMedian)
 
+-- | As 'unliftCDFVal', with the range, and the median -/+ stddev.
 unliftCDFValExtra :: forall a p. Divisible a => CDFIx p -> p a -> [a]
 unliftCDFValExtra CDFI (I x) = [x]
-unliftCDFValExtra i@CDF2 c@CDF{cdfRange=Interval mi ma, ..} = [ mean
+unliftCDFValExtra i@CDF2 c@CDF{cdfRange=Interval mi ma, ..} = [ median
                                                               , mi
                                                               , ma
-                                                              , mean - stddev
-                                                              , mean + stddev
+                                                              , median - stddev
+                                                              , median + stddev
                                                               ]
- where mean   = unliftCDFVal i c
+ where median = unliftCDFVal i c
        stddev = (1 :: a) `divide` (1 / cdfStddev)
 
 arity :: forall p a b. KnownCDF p => (I a -> b) -> (CDF I a -> b) -> p a -> b
@@ -359,25 +360,6 @@ stdCombine2 cs =
   , ..
   }
 
-collapseCDF :: ([a] -> b) -> CDF (CDF I) a -> CDF I b
-collapseCDF avg c =
-  CDF
-  { cdfSize    = cdfSize c
-  , cdfAverage = I $ cdfAverageVal c
-  , cdfMedian  = avg [cdfMedian c]
-  , cdfRange   = cdfRange c
-                 & low &&& high
-                 & both (avg . (:[]))
-                 & uncurry Interval
-  , cdfStddev  = cdfStddev c
-  , cdfSamples = zip (cdfSamples c <&> fst)
-                     (cdfSamples c <&>
-                      I
-                      . avg               -- :: a
-                      . fmap  (unI . snd) -- :: [(Int, a)]
-                      . cdfSamples . snd) -- :: [(Centile a)]
-  }
-
 listMedian :: Ord a => [a] -> a
 listMedian ms = sort ms !! div (length ms) 2
 
@@ -415,6 +397,18 @@ collapseCDFs Combine{..} xs = do
                                         then Left xxs
                                         else Right (c, snd <$> xxs)
 
+-- | For sample-based metrics, a host without samples (e.g. no major GC outside snapshot writes)
+--   would pull the unweighted average of averages towards 0: combine only the non-empty CDFs,
+--   unless all of them are empty. Across runs, this also keeps the analysis of a run that
+--   lacks a metric (by an older locli; read as an empty CDF) from failing the combination.
+--   If all are empty, one of them stands for all: empty CDFs may differ in their sampling
+--   (a computed one has centiles, one missing from an older analysis has none), which
+--   'cdf2OfCDFs' rejects.
+nonEmptyCDFs :: [CDF p a] -> [CDF p a]
+nonEmptyCDFs xs = case filter ((> 0) . cdfSize) xs of
+  [] -> take 1 xs
+  ys -> ys
+
 -- | Polymorphic, but practically speaking, intended for either:
 --    1. given a ([I]     -> CDF I) function, and a list of (CDF I),       produce a CDF (CDF I), or
 --    2. given a ([CDF I] -> CDF I) function, and a list of (CDF (CDF I)), produce a CDF (CDF I)
@@ -433,7 +427,7 @@ cdf2OfCDFs Combine{..} xs = do
   pure CDF
     { cdfSize    = sum sizes
     , cdfRange   = xs <&> cdfRange   & cRanges
-    , cdfStddev  = xs <&> cdfStddev  & cStddevs
+    , cdfStddev  = stddev
     , cdfAverage = cdf (nEquicentiles nCDFs) averages -- XXX: unweighted
     , cdfMedian  = listMedian $ xs <&> cdfMedian
     , ..
@@ -442,6 +436,17 @@ cdf2OfCDFs Combine{..} xs = do
    nCDFs    = length xs
    averages :: [Double]
    averages = xs <&> unI . cdfArity cdfAverage (cdfAverage . cdfAverage)
+
+   -- If every input CDF holds a single sample (e.g. a per-host run total), the combined
+   -- stddev is just the stddev of those samples -- whereas the approximation of 'cStddevs'
+   -- (e.g. the maximum of the inputs' stddevs) would always yield 0 there.
+   -- This deliberately stays limited to that case: the exact pooled stddev in general
+   -- (within-input variances plus the spread of the input averages) would change the
+   -- stddev and CoV of all existing metrics, breaking their comparability with
+   -- reports produced before.
+   stddev
+     | all ((== 1) . cdfSize) xs = Stat.stdDev (Vec.fromList averages)
+     | otherwise                 = xs <&> cdfStddev & cStddevs
 
    sizes    = xs <&> cdfSize
    samples  = xs <&> cdfSamples

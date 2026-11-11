@@ -1,3 +1,6 @@
+// Comparison of these runs (tag, ident); the first one is the baseline:
+{% for r in runs %}//   {{ r.value.meta.tag }} ({{ r.value.meta.ident }})
+{% endfor %}//
 // To load CDF data for plotting from other run directories, you need to make
 // the root for compiling the document somewhat more permissive:
 //
@@ -17,37 +20,7 @@
 #import "@preview/neoplot:0.0.4" as gnuplot
 
 
-// Document Styling
-//
-#set page(paper: "a4", margin: 1.5cm)
-#set text(size: 10pt)
-#set par(leading: 0.6em, spacing: 0.8em, first-line-indent: 1.8em, justify: true)
-#show heading: set block(above: 1.5em, below: 1.2em)
-#show figure.caption: emph
-
-
-// Table styling
-// No strokes inside table body; left alignment for row descriptions only; slightly smaller row descriptions
-//
-#let frame(stroke) = (x, y) => (
-  left: if x > 0 { 0pt } else { stroke },
-  right: stroke,
-  top: if y < 2 { stroke } else { 0pt },
-  bottom: stroke,
-)
-#set table(
-  stroke: frame(0.5pt),
-  align:  (x, _) => if x == 0 { left } else { right },
-)
-#show table: set text(size: 0.96em)
-#show table.cell.where(x: 0): set text(size: 0.9em)
-
-
-// Table cell coloring
-// The function names have to be in sync with Cardano.Report.colorCode in package locli
-//
-#let gr(body) = table.cell(fill: green.lighten(60%))[#body]
-#let rd(body) = table.cell(fill: red.lighten(60%))[#body]
+{% include "preamble.ede" %}
 
 // END PREAMBLE
 
@@ -79,10 +52,9 @@
 = Manifest
 
 #pad(bottom: 10pt,[
-We compare {% for run in runs %}{%if !run.first%}{%if !run.last%}, {%else%} and {%endif%}{%endif%}`{{ run.value.ver }}` ({{ run.value.meta.era | toTitle }}){% endfor %} relative to `{{ base.ver }}` ({{ base.meta.era | toTitle }}), under {{ base.workload }} workload.
+We compare {% for run in runs %}{%if !run.first%}{%if !run.last%}, {%else%} and {%endif%}{%endif%}`{{ run.value.ver }}` ({{ run.value.meta.era | toTitle }}){% endfor %} relative to `{{ base.ver }}` ({{ base.meta.era | toTitle }}), under {{ base.workload }} workload. \
+_NB:_ LO stands for log object, i.e. a trace message emitted by a node.
 ])
-
-#pagebreak()
 
 {% include "table_generic.ede" with table = summary %}
 
@@ -91,6 +63,10 @@ We compare {% for run in runs %}{%if !run.first%}{%if !run.last%}, {%else%} and 
 = Analysis
 
 {% for section in analyses %}
+{% if section.value.title == "Ledger Snapshots" %}
+// Derived / complementary metrics go on a page of their own.
+#pagebreak()
+{% endif %}
 == {{ section.value.title }}
 
 {% include "table_generic.ede" with table = section.value %}
@@ -126,25 +102,7 @@ We compare {% for run in runs %}{%if !run.first%}{%if !run.last%}, {%else%} and 
 #pagebreak()
 
 
-{% if scalingCSV %}
-{% let runCount = runs | length %}
-= Addendum: Plutus Workload Calibration
-#pad(top: 2em)[]
-
-#let scalings = csv("{{scalingCSV}}")
-
-#align(center)[
-#table(
-  columns: {{ runCount + 1 }},
-
-  [], {% for run in runs %}[`{{run.value.meta.ident}}`],{% endfor %}
-  ..scalings.flatten(),
-)
-]
-
-#pagebreak()
-{% endlet %}
-{% endif %}
+{% include "plutus_calibration.ede" %}
 
 
 = Appendix A: charts

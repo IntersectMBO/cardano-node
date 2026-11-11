@@ -1,0 +1,124 @@
+// Single-run report: bundles the single table files (single_table.ede) found next to
+// this file at generation time, by importing their `locli-table` binding.
+// A variance report (multi-run results; `variance` lists the input runs) has the same
+// structure: its table files hold statistics over the runs.
+{% if variance %}//
+// Variance across these runs (tag, ident):
+{% for r in variance %}//   {{ r.value.tag }} ({{ r.value.ident }})
+{% endfor %}{% endif %}// Re-rendering any of these table files is reflected when compiling this report again.
+//
+// To load CDF data for plotting from the run directory, you need to make
+// the root for compiling the document somewhat more permissive:
+//
+// $ typst c --root ../.. {{ typstFile }}
+
+
+// The suggested file name for the report PDF; you can query this by using
+// $ typst query --root ../.. --one --field value {{ typstFile }} '<export_file_name>'
+//
+#metadata("{{ report.tag }}.{{ base.fileInfix }}.pdf") <export_file_name>
+
+
+// START PREAMBLE
+
+// This requires version typst >= 0.14
+//
+#import "@preview/neoplot:0.0.4" as gnuplot
+
+
+{% include "preamble.ede" %}
+
+// END PREAMBLE
+
+
+#align(center + horizon)[
+  #text(size: 24pt)[
+  {{ base.ver }}
+  ]
+
+  #text(size: 16pt)[
+  {{ base.workload }} workload \
+{% if variance %}  variance across {{ variance | length }} runs \
+{% endif %}  #pad(top: 50%,[
+    {{ report.author }}, Cardano Performance & Tracing \
+    {{ report.date }}
+  ])
+  ]
+]
+
+#pagebreak()
+
+
+#set page(numbering: "1")
+#counter(page).update(1)
+
+#outline()
+
+#pagebreak()
+
+= Manifest
+
+#pad(bottom: 10pt,[
+We analyse `{{ base.ver }}` ({{ base.meta.era | toTitle }}), under {{ base.workload }} workload. \
+{% if variance %}This is the variance across {{ variance | length }} runs; each table shows statistics over the runs' results. \
+{% endif %}_NB:_ LO stands for log object, i.e. a trace message emitted by a node.
+])
+
+{% include "import_table.ede" with file = summary %}
+
+#pagebreak()
+
+= Analysis
+
+{% for section in analyses %}
+{% if section.value.title == "Ledger Snapshots" %}
+// Derived / complementary metrics go on a page of their own.
+#pagebreak()
+{% endif %}
+== {{ section.value.title }}
+
+{% include "import_table.ede" with file = section.value %}
+{% if section.value.title == "Anomaly control" %}
+#pagebreak()
+{% else %}
+#pad(top: 2em)[]
+{% endif %}
+
+{% endfor %}
+
+#pagebreak()
+
+
+{% include "plutus_calibration.ede" %}
+
+= Appendix A: charts
+
+== Cluster performance charts
+
+{% for c in charts %}
+{%include "report_gnuplot.ede" with chart = c.value %}
+{% endfor %}
+
+#pagebreak()
+
+
+#set par(
+    first-line-indent: (amount: 0pt, all: true),
+    spacing: 1.35em
+)
+
+= Appendix B: data dictionary
+
+== Block propagation metrics
+
+{% for m in dictionary.dBlockProp %}
+*{{ m.value.deShortDesc }}* (_{{ m.value.deField }}_) -- {{ m.value.deDescription }}
+
+{% endfor %}
+
+== Cluster performance metrics
+
+{% for m in dictionary.dClusterPerf %}
+*{{ m.value.deShortDesc }}* (_{{ m.value.deField }}_) -- {{ m.value.deDescription }}
+
+{% endfor %}

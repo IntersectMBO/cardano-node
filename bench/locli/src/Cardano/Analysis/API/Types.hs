@@ -1,3 +1,4 @@
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
@@ -9,6 +10,9 @@ module Cardano.Analysis.API.Types (module Cardano.Analysis.API.Types) where
 
 import Cardano.Prelude          hiding (head)
 
+import Data.Aeson               qualified as AE
+import Data.Aeson.Key           qualified as Key
+import Data.Aeson.KeyMap        qualified as KeyMap
 import Data.Text                qualified as T
 import Options.Applicative      qualified as Opt
 
@@ -54,6 +58,7 @@ data Summary f where
     , cdfLogObjects          :: !(CDF f Int)
     , cdfRuntime             :: !(CDF f NominalDiffTime)
     , cdfLogLineRate         :: !(CDF f Double)
+    , cdfUtxoFinal           :: !(CDF f Word64)  -- ^ per host: UTxO size of its last LedgerMetrics
     } -> Summary f
   deriving (Generic)
 
@@ -61,7 +66,11 @@ type SummaryOne   = Summary I
 type MultiSummary = Summary (CDF I)
 data SomeSummary  = forall f. KnownCDF f => SomeSummary (Summary f)
 
-deriving instance (forall a. FromJSON a => FromJSON (f a)) => FromJSON (Summary f)
+-- | Lenient on missing CDFs, as 'MachPerf'.
+instance (forall a. FromJSON a => FromJSON (f a), forall a. ToJSON a => ToJSON (f a), KnownCDF f)
+         => FromJSON (Summary f) where
+  parseJSON = AE.withObject "Summary" $
+    AE.genericParseJSON AE.defaultOptions . AE.Object . withEmptyCDFs (Proxy @(Summary f)) (Proxy @f)
 deriving instance (forall a.   ToJSON a =>   ToJSON (f a)) =>   ToJSON (Summary f)
 deriving instance (forall a.   NFData a =>   NFData (f a)) =>   NFData (Summary f)
 deriving instance (forall a.     Show a =>     Show (f a)) =>     Show (Summary f)
@@ -119,17 +128,22 @@ data BlockProp f
     , cdfBlocksPerHost       :: !(CDF f Int)
     , cdfBlocksFilteredRatio :: !(CDF f Double)
     , cdfBlocksChainedRatio  :: !(CDF f Double)
-    , cdfBlockBattle         :: !(CDF f Int)
+    , cdfSlotBattle          :: !(CDF f Int)
+    , cdfHeightBattle        :: !(CDF f Int)
     , cdfBlockSize           :: !(CDF f Int)
     , bpPropagation          :: !(Map Text (CDF f NominalDiffTime))
     }
   deriving (Generic)
-deriving instance
+-- | Lenient on missing CDFs, as 'MachPerf'.
+instance
   ( forall a. FromJSON a => FromJSON (f a)
   , FromJSON (CDFList f (DataDomain I SlotNo))
   , FromJSON (CDFList f (DataDomain I BlockNo))
+  , forall a. ToJSON a => ToJSON (f a), KnownCDF f
   ) =>
-  FromJSON (BlockProp f)
+  FromJSON (BlockProp f) where
+  parseJSON = AE.withObject "BlockProp" $
+    AE.genericParseJSON AE.defaultOptions . AE.Object . withEmptyCDFs (Proxy @(BlockProp f)) (Proxy @f)
 deriving instance
   ( forall a. ToJSON a => ToJSON (f a)
   , ToJSON (CDFList f (DataDomain I SlotNo))
@@ -153,11 +167,10 @@ data MachPerf f
     { mpVersion            :: !Cardano.Analysis.API.LocliVersion.LocliVersion
     , mpDomainSlots        :: !(CDFList f (DataDomain I SlotNo))
     , mpDomainCDFSlots     :: !(DataDomain f SlotNo)
-    , cdfHostSlots         :: !(CDF f Word64)
+    , cdfHostSlots         :: !(CDF f Word64)          -- ^ per node: slots analysed (after slot filters); JSON only
     -- distributions
     , cdfStarts            :: !(CDF f Word64)
-    , cdfLeads             :: !(CDF f Word64)
-    , cdfUtxo              :: !(CDF f Word64)
+    , cdfLeads             :: !(CDF f Word64)          -- ^ per slot: leadership wins (several with dense pools); JSON only
     , cdfDensity           :: !(CDF f Double)
     , cdfStarted           :: !(CDF f NominalDiffTime)
     , cdfBlkCtx            :: !(CDF f NominalDiffTime)
@@ -167,7 +180,22 @@ data MachPerf f
     , cdfBlockGap          :: !(CDF f Word64)
     , cdfSpanLensCpu       :: !(CDF f Int)
     , cdfSpanLensCpuEpoch  :: !(CDF f Int)
-    , cdfSpanLensCpuRwd    :: !(CDF f Int)
+    , cdfSpanLensCpuSnap   :: !(CDF f Int)
+    , cdfSpanLensCpuOther  :: !(CDF f Int)
+    -- Ledger Snapshots
+    , cdfSnapTaken         :: !(CDF f Word64)          -- ^ per node: snapshots completed
+    , cdfSnapDuration      :: !(CDF f NominalDiffTime) -- ^ per snapshot: writing duration
+    , cdfLiveMajGcDuring   :: !(CDF f Word64)          -- ^ per major GC during a snapshot write: live data, MiB
+    , cdfLiveMajGcOutside  :: !(CDF f Word64)          -- ^ per major GC outside snapshot writes: live data, MiB
+    -- Transaction Processing (per node: run totals and ratios)
+    , cdfTxsProcessed      :: !(CDF f Word64)
+    , cdfTxsAccepted       :: !(CDF f Word64)
+    , cdfTxsRejected       :: !(CDF f Word64)
+    , cdfTxsRejectRatio    :: !(CDF f Double)
+    , cdfMempoolTxs        :: !(CDF f Word64)          -- ^ mempool fill level per slot, txs
+    , cdfCpuPerTx          :: !(CDF f Double)          -- ^ process CPU ÷ txs processed, ms (not a per-tx cost)
+    , cdfMutPerTx          :: !(CDF f Double)          -- ^ RTS mutator CPU ÷ txs processed, ms
+    , cdfGcPerTx           :: !(CDF f Double)          -- ^ RTS GC CPU ÷ txs processed, ms
     , mpResourceCDFs       :: !(Resources (CDF f Word64))
     }
   deriving (Generic)
@@ -234,7 +262,10 @@ data BlockEvents
   , beEpochSafeInt  :: !EpochSafeInt
   , beForge         :: !BlockForge
   , beObservations  :: ![BlockObservation]
-  , beForks         :: !(Count BlockEvents)
+  , beSlotBattle    :: !(Count BlockEvents)
+                       -- ^ Other blocks forged for this block's slot, at any height
+  , beHeightBattle  :: !(Count BlockEvents)
+                       -- ^ Other blocks at this block's height, forged for another slot
   , bePropagation   :: !(CDF I NominalDiffTime)
                        -- ^ CDF of slot-start-to-adoptions on cluster
   , beOtherBlocks   :: ![Hash]
@@ -259,10 +290,12 @@ data BlockForge
   , bfTicked       :: !(SMaybe NominalDiffTime) -- ^ Since leading
   , bfMemSnap      :: !(SMaybe NominalDiffTime) -- ^ Since ticked
   , bfForged       :: !NominalDiffTime -- ^ Since ticked OR loop start
-  , bfAnnounced    :: !NominalDiffTime -- ^ Since forging
-  , bfAnnouncedCum :: !NominalDiffTime -- ^ Since slot start
-  , bfSending      :: !NominalDiffTime -- ^ Since announcement
-  , bfAdopted      :: !NominalDiffTime -- ^ Since announcement
+  -- The phases after forging are missing for a forger without downstream peers (a solo node),
+  -- or that adopted the block only later, after a chain switch.
+  , bfAnnounced    :: !(SMaybe NominalDiffTime) -- ^ Since forging
+  , bfAnnouncedCum :: !(SMaybe NominalDiffTime) -- ^ Since slot start
+  , bfSending      :: !(SMaybe NominalDiffTime) -- ^ Since announcement
+  , bfAdopted      :: !(SMaybe NominalDiffTime) -- ^ Since announcement
   , bfChainDelta   :: !Int             -- ^ ChainDelta during adoption
   }
   deriving (Generic, FromJSON, ToJSON, Show)
@@ -279,10 +312,10 @@ allBlockForgeTimes  f BlockForge{..}
   <> smaybe mempty (f "bfTicked")   bfTicked
   <> smaybe mempty (f "bfMemSnap")  bfMemSnap
   <>                f "bfForged"    bfForged
-  <>                f "bfAnnounced" bfAnnounced
-  <>                f "bfAnnouncedCum" bfAnnouncedCum
-  <>                f "bfSending"   bfSending
-  <>                f "bfAdopted"   bfAdopted
+  <> smaybe mempty (f "bfAnnounced") bfAnnounced
+  <> smaybe mempty (f "bfAnnouncedCum") bfAnnouncedCum
+  <> smaybe mempty (f "bfSending")   bfSending
+  <> smaybe mempty (f "bfAdopted")   bfAdopted
 
 data BlockObservation
   =  BlockObservation
@@ -354,7 +387,47 @@ data RunScalars
 
 -- * MachPerf / ClusterPef
 --
-deriving instance (forall a. FromJSON a => FromJSON (f a), FromJSON (CDFList f (DataDomain I SlotNo))) => FromJSON (MachPerf f)
+
+-- | The record selector names of a single-constructor record type.
+recordSelectors :: forall a. GSelectors (Rep a) => Proxy a -> [Text]
+recordSelectors _ = gSelectors (Proxy @(Rep a))
+
+class GSelectors (r :: Type -> Type) where
+  gSelectors :: Proxy r -> [Text]
+
+instance GSelectors r => GSelectors (D1 c r) where
+  gSelectors _ = gSelectors (Proxy @r)
+
+instance GSelectors r => GSelectors (C1 c r) where
+  gSelectors _ = gSelectors (Proxy @r)
+
+instance (GSelectors l, GSelectors r) => GSelectors (l :*: r) where
+  gSelectors _ = gSelectors (Proxy @l) <> gSelectors (Proxy @r)
+
+instance Selector s => GSelectors (S1 s r) where
+  gSelectors _ = [T.pack $ selName (SelProxy :: SelProxy s r ())]
+
+-- | 'selName' only needs the selector's type, not a value of the field.
+data SelProxy (s :: k) (f :: Type -> Type) a = SelProxy
+
+-- | Lenient decoding: a CDF missing from the JSON (a metric added after the data was written,
+--   e.g. by an older locli) decodes as an empty CDF -- size 0, i.e. no data -- which reports render
+--   as not available. CDF fields are identified by locli's naming convention: their record
+--   selectors start with "cdf". Anything else missing still fails decoding.
+withEmptyCDFs :: forall r f. (GSelectors (Rep r), forall a. ToJSON a => ToJSON (f a), KnownCDF f)
+              => Proxy r -> Proxy f -> AE.Object -> AE.Object
+withEmptyCDFs pr _ o =
+  o <> KeyMap.fromList [ (k, emptyCDF) | k <- cdfKeys, not (k `KeyMap.member` o) ]
+ where
+   cdfKeys  = filter ("cdf" `T.isPrefixOf`) (recordSelectors pr) <&> Key.fromText
+   emptyCDF = AE.toJSON (zeroCDF :: CDF f Double)
+
+instance ( forall a. FromJSON a => FromJSON (f a), FromJSON (CDFList f (DataDomain I SlotNo))
+         , forall a. ToJSON a => ToJSON (f a), KnownCDF f)
+         => FromJSON (MachPerf f) where
+  parseJSON = AE.withObject "MachPerf" $
+    AE.genericParseJSON AE.defaultOptions . AE.Object . withEmptyCDFs (Proxy @(MachPerf f)) (Proxy @f)
+
 deriving instance (forall a.   ToJSON a =>   ToJSON (f a),   ToJSON (CDFList f (DataDomain I SlotNo))) =>   ToJSON (MachPerf f)
 deriving instance (forall a.   NFData a =>   NFData (f a),   NFData (CDFList f (DataDomain I SlotNo))) =>   NFData (MachPerf f)
 deriving instance (forall a.     Show a =>     Show (f a),     Show (CDFList f (DataDomain I SlotNo))) =>     Show (MachPerf f)
@@ -373,6 +446,7 @@ data SlotStats a
     , slCountLeads   :: !Word64
     , slCountForges  :: !Word64
     , slChainDBSnap  :: !Word64
+    , slSnapshot     :: !(SMaybe (UTCTime, NominalDiffTime)) -- ^ a snapshot completed in this slot: at, duration
     , slRejectedTx   :: !Word64
     , slBlockNo      :: !BlockNo
     , slBlockGap     :: !Word64
@@ -495,12 +569,16 @@ adoptionCentilesBrief =
 data PerfSubset
   = PerfFull
   | PerfReport
+  | PerfSnapshots
+  | PerfTxProcessing
   deriving Show
 
 parsePerfSubset :: Opt.Parser PerfSubset
 parsePerfSubset =
   [ Opt.flag' PerfFull   (Opt.long "full"   <> Opt.help "Complete performance data")
   , Opt.flag' PerfReport (Opt.long "report" <> Opt.help "Only report-relevant perf data")
+  , Opt.flag' PerfSnapshots    (Opt.long "snapshots"     <> Opt.help "Ledger snapshot metrics")
+  , Opt.flag' PerfTxProcessing (Opt.long "tx-processing" <> Opt.help "Transaction processing metrics")
   ] & \case
         (x:xs) -> foldl (<|>) x xs
         [] -> error "Crazy world."

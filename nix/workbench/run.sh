@@ -684,7 +684,7 @@ EOF
            then fail "fetch-analysis:  run has not been analysed on remote: $(white $run)"
            else local analysis_files=(
                    $(ssh $env -- \
-                     sh -c "'cd $depl/$dir/$run && ls analysis/{cdf/*.cdf,*.{json,org,txt}} | fgrep -v -e flt.json -e logobjs.json -e perf-stats.json -e mach-views.json'" \
+                     sh -c "'cd $depl/$dir/$run && ls analysis/{cdf/*.cdf,*.{json,typ,txt,csv}} | fgrep -v -e flt.json -e logobjs.json -e perf-stats.json -e mach-views.json'" \
                      2>/dev/null)
                 )
                 local args=(

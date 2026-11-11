@@ -1,7 +1,0 @@
-|                           | {{ base.ver }}{% for run in runs %} |  {{ run.value.ver }}{% endfor %} |
-|---------------------------+-----{% for run in runs %}-+-----{% endfor %}-|
-{% for i in table.rowPrecs %}
-|                           |     {% for run in runs %} |     {% endfor %} |
-{% endfor %}
-|---------------------------+-----{% for run in runs %}-+-----{% endfor %}-|
-#+TBLFM: $2='(identity remote(file:$base/${{ table.dataRef }},@@#${{ table.valueCol }}))::$1='(identity remote(file:$base/${{ table.dataRef }},@@#${{ table.nameCol }})){% for run in runs %}::${{ 2 + run.index }}='(identity remote(file:$run{{ run.index }}/${{ table.dataRef }},@@#${{ table.valueCol }})){% endfor %}
