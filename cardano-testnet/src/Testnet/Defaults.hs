@@ -279,6 +279,7 @@ defaultYamlHardforkViaConfig sbe =
       -- maximum protocol version, so it cannot forge once the ledger is at PV12 (its own
       -- blocks are rejected with ObsoleteNode), and it ignores the Dijkstra genesis file.
       : ("ExperimentalHardForksEnabled", Aeson.Bool True)
+      : ("PerasEnabled", Aeson.Bool True)
       : (case sbe' of
             ShelleyBasedEraShelley ->
                 [ ("TestShelleyHardForkAtEpoch", Aeson.Number 0) ]
