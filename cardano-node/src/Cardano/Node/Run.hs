@@ -26,6 +26,7 @@ module Cardano.Node.Run
 import           Cardano.Api (File (..), FileDirection (..))
 import           Cardano.Api.Error (displayError)
 import qualified Cardano.Api as Api
+import           Cardano.Base.FeatureFlags (CardanoFeatureFlag (..))
 import           System.Random (randomIO)
 
 import qualified Cardano.Crypto.Init as Crypto
@@ -428,7 +429,10 @@ handleSimpleNode blockType shelleyGenesisHash pInfo mkBlockForging tracers forgi
           , rnGetUseBootstrapPeers = readTVar useBootstrapVar
           , rnTxSubmissionLogicVersion = ncTxSubmissionLogicVersion nc
           , rnTxSubmissionInitDelay = ncTxSubmissionInitDelay nc
-          , rnFeatureFlags = mempty -- TODO(10.7) forward this to CLI options?
+          , rnFeatureFlags =
+              if ncPerasEnabled nc
+                then Set.singleton PerasFlag
+                else Set.empty
           }
 #ifdef UNIX
     -- initial `SIGHUP` handler, which rereads the topology file and the RPC config from the main configuration file
