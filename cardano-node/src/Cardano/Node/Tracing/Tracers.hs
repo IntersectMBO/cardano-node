@@ -471,7 +471,7 @@ traceLeiosVoteStateToStderr = \case
 
 -- | The endorser blocks and closures the node acquires go to stderr too, for
 -- the acceptance demo.
-traceLeiosFetchClientToStderr :: TraceLeiosFetchClientEvent -> IO ()
+traceLeiosFetchClientToStderr :: Show peer => TraceLeiosFetchClientEvent peer -> IO ()
 traceLeiosFetchClientToStderr = \case
   TraceLeiosFetchClientBlockArrived{} -> pure ()
   TraceLeiosFetchClientTxsArrived{} -> pure ()
