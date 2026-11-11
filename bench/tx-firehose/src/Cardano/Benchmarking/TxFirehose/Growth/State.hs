@@ -116,3 +116,39 @@ applyDelta journal delta
   index = laneIndex delta
   old = lanes journal !! index
   new = nextLane delta
+
+-- | Reconcile only against immutable state. A later change proves its entire
+-- preceding lane prefix, including a recorded seed transaction.
+reconcile :: Set Api.TxIn -> Journal -> Either String Journal
+reconcile stable journal = do
+  let seedStillPending =
+        not (seeded journal)
+          && not (all (either (const False) (const True) . observedPrefix stable) (lanes journal))
+  advanced <-
+    if seedStillPending
+      then pure [(0, lane) | lane <- lanes journal]
+      else traverse (advance stable) (lanes journal)
+  let seedGrowth =
+        if not (seeded journal) && not seedStillPending
+          then toInteger (length (lanes journal)) - 1
+          else 0
+  pure
+    journal
+      { confirmed = confirmed journal + seedGrowth + sum (map fst advanced)
+      , seeded = not seedStillPending
+      , lanes = map snd advanced
+      }
+
+-- | Drain must also wait for zero-net-growth (single-lane) initialization.
+-- The mode is deliberately not stored in the journal or its identity.
+finished :: Bool -> Journal -> Bool
+finished draining journal =
+  pendingGrowth journal == 0
+    && if draining then seeded journal else confirmed journal == target (identity journal)
+
+-- | Replaying recorded transactions is independent of allocating new batches.
+-- Drain always leaves the entire unallocated remainder for a future normal run.
+remainingToAllocate :: Bool -> Journal -> Integer
+remainingToAllocate draining journal
+  | draining = 0
+  | otherwise = target (identity journal) - confirmed journal - pendingGrowth journal

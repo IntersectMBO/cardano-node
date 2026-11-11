@@ -24,6 +24,7 @@ import Data.Maybe.Strict (StrictMaybe (SJust, SNothing))
 import Data.Proxy (Proxy (Proxy))
 import Data.Set qualified as Set
 import Data.Word (Word64)
+import GrowthTest qualified
 import Lens.Micro ((.~), (^.))
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.HUnit (assertBool, assertFailure, testCase, (@?=))
@@ -33,7 +34,8 @@ main =
   defaultMain $
     testGroup
       "tx-firehose"
-      [ testCase "Conway growth checks realistic minimum ADA including change" $ do
+      [ GrowthTest.tests
+      , testCase "Conway growth checks realistic minimum ADA including change" $ do
           sk <- Api.generateSigningKey Api.AsPaymentKey
           let sbe = Api.ShelleyBasedEraConway
               network = Api.Testnet (Api.NetworkMagic 42)

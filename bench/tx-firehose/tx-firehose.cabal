@@ -77,8 +77,10 @@ executable tx-firehose
 test-suite tx-firehose-test
   import:           project-config
   type:             exitcode-stdio-1.0
-  hs-source-dirs:    test
+  hs-source-dirs:    test app
   main-is:          Main.hs
+  other-modules:    Growth
+                    GrowthTest
   build-depends:    base
                   , aeson
                   , bytestring
@@ -87,7 +89,15 @@ test-suite tx-firehose-test
                   , cardano-ledger-core
                   , cardano-strict-containers
                   , containers
+                  , directory
+                  , filelock
+                  , filepath
                   , microlens
+                  , optparse-applicative
+                  , time
+                  , transformers
                   , tasty
                   , tasty-hunit
                   , tx-firehose
+  if !os(windows)
+    build-depends:  unix

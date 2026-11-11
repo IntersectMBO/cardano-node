@@ -324,6 +324,7 @@ runInEra (AnyCardanoEra ce) k =
 
 validateOptions :: Options -> IO ()
 validateOptions opts = do
+  mapM_ Growth.validateOptions (optGrowth opts)
   when (optTps opts <= 0 || isNaN (optTps opts) || isInfinite (optTps opts)) $ die "--tps must be > 0"
   when (any ((<= 0) . snd) (optTpsSchedule opts)) $ die "--tps-schedule rates must be > 0"
   when (optInputsPerTx opts == Just 0) $ die "--inputs-per-tx must be >= 1"

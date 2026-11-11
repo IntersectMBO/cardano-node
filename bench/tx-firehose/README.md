@@ -277,6 +277,53 @@ an entry-count target, not mainnet's token/datum/script distribution or exact
 memory footprint. Later load must spend across the enlarged set if the goal is
 to measure access patterns rather than just resident state size.
 
+### Drain before changing workloads
+
+Use `--growth-drain` to finish the work already recorded in an existing checkpoint
+and WAL, without allocating any new growth batches or initializing new funding
+lanes. A recorded lane-setup transaction is retried if needed and must become
+immutable too. Drain uses the same immutable-tip reconciliation, exact transaction
+replay and rollback handling as ordinary recovery; it is not a cancellation or
+cleanup operation.
+
+Keep **all original identity arguments**: `--grow-by`, `--growth-lanes`, `--fanout`,
+the funding and retained keys, retained amount, network and colour. In particular,
+do not lower the target to the current progress or change the fanout when draining.
+The checkpoint format is unchanged, and drain is not part of its identity. Missing
+checkpoint/WAL files are an error, and `--growth-drain` cannot be combined with
+`--growth-dry-run`.
+
+To switch workloads safely:
+
+1. Stop the growth service and prevent it from automatically restarting while you
+   drain and archive its state.
+2. Run with its original arguments plus `--growth-drain`. Wait for a successful
+   exit and `TxFirehose.Growth.Drained`, which reports `finalizedGrowth`,
+   `pendingGrowth` (zero), and the original `targetGrowth`. This can finish below
+   the original target; it does not emit `Complete`.
+3. With the process stopped, archive **both** the checkpoint and `.wal` together.
+4. Start the new workload with a fresh `--growth-state` path and its new arguments.
+   Its `--grow-by` is additional growth from that new run, not a global UTxO count.
+
+```bash
+# Stop the service first. Reuse the original args array from the running workload.
+tx-firehose "${args[@]}" --growth-drain +RTS -N2 -RTS
+
+# Only after Drained and successful exit; use the original state path.
+state=/var/lib/tx-firehose/growth.json
+archive="/var/lib/tx-firehose/archive/$(date -u +%Y%m%dT%H%M%SZ)"
+mkdir -p "$archive"
+cp -- "$state" "$state.wal" "$archive/"
+
+# Configure the next workload with a fresh path, e.g. growth-next.json,
+# before restarting the service. Keep the archived pair together.
+```
+
+Alternatively, omit `--growth-drain` on a later invocation with the same journal
+and original arguments to continue toward its original target. If drain is
+interrupted, restart drain with the same checkpoint/WAL. Existing recovery limits
+(including invalidated pending transactions after protocol changes) still apply.
+
 ### Later cleanup
 
 Cleanup is deliberately separate. Retained outputs are ordinary key-controlled
@@ -311,3 +358,12 @@ WAL after checkpointing. Concurrent journal access and mismatched resume options
 were rejected; restarting after completion submitted nothing. This verifies
 functional recovery on a small local chain, not Leios certification throughput
 or performance at 11M entries.
+
+Drain tests cover WAL recovery, unchanged identity checks, missing state, pending
+lane initialization, and stopping below target without allocating batches. A local
+Conway integration check on 2026-11-11 also resumed journals written by the
+pre-drain binary: a single-lane initialization drained at zero growth, and a
+four-lane run drained at 23 additional UTxOs. Both retained their journal revision
+during drain and subsequently resumed ordinary growth to the original target of
+103. Repeated drain submitted nothing, and only `Drained`, not `Complete`, was
+emitted by drain runs.

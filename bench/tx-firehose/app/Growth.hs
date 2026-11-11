@@ -5,7 +5,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Growth (Options, parser, run) where
+module Growth (Options (..), parser, validateOptions, withJournal, run) where
 
 import Cardano.Api qualified as Api
 import Cardano.Benchmarking.TxFirehose.Color (Color, colorHex)
@@ -58,6 +58,7 @@ data Options = Options
   , pipelineDepth :: Int
   , pollSeconds :: Int
   , dryRun :: Bool
+  , drain :: Bool
   }
   deriving Show
 
@@ -120,6 +121,57 @@ parser =
           <> O.help
             "Query funding and parameters, print signed size/fee calibration, then exit without writing a journal or submitting"
       )
+    <*> O.switch
+      ( O.long "growth-drain"
+          <> O.help
+            "Resume an existing journal with original arguments; retry only recorded work and exit when immutable, even below target; incompatible with --growth-dry-run"
+      )
+
+validateOptions :: Options -> IO ()
+validateOptions opts = do
+  when (drain opts && dryRun opts) $
+    die "--growth-drain and --growth-dry-run are mutually exclusive"
+  when
+    ( growBy opts <= 0
+        || laneCount opts < 1
+        || laneCount opts > 4096
+        || fanout opts < 1
+        || fanout opts > 65534
+        || outputLovelace opts <= 0
+        || pipelineDepth opts < 1
+        || pollSeconds opts < 1
+    )
+    $ die "Invalid growth options: positive values required; lanes <= 4096, fanout <= 65534"
+
+-- Keep loading/identity validation common to ordinary resume and drain. Check
+-- drain prerequisites before creating even the parent directory or lock file,
+-- then recheck the checkpoint under the lock before considering initialization.
+withJournal :: Options -> Identity -> IO Journal -> (Journal -> IO a) -> IO a
+withJournal opts ident initialize action = do
+  validateOptions opts
+  when (drain opts) $ do
+    exists <- doesFileExist (stateFile opts)
+    walExists <- doesFileExist (stateFile opts ++ ".wal")
+    unless (exists && walExists) $
+      die "--growth-drain requires an existing checkpoint and .wal; no state created"
+  createDirectoryIfMissing True (takeDirectory (stateFile opts))
+  locked <- withTryFileLock (stateFile opts ++ ".lock") Exclusive $ \_ -> do
+    exists <- doesFileExist (stateFile opts)
+    journal <-
+      if exists
+        then loadJournal (stateFile opts)
+        else
+          if drain opts
+            then die "--growth-drain requires an existing checkpoint; no state created"
+            else initialize
+    unless (identity journal == ident) $
+      die "Growth journal configuration mismatch; resume with the original key/network/era/target/shape"
+    when (confirmed journal < 0 || confirmed journal + pendingGrowth journal > target ident) $
+      die "Invalid journal progress"
+    action journal
+  case locked of
+    Nothing -> die "Another process holds the growth journal lock"
+    Just result -> pure result
 
 syncFile :: FilePath -> IO ()
 #ifdef mingw32_HOST_OS
@@ -213,17 +265,7 @@ run ::
   Color ->
   IO ()
 run sbe opts tps conn networkId sk changeAddr color = do
-  when
-    ( growBy opts <= 0
-        || laneCount opts < 1
-        || laneCount opts > 4096
-        || fanout opts < 1
-        || fanout opts > 65534
-        || outputLovelace opts <= 0
-        || pipelineDepth opts < 1
-        || pollSeconds opts < 1
-    )
-    $ die "Invalid growth options: positive values required; lanes <= 4096, fanout <= 65534"
+  validateOptions opts
   vk <- Api.readFileTextEnvelope (Api.File (retainedKey opts)) >>= either (die . show) pure
   let retainedAddr =
         Api.shelleyAddressInEra sbe $
@@ -249,25 +291,12 @@ run sbe opts tps conn networkId sk changeAddr color = do
   when (dryRun opts) $ do
     _ <- initialize ident retainedAddr False
     exitSuccess
-  createDirectoryIfMissing True (takeDirectory (stateFile opts))
-  locked <- withTryFileLock (stateFile opts ++ ".lock") Exclusive $ \_ -> do
-    exists <- doesFileExist (stateFile opts)
-    journal <-
-      if exists
-        then loadJournal (stateFile opts)
-        else initialize ident retainedAddr True
-    unless (identity journal == ident) $
-      die "Growth journal configuration mismatch; resume with the original key/network/era/target/shape"
-    when (confirmed journal < 0 || confirmed journal + pendingGrowth journal > growBy opts) $
-      die "Invalid journal progress"
+  withJournal opts ident (initialize ident retainedAddr True) $ \journal -> do
     -- Rebuild and verify every pending transaction before contacting submission.
     mapM_ (replay retainedAddr) (lanes journal)
-    when exists (save journal)
+    save journal
     ready <- if seeded journal then pure journal else seedLoop journal
     loop retainedAddr ready Set.empty (0 :: Int)
-  case locked of
-    Nothing -> die "Another process holds the growth journal lock"
-    Just () -> pure ()
  where
   wait = threadDelay (pollSeconds opts * 1000000)
   save = checkpoint (stateFile opts)
@@ -438,23 +467,7 @@ run sbe opts tps conn networkId sk changeAddr color = do
   loop retainedAddr journal accepted roundNo = do
     let refs = seedFunds journal ++ concatMap laneFunds (lanes journal)
     stable <- Map.keysSet <$> queryRefs Api.ImmutableTip refs
-    let seedStillPending =
-          not (seeded journal)
-            && not (all (either (const False) (const True) . observedPrefix stable) (lanes journal))
-    advanced <-
-      if seedStillPending
-        then pure [(0, lane) | lane <- lanes journal]
-        else require $ traverse (advance stable) (lanes journal)
-    let seedGrowth =
-          if not (seeded journal) && not seedStillPending
-            then toInteger (length (lanes journal)) - 1
-            else 0
-        j =
-          journal
-            { confirmed = confirmed journal + seedGrowth + sum (map fst advanced)
-            , seeded = not seedStillPending
-            , lanes = map snd advanced
-            }
+    j <- require $ reconcile stable journal
     when (j /= journal) (save j)
     logEvent
       "Progress"
@@ -462,8 +475,17 @@ run sbe opts tps conn networkId sk changeAddr color = do
       , "pendingGrowth" .= pendingGrowth j
       , "targetGrowth" .= growBy opts
       ]
-    if confirmed j == growBy opts && pendingGrowth j == 0
-      then logEvent "Complete" ["finalizedGrowth" .= confirmed j]
+    if finished (drain opts) j
+      then
+        if drain opts
+          then
+            logEvent
+              "Drained"
+              [ "finalizedGrowth" .= confirmed j
+              , "pendingGrowth" .= pendingGrowth j
+              , "targetGrowth" .= target (identity j)
+              ]
+          else logEvent "Complete" ["finalizedGrowth" .= confirmed j]
       else do
         volatile <- Map.keysSet <$> queryRefs Api.VolatileTip (seedFunds j ++ concatMap laneFunds (lanes j))
         if not (seeded j) && any ((`Set.member` volatile) . reference) (seedFunds j)
@@ -478,7 +500,7 @@ run sbe opts tps conn networkId sk changeAddr color = do
                 -- Retry identical transactions after eviction/rejection/disconnect.
                 cached = if roundNo * pollSeconds opts >= 60 then Set.empty else Set.intersection accepted pendingRefs
             (next, sent) <- foldM (stepLane retainedAddr pp volatile) (j, cached) [0 .. length (lanes j) - 1]
-            when (next == j && pendingGrowth j == 0) $
+            when (not (drain opts) && next == j && pendingGrowth j == 0) $
               die "No funding lane can make progress; check calibration/funding and protocol parameters"
             wait
             loop retainedAddr next sent (if roundNo * pollSeconds opts >= 60 then 0 else roundNo + 1)
@@ -487,7 +509,7 @@ run sbe opts tps conn networkId sk changeAddr color = do
     prefix <- require (observedPrefix volatile lane)
     built <- replay retainedAddr lane
     (ok, sent) <- foldM sendPending (True, accepted) (drop prefix (zip (pending lane) built))
-    let remaining = growBy opts - confirmed j - pendingGrowth j
+    let remaining = remainingToAllocate (drain opts) j
     if not ok || remaining <= 0 || length (pending lane) >= pipelineDepth opts
       then pure (j, sent)
       else do
