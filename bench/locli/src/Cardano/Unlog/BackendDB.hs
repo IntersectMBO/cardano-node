@@ -1,6 +1,7 @@
 
 module Cardano.Unlog.BackendDB
        ( prepareDB
+       , readRunLogsBare
        , runLiftLogObjectsDB
        , LoadFromDB(..)
        , LoadLogObjects(..)
@@ -18,8 +19,8 @@ module Cardano.Unlog.BackendDB
        , sqlOrdered
        ) where
 
-import           Cardano.Analysis.API.Ground (Host (..), LogObjectSource (..))
-import           Cardano.Prelude (ExceptT, (<|>))
+import           Cardano.Analysis.API.Ground (Host (..), JsonInputFile (..), LogObjectSource (..))
+import           Cardano.Prelude (ExceptT (..), (<|>))
 import           Cardano.Unlog.LogObject (HostLogs (..), LogObject (..), RunLogs (..), fromTextRef)
 import           Cardano.Unlog.LogObjectDB
 import           Cardano.Util (sequenceConcurrentlyChunksOf, withTimingInfo)
@@ -84,6 +85,11 @@ instance LoadFromDB LoadSummaryOnly where
   loadQuery = const $ Just "SELECT null"
   loadConvert _ summary _ = summary
 
+
+-- | The run's log manifest, as written by `wb analyse prepare-db`: per host, its DB and raw log files.
+readRunLogsBare :: JsonInputFile a -> ExceptT String IO (RunLogs ())
+readRunLogsBare rlf =
+  ExceptT $ Aeson.eitherDecode <$> BSL.readFile (unJsonInputFile rlf)
 
 runLiftLogObjectsDB :: LoadFromDB l => l -> RunLogs a -> ExceptT String IO (RunLogs [LoadResult l])
 runLiftLogObjectsDB loadMode RunLogs{rlHostLogs, ..} = liftIO $ do

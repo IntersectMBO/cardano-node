@@ -101,7 +101,6 @@ library
                         Cardano.Render
 
                         Cardano.Unlog.BackendDB
-                        Cardano.Unlog.BackendFile
                         Cardano.Unlog.LogObject
                         Cardano.Unlog.LogObjectDB
                         Cardano.Unlog.PlutusBudgetSummary

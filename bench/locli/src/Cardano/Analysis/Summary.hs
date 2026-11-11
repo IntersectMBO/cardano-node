@@ -184,14 +184,14 @@ computeSummary sumAnalysisTime
      & fmap (hlRawLogObjects &&& hlRawLines)
      & unzip
 
-   -- Log objects analysed per host: counted when loaded from the DB; only for the file
-   -- backend, by a pass over each host's log objects.
+   -- Log objects analysed per host: counted when loaded from the DB; the pass over the
+   -- host's log objects is only a fallback, should the count be missing.
    analysedCounts :: [Int]
    analysedCounts = hostLogs <&> \HostLogs{hlLoadedCount, hlLogs = (_, los)} -> fromMaybe (length los) hlLoadedCount
 
    -- A host's latest evidence, also from after the analysed slots: hosts stop at different
-   -- times. Hosts without LedgerMetrics have no sample. The DB backend provides it; only for
-   -- the file backend, it takes a pass over all of the host's log objects.
+   -- times. Hosts without LedgerMetrics have no sample. Loaded from the DB; the pass over
+   -- the host's log objects is only a fallback, should it be missing.
    lastUtxoSize :: HostLogs [LogObject] -> Maybe Word64
    lastUtxoSize HostLogs{hlRawLastUTxOSize, hlLogs = (_, los)} =
      hlRawLastUTxOSize <|>

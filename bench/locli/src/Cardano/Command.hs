@@ -28,7 +28,6 @@ import Cardano.Analysis.Summary
 import Cardano.Render
 import Cardano.Report
 import Cardano.Unlog.BackendDB
-import Cardano.Unlog.BackendFile
 import Cardano.Unlog.LogObject
 import Cardano.Unlog.PlutusBudgetSummary
 import Cardano.Util             hiding (head)
@@ -51,7 +50,6 @@ data ChainCommand
   =        ReadMetaGenesis  (JsonInputFile  RunPartial) (JsonInputFile  Genesis)
   |        WriteMetaGenesis TextOutputFile              TextOutputFile
 
-  |                 Unlog   (JsonInputFile (RunLogs ())) Bool (Maybe [LOAnyType])
   |        DumpLogObjects
   |             PrepareDB   String [TextInputFile] SqliteOutputFile
   |               UnlogDB   (JsonInputFile (RunLogs ()))
@@ -117,15 +115,6 @@ parseChainCommand =
    ]) <|>
 
   subparser (mconcat [ commandGroup "Basic log objects"
-   , op "unlog" "Read log files"
-     (Unlog
-       <$> optJsonInputFile    "run-logs"       "Run log manifest (API/Types.hs:RunLogs)"
-       <*> Opt.flag False True (Opt.long "lodecodeerror-ok"
-                                 <> Opt.help "Allow non-EOF LODecodeError logobjects")
-       <*> optional
-            (some
-             (optLOAnyType      "ok-loany"        "[MULTI] Allow a particular LOAnyType"))
-     )
    , op "unlog-db" "Read logs from DBs"
      (UnlogDB
        <$> optJsonInputFile    "run-logs"       "Run log manifest (API/Types.hs:RunLogs)"
@@ -275,12 +264,6 @@ parseChainCommand =
      command c $ info (p <**> helper) $
        mconcat [ progDesc descr ]
 
-   optLOAnyType :: String -> String -> Parser LOAnyType
-   optLOAnyType opt desc =
-     Opt.option Opt.auto
-     ( Opt.long opt
-       <> Opt.help desc
-       <> Opt.metavar "LOAnyType" )
 
 parseTimelineCommentsBP :: Parser (TimelineComments BlockEvents)
 parseTimelineCommentsBP =
@@ -425,18 +408,6 @@ runChainCommand s@State{sMultiSummary=Just summ@Summary{..}}
   pure s
 runChainCommand _ c@WriteMetaGenesis{} = missingCommandData c
   ["multi objects"]
-
-runChainCommand s
-  c@(Unlog rlf okDErr loAnyLimit) = do
-  progress "logs" (Q $ printf "reading run log manifest %s" $ unJsonInputFile rlf)
-  runLogsBare <- readRunLogsBare rlf
-                 & firstExceptT (CommandError c . pack)
-  progress "logs" (Q $ printf "parsing logs for %d hosts" $
-                   Map.size $ rlHostLogs runLogsBare)
-  progress "logs" (Q $ printf "LOAny constraint:  %s" (show loAnyLimit :: String))
-  runLogs <- runLiftLogObjects runLogsBare okDErr loAnyLimit
-             & firstExceptT (CommandError c . pack)
-  pure s { sRunLogs = Just runLogs }
 
 runChainCommand s
   c@(UnlogDB rlf) = do

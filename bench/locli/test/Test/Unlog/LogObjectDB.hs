@@ -6,7 +6,6 @@ import           Cardano.Prelude
 
 import           Cardano.Analysis.API.Ground (LogObjectSource (..))
 import           Cardano.Unlog.BackendDB (LoadLogObjects (..), getLastUTxOSize, prepareDB, runLiftLogObjectsDB, selectAll)
-import           Cardano.Unlog.BackendFile (readLogObjectStream)
 import           Cardano.Unlog.LogObject
 import           Cardano.Unlog.LogObjectDB
 import           Cardano.Unlog.Resources (Resources (..))
@@ -56,6 +55,17 @@ prop_LOBody_converter_for_each_constructor = property $
 fixtureFile :: FilePath
 fixtureFile = "test/data/logobject-roundtrip-fixture.jsonl"
 
+-- | The fixture's log objects, decoded line by line as `prepare-db` does. Lines of namespaces
+--   without an interpreter (`LOAny`) are dropped, as no analysis sees them; a line that doesn't
+--   decode fails the test.
+readFixture :: IO [LogObject]
+readFixture = do
+  ls <- filter (not . BS.null) . BS.lines <$> BS.readFile fixtureFile
+  pure . flip mapMaybe ls $ \l -> case AE.eitherDecodeStrict l of
+    Left err -> panic $ "fixture line doesn't decode: " <> show err <> "\n" <> decodeUtf8 l
+    Right LogObject{loBody = LOAny{}} -> Nothing
+    Right lo -> Just lo
+
 -- `sqlToLogObject` only ever reads `sdbName` out of this; the rest are
 -- unused placeholders for this test.
 fixtureSummary :: SummaryDB
@@ -75,7 +85,7 @@ maxClockDrift :: NominalDiffTime
 maxClockDrift = 0.00001 -- 10 microseconds
 
 prop_LogObject_sqlite_roundtrip = withTests 1 $ property $ do
-  logObjects <- evalIO $ readLogObjectStream fixtureFile False Nothing
+  logObjects <- evalIO readFixture
   let persistable = filter (isJust . logObjectToSql) logObjects
 
   readBack <- evalIO $ withDb ":memory:" $ do
@@ -94,7 +104,7 @@ prop_LogObject_sqlite_roundtrip = withTests 1 $ property $ do
 -- timestamp, not by insertion order. Earlier LedgerMetrics with other UTxO sizes,
 -- written first and last, must not be picked.
 prop_last_utxo_size_from_db = withTests 1 $ property $ do
-  logObjects <- evalIO $ readLogObjectStream fixtureFile False Nothing
+  logObjects <- evalIO readFixture
   let metrics = [ (loAt, lo, slot, utxo, density)
                 | lo@LogObject{loAt, loBody = LOLedgerMetrics slot utxo density} <- logObjects ]
   (latestAt, latest, slot, latestUtxo, density) <-
@@ -114,7 +124,7 @@ prop_last_utxo_size_from_db = withTests 1 $ property $ do
 -- Loading a host's DB (as `unlog-db` does) provides what the summary would otherwise
 -- take from a pass over all of the host's log objects: their count, and the last UTxO size.
 prop_loadHostLogsDB_counts_and_last_utxo = withTests 1 $ property $ do
-  logObjects <- evalIO $ readLogObjectStream fixtureFile False Nothing
+  logObjects <- evalIO readFixture
   let persistable = filter (isJust . logObjectToSql) logObjects
       lastUtxo    = lastMay [ u | LogObject{loBody = LOLedgerMetrics{loUtxoSize = u}} <- logObjects ]
 
@@ -178,7 +188,7 @@ prop_resources_optional_fields = withTests 1 $ property $ do
 -- The fixture holds both edges of one ChainSync server update (rising edge with
 -- "risingEdge": true, falling edge without the field): only one is an announcement.
 prop_chainSync_update_announced_once = withTests 1 $ property $ do
-  logObjects <- evalIO $ readLogObjectStream fixtureFile False Nothing
+  logObjects <- evalIO readFixture
   length [ () | LogObject{loBody = LOChainSyncServerSendHeader{}} <- logObjects ] === 1
 
 prop_interpreters_covered_by_fixture = withTests 1 $ property $ do

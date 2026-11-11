@@ -113,7 +113,9 @@ The `Resources` sample follows the performance observability specification: only
 
 Databases written by older versions must stay readable. Rows are read through per-constructor converters (`toLOBodyConverters`); an unknown row shape is an error, while missing optional content stays lenient.
 
-The file backend (`unlog`, `Cardano.Unlog.BackendFile`) parses the JSON logs on every analysis; it's kept, but deprecated.
+It is the only backend: the file backend, which parsed the JSON logs on every analysis, was removed in 3.0.
+
+Incremental analysis (consuming the logs of running nodes) isn't built, and would need a redesign of the analysis passes, which recompute from complete log object lists. Its ingestion side would build on this backend: `prepareFile` already decodes and stores one line at a time; the databases would be opened in append mode and fed in chunks, each chunk committed on its own; and a reader can fetch only new rows by each table's implicit `rowid`, which grows with log order, without an index (indexes are avoided on purpose, as every run's databases are archived).
 
 == Values taken at load time
 
@@ -127,7 +129,7 @@ On a 52-node cluster run, the analysis holds about 94 million log objects, more 
   [`hlLoadedCount`], [the number of rows loaded, counted (and forced) right after the query],
 )
 
-`computeSummary` falls back to a pass over the log objects only when a field is `Nothing`, i.e. with the file backend. Values computed at load time must be forced there: an unevaluated `length rows` would keep the node's entire row list alive until the summary is computed.
+`computeSummary` falls back to a pass over the log objects only when a field is `Nothing`, defensively. Values computed at load time must be forced there: an unevaluated `length rows` would keep the node's entire row list alive until the summary is computed.
 
 = The machine timeline <sec-machperf>
 
@@ -276,7 +278,7 @@ Plain-text outputs stay ASCII, since they're read over SSH on the benchmarking m
 #table(
   columns: (auto, 1fr),
   table.header[Workbench op][locli command(s)],
-  [`logs`], [`unlog-db` (`unlog` with the file backend)],
+  [`logs`], [`unlog-db`],
   [`read-context`], [`read-meta-genesis`],
   [`build-mach-views`], [`build-mach-views`],
   [`rebuild-chain`, `dump-chain`, `chain-timeline`], [`rebuild-chain` (with the chain filters), `dump-chain`, `timeline-chain`],

@@ -164,8 +164,6 @@ case "$op" in
         scenario_cleanup_exit_trap
 
         backend stop-all          "$dir"
-
-        analysis_trace_frequencies 'current'
         ;;
 
     * ) usage_scenario;; esac

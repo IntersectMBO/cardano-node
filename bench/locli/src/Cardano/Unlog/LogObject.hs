@@ -428,7 +428,7 @@ data LOAnyType
   | LANonBlocking
   | LARollback
   | LANoInterpreter
-  deriving (Eq, Generic, NFData, Read, Show, ToJSON, Data)
+  deriving (Eq, Generic, NFData, Show, ToJSON, Data)
 
 deriving instance Eq       ResourceStats
 deriving instance Data     ResourceStats
