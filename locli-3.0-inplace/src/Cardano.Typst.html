@@ -1,0 +1,388 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE MultiWayIf #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE StrictData #-}</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="hs-comment">-- | Typst rendering helpers shared by all Typst outputs: number formatting and</span><span>
+</span><span id="line-5"></span><span class="hs-comment">--   escaping. Document structure comes from the templates in report-templates/typst.</span><span>
+</span><span id="line-6"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Cardano.Typst.html"><span class="hs-identifier">Cardano.Typst</span></a></span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Typst.html#Coloring"><span class="hs-identifier">Coloring</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Typst.html#colorCode"><span class="hs-identifier">colorCode</span></a></span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Typst.html#NumField"><span class="hs-identifier">NumField</span></a></span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Typst.html#numFieldValue"><span class="hs-identifier">numFieldValue</span></a></span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Typst.html#renderNumField"><span class="hs-identifier">renderNumField</span></a></span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Typst.html#nan"><span class="hs-identifier">nan</span></a></span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Typst.html#threshold"><span class="hs-identifier">threshold</span></a></span><span>
+</span><span id="line-14"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Typst.html#typstEscape"><span class="hs-identifier">typstEscape</span></a></span><span>
+</span><span id="line-15"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Cardano.Prelude</span></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/base-4.21.2.0-inplace/src/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span>                          </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Float.html#isNegativeZero"><span class="hs-identifier">isNegativeZero</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/text-2.1.4-inplace/src/Data.Text.html"><span class="hs-identifier">Data.Text</span></a></span><span>                        </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">T</span></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/text-2.1.4-inplace/src/Data.Text.Lazy.html"><span class="hs-identifier">Data.Text.Lazy</span></a></span><span>                   </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">LT</span></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/text-2.1.4-inplace/src/Data.Text.Lazy.Builder.html"><span class="hs-identifier">Data.Text.Lazy.Builder</span></a></span><span>           </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">LT</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/text-2.1.4-inplace/src/Data.Text.Internal.Builder.html#toLazyText"><span class="hs-identifier">toLazyText</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/text-2.1.4-inplace/src/Data.Text.Lazy.Builder.RealFloat.html"><span class="hs-identifier">Data.Text.Lazy.Builder.RealFloat</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">LT</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/text-2.1.4-inplace/src/Data.Text.Lazy.Builder.RealFloat.html#FPFormat"><span class="hs-identifier">FPFormat</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/text-2.1.4-inplace/src/Data.Text.Lazy.Builder.RealFloat.html#formatRealFloat"><span class="hs-identifier">formatRealFloat</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span class="hs-comment">--</span><span>
+</span><span id="line-28"></span><span class="hs-comment">-- Number formatting</span><span>
+</span><span id="line-29"></span><span class="hs-comment">--</span><span>
+</span><span id="line-30"></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">data</span><span> </span><span id="Coloring"><span class="annot"><a href="Cardano.Typst.html#Coloring"><span class="hs-identifier hs-var">Coloring</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="NoCol"><span class="annot"><a href="Cardano.Typst.html#NoCol"><span class="hs-identifier hs-var">NoCol</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="Green"><span class="annot"><a href="Cardano.Typst.html#Green"><span class="hs-identifier hs-var">Green</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="Red"><span class="annot"><a href="Cardano.Typst.html#Red"><span class="hs-identifier hs-var">Red</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="Yellow"><span class="annot"><a href="Cardano.Typst.html#Yellow"><span class="hs-identifier hs-var">Yellow</span></a></span></span><span> </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679501209"><span id="local-6989586621679501214"><span class="annot"><span class="annottext">Coloring -&gt; Coloring -&gt; Bool
+(Coloring -&gt; Coloring -&gt; Bool)
+-&gt; (Coloring -&gt; Coloring -&gt; Bool) -&gt; Eq Coloring
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: Coloring -&gt; Coloring -&gt; Bool
+== :: Coloring -&gt; Coloring -&gt; Bool
+$c/= :: Coloring -&gt; Coloring -&gt; Bool
+/= :: Coloring -&gt; Coloring -&gt; Bool
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-prim-0.13.0-inplace/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679501219"><span id="local-6989586621679501221"><span id="local-6989586621679501225"><span class="annot"><span class="annottext">Int -&gt; Coloring -&gt; ShowS
+[Coloring] -&gt; ShowS
+Coloring -&gt; String
+(Int -&gt; Coloring -&gt; ShowS)
+-&gt; (Coloring -&gt; String) -&gt; ([Coloring] -&gt; ShowS) -&gt; Show Coloring
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; Coloring -&gt; ShowS
+showsPrec :: Int -&gt; Coloring -&gt; ShowS
+$cshow :: Coloring -&gt; String
+show :: Coloring -&gt; String
+$cshowList :: [Coloring] -&gt; ShowS
+showList :: [Coloring] -&gt; ShowS
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span class="annot"><span class="hs-comment">-- | The function names have to be in sync with report-templates/typst/preamble.ede.</span></span><span>
+</span><span id="line-34"></span><span class="annot"><a href="Cardano.Typst.html#colorCode"><span class="hs-identifier hs-type">colorCode</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Typst.html#Coloring"><span class="hs-identifier hs-type">Coloring</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/text-2.1.4-inplace/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-35"></span><span id="colorCode"><span class="annot"><span class="annottext">colorCode :: Coloring -&gt; Text
+</span><a href="Cardano.Typst.html#colorCode"><span class="hs-identifier hs-var hs-var">colorCode</span></a></span></span><span> </span><span class="annot"><span class="annottext">Coloring
+</span><a href="Cardano.Typst.html#NoCol"><span class="hs-identifier hs-var">NoCol</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/text-2.1.4-inplace/src/Data.Text.Internal.html#empty"><span class="hs-identifier hs-var">T.empty</span></a></span><span>
+</span><span id="line-36"></span><span class="annot"><a href="Cardano.Typst.html#colorCode"><span class="hs-identifier hs-var">colorCode</span></a></span><span> </span><span class="annot"><span class="annottext">Coloring
+</span><a href="Cardano.Typst.html#Green"><span class="hs-identifier hs-var">Green</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;gr&quot;</span></span><span>
+</span><span id="line-37"></span><span class="annot"><a href="Cardano.Typst.html#colorCode"><span class="hs-identifier hs-var">colorCode</span></a></span><span> </span><span class="annot"><span class="annottext">Coloring
+</span><a href="Cardano.Typst.html#Red"><span class="hs-identifier hs-var">Red</span></a></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;rd&quot;</span></span><span>
+</span><span id="line-38"></span><span class="annot"><a href="Cardano.Typst.html#colorCode"><span class="hs-identifier hs-var">colorCode</span></a></span><span> </span><span class="annot"><span class="annottext">Coloring
+</span><a href="Cardano.Typst.html#Yellow"><span class="hs-identifier hs-var">Yellow</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;yw&quot;</span></span><span>
+</span><span id="line-39"></span><span>
+</span><span id="line-40"></span><span class="hs-comment">-- | A value with its rendering precision (derived from the 'Field' definition),</span><span>
+</span><span id="line-41"></span><span class="hs-comment">--   tagged for custom coloring to be used in the future. 'renderNumField' reproduces</span><span>
+</span><span id="line-42"></span><span class="hs-comment">--   the number formatting the reports have always used.</span><span>
+</span><span id="line-43"></span><span class="hs-keyword">type</span><span> </span><span id="NumField"><span class="annot"><a href="Cardano.Typst.html#NumField"><span class="hs-identifier hs-var">NumField</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-prim-0.13.0-inplace/src/GHC.Types.html#Double"><span class="hs-identifier hs-type">Double</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-prim-0.13.0-inplace/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Typst.html#Coloring"><span class="hs-identifier hs-type">Coloring</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-44"></span><span>
+</span><span id="line-45"></span><span class="annot"><a href="Cardano.Typst.html#numFieldValue"><span class="hs-identifier hs-type">numFieldValue</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Typst.html#NumField"><span class="hs-identifier hs-type">NumField</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-prim-0.13.0-inplace/src/GHC.Types.html#Double"><span class="hs-identifier hs-type">Double</span></a></span><span>
+</span><span id="line-46"></span><span id="numFieldValue"><span class="annot"><span class="annottext">numFieldValue :: NumField -&gt; Double
+</span><a href="Cardano.Typst.html#numFieldValue"><span class="hs-identifier hs-var hs-var">numFieldValue</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Double, Maybe Int) -&gt; Double
+forall a b. (a, b) -&gt; a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Tuple.html#fst"><span class="hs-identifier hs-var">fst</span></a></span><span> </span><span class="annot"><span class="annottext">((Double, Maybe Int) -&gt; Double)
+-&gt; (NumField -&gt; (Double, Maybe Int)) -&gt; NumField -&gt; Double
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Control.Category.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">NumField -&gt; (Double, Maybe Int)
+forall a b. (a, b) -&gt; a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Tuple.html#fst"><span class="hs-identifier hs-var">fst</span></a></span><span>
+</span><span id="line-47"></span><span>
+</span><span id="line-48"></span><span class="annot"><a href="Cardano.Typst.html#nan"><span class="hs-identifier hs-type">nan</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Typst.html#threshold"><span class="hs-identifier hs-type">threshold</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-prim-0.13.0-inplace/src/GHC.Types.html#Double"><span class="hs-identifier hs-type">Double</span></a></span><span>
+</span><span id="line-49"></span><span id="nan"><span class="annot"><span class="annottext">nan :: Double
+</span><a href="Cardano.Typst.html#nan"><span class="hs-identifier hs-var hs-var">nan</span></a></span></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Double
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
+forall a. Fractional a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Real.html#%2F"><span class="hs-operator hs-var">/</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-50"></span><span id="threshold"><span class="annot"><span class="annottext">threshold :: Double
+</span><a href="Cardano.Typst.html#threshold"><span class="hs-identifier hs-var hs-var">threshold</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Double
+</span><span class="hs-number">0.0001</span></span><span>
+</span><span id="line-51"></span><span>
+</span><span id="line-52"></span><span class="annot"><a href="Cardano.Typst.html#renderNumField"><span class="hs-identifier hs-type">renderNumField</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Typst.html#NumField"><span class="hs-identifier hs-type">NumField</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/text-2.1.4-inplace/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-53"></span><span id="renderNumField"><span class="annot"><span class="annottext">renderNumField :: NumField -&gt; Text
+</span><a href="Cardano.Typst.html#renderNumField"><span class="hs-identifier hs-var hs-var">renderNumField</span></a></span></span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span id="local-6989586621679501233"><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679501233"><span class="hs-identifier hs-var">val</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679501234"><span class="annot"><span class="annottext">Maybe Int
+</span><a href="#local-6989586621679501234"><span class="hs-identifier hs-var">prec</span></a></span></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Coloring
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span>
+</span><span id="line-54"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Double -&gt; Bool
+forall a. RealFloat a =&gt; a -&gt; Bool
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Float.html#isNaN"><span class="hs-identifier hs-var">isNaN</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679501233"><span class="hs-identifier hs-var">val</span></a></span><span>               </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;&#8212;&quot;</span></span><span> </span><span class="hs-comment">-- not available, or not defined</span><span>
+</span><span id="line-55"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679501236"><span class="hs-identifier hs-var">absval</span></a></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-prim-0.13.0-inplace/src/GHC.Classes.html#%3C"><span class="hs-operator hs-var">&lt;</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="Cardano.Typst.html#threshold"><span class="hs-identifier hs-var">threshold</span></a></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
+forall a. Fractional a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Real.html#%2F"><span class="hs-operator hs-var">/</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><span class="hs-number">10</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679501238"><span class="hs-identifier hs-var">zeroPaddedText</span></a></span><span>
+</span><span id="line-56"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-57"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679501239"><span class="annot"><span class="annottext">res :: Text
+</span><a href="#local-6989586621679501239"><span class="hs-identifier hs-var hs-var">res</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">LazyText -&gt; Text
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/text-2.1.4-inplace/src/Data.Text.Lazy.html#toStrict"><span class="hs-identifier hs-var">LT.toStrict</span></a></span><span> </span><span class="annot"><span class="annottext">(LazyText -&gt; Text) -&gt; LazyText -&gt; Text
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Builder -&gt; LazyText
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/text-2.1.4-inplace/src/Data.Text.Internal.Builder.html#toLazyText"><span class="hs-identifier hs-var">LT.toLazyText</span></a></span><span> </span><span class="annot"><span class="annottext">(Builder -&gt; LazyText) -&gt; Builder -&gt; LazyText
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">FPFormat -&gt; Maybe Int -&gt; Double -&gt; Builder
+forall a. RealFloat a =&gt; FPFormat -&gt; Maybe Int -&gt; a -&gt; Builder
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/text-2.1.4-inplace/src/Data.Text.Lazy.Builder.RealFloat.html#formatRealFloat"><span class="hs-identifier hs-var">LT.formatRealFloat</span></a></span><span> </span><span class="annot"><span class="annottext">FPFormat
+</span><a href="#local-6989586621679501241"><span class="hs-identifier hs-var">format</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Int
+</span><a href="#local-6989586621679501242"><span class="hs-identifier hs-var">prec'</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679501233"><span class="hs-identifier hs-var">val</span></a></span><span>
+</span><span id="line-58"></span><span>    </span><span class="hs-keyword">in</span><span> </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679501243"><span class="hs-identifier hs-var">decimals</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-prim-0.13.0-inplace/src/GHC.Classes.html#%3E"><span class="hs-operator hs-var">&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">3</span></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-prim-0.13.0-inplace/src/GHC.Classes.html#%26%26"><span class="hs-operator hs-var">&amp;&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'.'</span></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Text -&gt; Bool
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/text-2.1.4-inplace/src/Data.Text.html#elem"><span class="hs-operator hs-var">`T.elem`</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679501239"><span class="hs-identifier hs-var">res</span></a></span><span>
+</span><span id="line-59"></span><span>      </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text
+</span><a href="#local-6989586621679501247"><span class="hs-identifier hs-var">keepDecimal</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Text) -&gt; Text -&gt; Text
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(Char -&gt; Bool) -&gt; Text -&gt; Text
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/text-2.1.4-inplace/src/Data.Text.html#dropWhileEnd"><span class="hs-identifier hs-var">T.dropWhileEnd</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Char -&gt; Char -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-prim-0.13.0-inplace/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'0'</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679501239"><span class="hs-identifier hs-var">res</span></a></span><span>
+</span><span id="line-60"></span><span>      </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679501239"><span class="hs-identifier hs-var">res</span></a></span><span>
+</span><span id="line-61"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-62"></span><span>    </span><span id="local-6989586621679501236"><span class="annot"><span class="annottext">absval :: Double
+</span><a href="#local-6989586621679501236"><span class="hs-identifier hs-var hs-var">absval</span></a></span></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double
+forall a. Num a =&gt; a -&gt; a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Num.html#abs"><span class="hs-identifier hs-var">abs</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679501233"><span class="hs-identifier hs-var">val</span></a></span><span>
+</span><span id="line-63"></span><span>    </span><span id="local-6989586621679501243"><span class="annot"><span class="annottext">decimals :: Int
+</span><a href="#local-6989586621679501243"><span class="hs-identifier hs-var hs-var">decimals</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Maybe Int -&gt; Int
+forall a. a -&gt; Maybe a -&gt; a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Maybe.html#fromMaybe"><span class="hs-identifier hs-var">fromMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">Maybe Int
+</span><a href="#local-6989586621679501234"><span class="hs-identifier hs-var">prec</span></a></span><span>
+</span><span id="line-64"></span><span>    </span><span class="hs-comment">-- &quot;34.&quot; -&gt; &quot;34.0&quot;</span><span>
+</span><span id="line-65"></span><span>    </span><span id="local-6989586621679501247"><span class="annot"><span class="annottext">keepDecimal :: Text -&gt; Text
+</span><a href="#local-6989586621679501247"><span class="hs-identifier hs-var hs-var">keepDecimal</span></a></span></span><span> </span><span id="local-6989586621679501254"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679501254"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;.&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Bool
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/text-2.1.4-inplace/src/Data.Text.html#isSuffixOf"><span class="hs-operator hs-var">`T.isSuffixOf`</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679501254"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679501254"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;0&quot;</span></span><span> </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679501254"><span class="hs-identifier hs-var">t</span></a></span><span>
+</span><span id="line-66"></span><span>    </span><span id="local-6989586621679501238"><span class="annot"><span class="annottext">zeroPaddedText :: Text
+</span><a href="#local-6989586621679501238"><span class="hs-identifier hs-var hs-var">zeroPaddedText</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-67"></span><span>      </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679501256"><span class="annot"><span class="annottext">start :: Text
+</span><a href="#local-6989586621679501256"><span class="hs-identifier hs-var hs-var">start</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679501233"><span class="hs-identifier hs-var">val</span></a></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-prim-0.13.0-inplace/src/GHC.Classes.html#%3C"><span class="hs-operator hs-var">&lt;</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><span class="hs-number">0.0</span></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-prim-0.13.0-inplace/src/GHC.Classes.html#%7C%7C"><span class="hs-operator hs-var">||</span></a></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Bool
+forall a. RealFloat a =&gt; a -&gt; Bool
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Float.html#isNegativeZero"><span class="hs-identifier hs-var">isNegativeZero</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679501233"><span class="hs-identifier hs-var">val</span></a></span><span> </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;-0&quot;</span></span><span> </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;0&quot;</span></span><span>
+</span><span id="line-68"></span><span>      </span><span class="hs-keyword">in</span><span> </span><span class="hs-keyword">if</span><span>
+</span><span id="line-69"></span><span>        </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679501243"><span class="hs-identifier hs-var">decimals</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-prim-0.13.0-inplace/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679501256"><span class="hs-identifier hs-var">start</span></a></span><span>
+</span><span id="line-70"></span><span>        </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679501243"><span class="hs-identifier hs-var">decimals</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-prim-0.13.0-inplace/src/GHC.Classes.html#%3E"><span class="hs-operator hs-var">&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">3</span></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679501256"><span class="hs-identifier hs-var">start</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;.0&quot;</span></span><span>
+</span><span id="line-71"></span><span>        </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span>     </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679501256"><span class="hs-identifier hs-var">start</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;.&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Text -&gt; Text
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/text-2.1.4-inplace/src/Data.Text.html#replicate"><span class="hs-identifier hs-var">T.replicate</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679501243"><span class="hs-identifier hs-var">decimals</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;0&quot;</span></span><span>
+</span><span id="line-72"></span><span>    </span><span class="hs-special">(</span><span id="local-6989586621679501241"><span class="annot"><span class="annottext">FPFormat
+</span><a href="#local-6989586621679501241"><span class="hs-identifier hs-var">format</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679501242"><span class="annot"><span class="annottext">Maybe Int
+</span><a href="#local-6989586621679501242"><span class="hs-identifier hs-var">prec'</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-73"></span><span>      </span><span class="hs-keyword">let</span><span>
+</span><span id="line-74"></span><span>        </span><span id="local-6989586621679501259"><span class="annot"><span class="annottext">cutoff :: Maybe Int
+</span><a href="#local-6989586621679501259"><span class="hs-identifier hs-var hs-var">cutoff</span></a></span></span><span>
+</span><span id="line-75"></span><span>          </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679501243"><span class="hs-identifier hs-var">decimals</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-prim-0.13.0-inplace/src/GHC.Classes.html#%3C%3D"><span class="hs-operator hs-var">&lt;=</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">5</span></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe Int
+</span><a href="#local-6989586621679501234"><span class="hs-identifier hs-var">prec</span></a></span><span>
+</span><span id="line-76"></span><span>          </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679501236"><span class="hs-identifier hs-var">absval</span></a></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-prim-0.13.0-inplace/src/GHC.Classes.html#%3E%3D"><span class="hs-operator hs-var">&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><span class="hs-number">10000</span></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Maybe Int
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-77"></span><span>          </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679501236"><span class="hs-identifier hs-var">absval</span></a></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-prim-0.13.0-inplace/src/GHC.Classes.html#%3E%3D"><span class="hs-operator hs-var">&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><span class="hs-number">1000</span></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Maybe Int
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-78"></span><span>          </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679501236"><span class="hs-identifier hs-var">absval</span></a></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-prim-0.13.0-inplace/src/GHC.Classes.html#%3E%3D"><span class="hs-operator hs-var">&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><span class="hs-number">100</span></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Maybe Int
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">2</span></span><span>
+</span><span id="line-79"></span><span>          </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679501236"><span class="hs-identifier hs-var">absval</span></a></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-prim-0.13.0-inplace/src/GHC.Classes.html#%3E%3D"><span class="hs-operator hs-var">&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><span class="hs-number">10</span></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Maybe Int
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">3</span></span><span>
+</span><span id="line-80"></span><span>          </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span>        </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Maybe Int
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">4</span></span><span>
+</span><span id="line-81"></span><span>      </span><span class="hs-keyword">in</span><span> </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679501236"><span class="hs-identifier hs-var">absval</span></a></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-prim-0.13.0-inplace/src/GHC.Classes.html#%3C"><span class="hs-operator hs-var">&lt;</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="Cardano.Typst.html#threshold"><span class="hs-identifier hs-var">threshold</span></a></span><span> </span><span class="hs-keyword">then</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FPFormat
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/text-2.1.4-inplace/src/Data.Text.Lazy.Builder.RealFloat.html#Exponent"><span class="hs-identifier hs-var">LT.Exponent</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Maybe Int
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">else</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FPFormat
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/text-2.1.4-inplace/src/Data.Text.Lazy.Builder.RealFloat.html#Fixed"><span class="hs-identifier hs-var">LT.Fixed</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Maybe Int
+</span><a href="#local-6989586621679501259"><span class="hs-identifier hs-var">cutoff</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-82"></span><span>
+</span><span id="line-83"></span><span>
+</span><span id="line-84"></span><span class="hs-comment">--</span><span>
+</span><span id="line-85"></span><span class="hs-comment">-- Escaping</span><span>
+</span><span id="line-86"></span><span class="hs-comment">--</span><span>
+</span><span id="line-87"></span><span>
+</span><span id="line-88"></span><span class="hs-comment">-- | Escape text for verbatim display inside a Typst content block @[...]@:</span><span>
+</span><span id="line-89"></span><span class="hs-comment">--   every character Typst markup could interpret is backslash-escaped, so data</span><span>
+</span><span id="line-90"></span><span class="hs-comment">--   values (run names, filter descriptions, \&quot;---\&quot;, ...) display exactly as given.</span><span>
+</span><span id="line-91"></span><span class="hs-comment">--   Apply to data only, before adding any intended markup.</span><span>
+</span><span id="line-92"></span><span class="annot"><a href="Cardano.Typst.html#typstEscape"><span class="hs-identifier hs-type">typstEscape</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/text-2.1.4-inplace/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/text-2.1.4-inplace/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-93"></span><span id="typstEscape"><span class="annot"><span class="annottext">typstEscape :: Text -&gt; Text
+</span><a href="Cardano.Typst.html#typstEscape"><span class="hs-identifier hs-var hs-var">typstEscape</span></a></span></span><span> </span><span id="local-6989586621679501263"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679501263"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Text
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/text-2.1.4-inplace/src/Data.Text.Internal.html#pack"><span class="hs-identifier hs-var">T.pack</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool -&gt; ShowS
+</span><a href="#local-6989586621679501265"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-prim-0.13.0-inplace/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; String
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/text-2.1.4-inplace/src/Data.Text.Show.html#unpack"><span class="hs-identifier hs-var">T.unpack</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679501263"><span class="hs-identifier hs-var">t</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-94"></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-95"></span><span>   </span><span class="hs-comment">-- '-' and '/' are only markup in combination (dashes &quot;--&quot;, soft hyphen &quot;-?&quot;,</span><span>
+</span><span id="line-96"></span><span>   </span><span class="hs-comment">-- a list item &quot;- &quot; at the start; comments &quot;//&quot;, &quot;/*&quot;), so leave them bare</span><span>
+</span><span id="line-97"></span><span>   </span><span class="hs-comment">-- otherwise: negative numbers, exponents and dates stay readable.</span><span>
+</span><span id="line-98"></span><span>   </span><span class="annot"><a href="#local-6989586621679501265"><span class="hs-identifier hs-type">go</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-prim-0.13.0-inplace/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-prim-0.13.0-inplace/src/GHC.Types.html#Char"><span class="hs-identifier hs-type">Char</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-prim-0.13.0-inplace/src/GHC.Types.html#Char"><span class="hs-identifier hs-type">Char</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-99"></span><span>   </span><span id="local-6989586621679501265"><span class="annot"><span class="annottext">go :: Bool -&gt; ShowS
+</span><a href="#local-6989586621679501265"><span class="hs-identifier hs-var hs-var">go</span></a></span></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-100"></span><span>   </span><span class="annot"><a href="#local-6989586621679501265"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span id="local-6989586621679501267"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679501267"><span class="hs-identifier hs-var">start</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679501268"><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679501268"><span class="hs-identifier hs-var">c</span></a></span></span><span class="annot"><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-prim-0.13.0-inplace/src/GHC.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span id="local-6989586621679501269"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679501269"><span class="hs-identifier hs-var">cs</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-101"></span><span>     </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679501268"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; String -&gt; Bool
+forall a. Eq a =&gt; a -&gt; [a] -&gt; Bool
+forall (t :: * -&gt; *) a. (Foldable t, Eq a) =&gt; a -&gt; t a -&gt; Bool
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Foldable.html#elem"><span class="hs-operator hs-var">`elem`</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;\\#[]*_`$&lt;&gt;@=+~'\&quot;&quot;</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-prim-0.13.0-inplace/src/GHC.Types.html#Char"><span class="hs-identifier hs-type">Char</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'\\'</span></span><span> </span><span class="annot"><span class="annottext">Char -&gt; ShowS
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-prim-0.13.0-inplace/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679501268"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; ShowS
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-prim-0.13.0-inplace/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; ShowS
+</span><a href="#local-6989586621679501265"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-prim-0.13.0-inplace/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679501269"><span class="hs-identifier hs-var">cs</span></a></span><span>
+</span><span id="line-102"></span><span>     </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679501268"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Char -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-prim-0.13.0-inplace/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'-'</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679501271"><span class="hs-identifier hs-var">next</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; String -&gt; Bool
+forall a. Eq a =&gt; a -&gt; [a] -&gt; Bool
+forall (t :: * -&gt; *) a. (Foldable t, Eq a) =&gt; a -&gt; t a -&gt; Bool
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Foldable.html#elem"><span class="hs-operator hs-var">`elem`</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;-?&quot;</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-prim-0.13.0-inplace/src/GHC.Types.html#Char"><span class="hs-identifier hs-type">Char</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-prim-0.13.0-inplace/src/GHC.Classes.html#%7C%7C"><span class="hs-operator hs-var">||</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679501267"><span class="hs-identifier hs-var">start</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-prim-0.13.0-inplace/src/GHC.Classes.html#%26%26"><span class="hs-operator hs-var">&amp;&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679501271"><span class="hs-identifier hs-var">next</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Char -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-prim-0.13.0-inplace/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">' '</span></span><span class="hs-special">)</span><span>
+</span><span id="line-103"></span><span>                                               </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'\\'</span></span><span> </span><span class="annot"><span class="annottext">Char -&gt; ShowS
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-prim-0.13.0-inplace/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679501268"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; ShowS
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-prim-0.13.0-inplace/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; ShowS
+</span><a href="#local-6989586621679501265"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-prim-0.13.0-inplace/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679501269"><span class="hs-identifier hs-var">cs</span></a></span><span>
+</span><span id="line-104"></span><span>     </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679501268"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Char -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-prim-0.13.0-inplace/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'/'</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679501271"><span class="hs-identifier hs-var">next</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; String -&gt; Bool
+forall a. Eq a =&gt; a -&gt; [a] -&gt; Bool
+forall (t :: * -&gt; *) a. (Foldable t, Eq a) =&gt; a -&gt; t a -&gt; Bool
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Foldable.html#elem"><span class="hs-operator hs-var">`elem`</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;/*&quot;</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-prim-0.13.0-inplace/src/GHC.Types.html#Char"><span class="hs-identifier hs-type">Char</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'\\'</span></span><span> </span><span class="annot"><span class="annottext">Char -&gt; ShowS
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-prim-0.13.0-inplace/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679501268"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; ShowS
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-prim-0.13.0-inplace/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; ShowS
+</span><a href="#local-6989586621679501265"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-prim-0.13.0-inplace/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679501269"><span class="hs-identifier hs-var">cs</span></a></span><span>
+</span><span id="line-105"></span><span>     </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span>                               </span><span class="hs-glyph">=</span><span>        </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679501268"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; ShowS
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-prim-0.13.0-inplace/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; ShowS
+</span><a href="#local-6989586621679501265"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-prim-0.13.0-inplace/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679501269"><span class="hs-identifier hs-var">cs</span></a></span><span>
+</span><span id="line-106"></span><span>    </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621679501271"><span class="annot"><span class="annottext">next :: Char
+</span><a href="#local-6989586621679501271"><span class="hs-identifier hs-var hs-var">next</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Char -&gt; Maybe Char -&gt; Char
+forall a. a -&gt; Maybe a -&gt; a
+</span><a href="file:///nix/store/g9ah26ic3aa0diw24pz8b1scmpzhqnmy-ghc-9.12.4-doc/share/doc/ghc-9.12.4/html/libraries/ghc-internal-9.1204.0-inplace/src/GHC.Internal.Data.Maybe.html#fromMaybe"><span class="hs-identifier hs-var">fromMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">' '</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; Maybe Char
+forall (f :: * -&gt; *) a. Foldable f =&gt; f a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">head</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679501269"><span class="hs-identifier hs-var">cs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-107"></span></pre></body></html>

@@ -1,0 +1,135 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# OPTIONS_GHC -Wno-orphans #-}</span><span>
+</span><span id="line-2"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="GHC.Hs.Specificity.html"><span class="hs-identifier">GHC.Hs.Specificity</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.21.2.0-inplace/src/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../deepseq-1.5.1.0-inplace/src/Control.DeepSeq.html"><span class="hs-identifier">Control.DeepSeq</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../deepseq-1.5.1.0-inplace/src/Control.DeepSeq.html#NFData"><span class="hs-identifier">NFData</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Utils.Outputable.html"><span class="hs-identifier">GHC.Utils.Outputable</span></a></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Utils.Binary.html"><span class="hs-identifier">GHC.Utils.Binary</span></a></span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Language.Haskell.Syntax.Specificity.html"><span class="hs-identifier">Language.Haskell.Syntax.Specificity</span></a></span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="annot"><span class="hs-comment">{- *********************************************************************
+*                                                                      *
+*                   ForAllTyFlag
+*                                                                      *
+********************************************************************* -}</span></span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="GHC.Utils.Outputable.html#Outputable"><span class="hs-identifier hs-type">Outputable</span></a></span><span> </span><span class="annot"><a href="Language.Haskell.Syntax.Specificity.html#ForAllTyFlag"><span class="hs-identifier hs-type">ForAllTyFlag</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-19"></span><span>  </span><span id="local-6989586621682522644"><span class="annot"><span class="annottext">ppr :: ForAllTyFlag -&gt; SDoc
+</span><a href="#local-6989586621682522644"><span class="hs-identifier hs-var hs-var hs-var">ppr</span></a></span></span><span> </span><span class="annot"><span class="annottext">ForAllTyFlag
+</span><a href="Language.Haskell.Syntax.Specificity.html#Required"><span class="hs-identifier hs-var">Required</span></a></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; SDoc
+forall doc. IsLine doc =&gt; String -&gt; doc
+</span><a href="GHC.Utils.Outputable.html#text"><span class="hs-identifier hs-var">text</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;[req]&quot;</span></span><span>
+</span><span id="line-20"></span><span>  </span><span class="annot"><a href="GHC.Utils.Outputable.html#ppr"><span class="hs-identifier hs-var">ppr</span></a></span><span> </span><span class="annot"><span class="annottext">ForAllTyFlag
+</span><a href="Language.Haskell.Syntax.Specificity.html#Specified"><span class="hs-identifier hs-var">Specified</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; SDoc
+forall doc. IsLine doc =&gt; String -&gt; doc
+</span><a href="GHC.Utils.Outputable.html#text"><span class="hs-identifier hs-var">text</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;[spec]&quot;</span></span><span>
+</span><span id="line-21"></span><span>  </span><span class="annot"><a href="GHC.Utils.Outputable.html#ppr"><span class="hs-identifier hs-var">ppr</span></a></span><span> </span><span class="annot"><span class="annottext">ForAllTyFlag
+</span><a href="Language.Haskell.Syntax.Specificity.html#Inferred"><span class="hs-identifier hs-var">Inferred</span></a></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; SDoc
+forall doc. IsLine doc =&gt; String -&gt; doc
+</span><a href="GHC.Utils.Outputable.html#text"><span class="hs-identifier hs-var">text</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;[infrd]&quot;</span></span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621682522652"><span class="annot"><a href="GHC.Utils.Binary.html#Binary"><span class="hs-identifier hs-type">Binary</span></a></span><span> </span><span class="annot"><a href="Language.Haskell.Syntax.Specificity.html#Specificity"><span class="hs-identifier hs-type">Specificity</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-24"></span><span>  </span><span id="local-6989586621682522660"><span class="annot"><span class="annottext">put_ :: WriteBinHandle -&gt; Specificity -&gt; IO ()
+</span><a href="#local-6989586621682522660"><span class="hs-identifier hs-var hs-var hs-var">put_</span></a></span></span><span> </span><span id="local-6989586621682522662"><span class="annot"><span class="annottext">WriteBinHandle
+</span><a href="#local-6989586621682522662"><span class="hs-identifier hs-var">bh</span></a></span></span><span> </span><span class="annot"><span class="annottext">Specificity
+</span><a href="Language.Haskell.Syntax.Specificity.html#SpecifiedSpec"><span class="hs-identifier hs-var">SpecifiedSpec</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">WriteBinHandle -&gt; Word8 -&gt; IO ()
+</span><a href="GHC.Utils.Binary.html#putByte"><span class="hs-identifier hs-var">putByte</span></a></span><span> </span><span class="annot"><span class="annottext">WriteBinHandle
+</span><a href="#local-6989586621682522662"><span class="hs-identifier hs-var">bh</span></a></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-25"></span><span>  </span><span class="annot"><a href="GHC.Utils.Binary.html#put_"><span class="hs-identifier hs-var">put_</span></a></span><span> </span><span id="local-6989586621682522665"><span class="annot"><span class="annottext">WriteBinHandle
+</span><a href="#local-6989586621682522665"><span class="hs-identifier hs-var">bh</span></a></span></span><span> </span><span class="annot"><span class="annottext">Specificity
+</span><a href="Language.Haskell.Syntax.Specificity.html#InferredSpec"><span class="hs-identifier hs-var">InferredSpec</span></a></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">WriteBinHandle -&gt; Word8 -&gt; IO ()
+</span><a href="GHC.Utils.Binary.html#putByte"><span class="hs-identifier hs-var">putByte</span></a></span><span> </span><span class="annot"><span class="annottext">WriteBinHandle
+</span><a href="#local-6989586621682522665"><span class="hs-identifier hs-var">bh</span></a></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span>  </span><span id="local-6989586621682522674"><span class="annot"><span class="annottext">get :: ReadBinHandle -&gt; IO Specificity
+</span><a href="#local-6989586621682522674"><span class="hs-identifier hs-var hs-var hs-var">get</span></a></span></span><span> </span><span id="local-6989586621682522676"><span class="annot"><span class="annottext">ReadBinHandle
+</span><a href="#local-6989586621682522676"><span class="hs-identifier hs-var">bh</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-28"></span><span>    </span><span id="local-6989586621682522677"><span class="annot"><a href="#local-6989586621682522677"><span class="hs-identifier hs-var">h</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">ReadBinHandle -&gt; IO Word8
+</span><a href="GHC.Utils.Binary.html#getByte"><span class="hs-identifier hs-var">getByte</span></a></span><span> </span><span class="annot"><span class="annottext">ReadBinHandle
+</span><a href="#local-6989586621682522676"><span class="hs-identifier hs-var">bh</span></a></span><span>
+</span><span id="line-29"></span><span>    </span><span class="hs-keyword">case</span><span> </span><span class="annot"><a href="#local-6989586621682522677"><span class="hs-identifier hs-type">h</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-30"></span><span>      </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Specificity -&gt; IO Specificity
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><span class="hs-identifier hs-var">return</span></span><span> </span><span class="annot"><span class="annottext">Specificity
+</span><a href="Language.Haskell.Syntax.Specificity.html#SpecifiedSpec"><span class="hs-identifier hs-var">SpecifiedSpec</span></a></span><span>
+</span><span id="line-31"></span><span>      </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Specificity -&gt; IO Specificity
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><span class="hs-identifier hs-var">return</span></span><span> </span><span class="annot"><span class="annottext">Specificity
+</span><a href="Language.Haskell.Syntax.Specificity.html#InferredSpec"><span class="hs-identifier hs-var">InferredSpec</span></a></span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621682522681"><span class="annot"><a href="GHC.Utils.Binary.html#Binary"><span class="hs-identifier hs-type">Binary</span></a></span><span> </span><span class="annot"><a href="Language.Haskell.Syntax.Specificity.html#ForAllTyFlag"><span class="hs-identifier hs-type">ForAllTyFlag</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-34"></span><span>  </span><span id="local-6989586621682522688"><span class="annot"><span class="annottext">put_ :: WriteBinHandle -&gt; ForAllTyFlag -&gt; IO ()
+</span><a href="GHC.Utils.Binary.html#put_"><span class="hs-identifier hs-var hs-var hs-var">put_</span></a></span></span><span> </span><span id="local-6989586621682522689"><span class="annot"><span class="annottext">WriteBinHandle
+</span><a href="#local-6989586621682522689"><span class="hs-identifier hs-var">bh</span></a></span></span><span> </span><span class="annot"><span class="annottext">ForAllTyFlag
+</span><a href="Language.Haskell.Syntax.Specificity.html#Required"><span class="hs-identifier hs-var">Required</span></a></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">WriteBinHandle -&gt; Word8 -&gt; IO ()
+</span><a href="GHC.Utils.Binary.html#putByte"><span class="hs-identifier hs-var">putByte</span></a></span><span> </span><span class="annot"><span class="annottext">WriteBinHandle
+</span><a href="#local-6989586621682522689"><span class="hs-identifier hs-var">bh</span></a></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-35"></span><span>  </span><span class="annot"><a href="GHC.Utils.Binary.html#put_"><span class="hs-identifier hs-var">put_</span></a></span><span> </span><span id="local-6989586621682522690"><span class="annot"><span class="annottext">WriteBinHandle
+</span><a href="#local-6989586621682522690"><span class="hs-identifier hs-var">bh</span></a></span></span><span> </span><span class="annot"><span class="annottext">ForAllTyFlag
+</span><a href="Language.Haskell.Syntax.Specificity.html#Specified"><span class="hs-identifier hs-var">Specified</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">WriteBinHandle -&gt; Word8 -&gt; IO ()
+</span><a href="GHC.Utils.Binary.html#putByte"><span class="hs-identifier hs-var">putByte</span></a></span><span> </span><span class="annot"><span class="annottext">WriteBinHandle
+</span><a href="#local-6989586621682522690"><span class="hs-identifier hs-var">bh</span></a></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-36"></span><span>  </span><span class="annot"><a href="GHC.Utils.Binary.html#put_"><span class="hs-identifier hs-var">put_</span></a></span><span> </span><span id="local-6989586621682522691"><span class="annot"><span class="annottext">WriteBinHandle
+</span><a href="#local-6989586621682522691"><span class="hs-identifier hs-var">bh</span></a></span></span><span> </span><span class="annot"><span class="annottext">ForAllTyFlag
+</span><a href="Language.Haskell.Syntax.Specificity.html#Inferred"><span class="hs-identifier hs-var">Inferred</span></a></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">WriteBinHandle -&gt; Word8 -&gt; IO ()
+</span><a href="GHC.Utils.Binary.html#putByte"><span class="hs-identifier hs-var">putByte</span></a></span><span> </span><span class="annot"><span class="annottext">WriteBinHandle
+</span><a href="#local-6989586621682522691"><span class="hs-identifier hs-var">bh</span></a></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">2</span></span><span>
+</span><span id="line-37"></span><span>
+</span><span id="line-38"></span><span>  </span><span id="local-6989586621682522700"><span class="annot"><span class="annottext">get :: ReadBinHandle -&gt; IO ForAllTyFlag
+</span><a href="GHC.Utils.Binary.html#get"><span class="hs-identifier hs-var hs-var hs-var">get</span></a></span></span><span> </span><span id="local-6989586621682522701"><span class="annot"><span class="annottext">ReadBinHandle
+</span><a href="#local-6989586621682522701"><span class="hs-identifier hs-var">bh</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-39"></span><span>    </span><span id="local-6989586621682522702"><span class="annot"><a href="#local-6989586621682522702"><span class="hs-identifier hs-var">h</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">ReadBinHandle -&gt; IO Word8
+</span><a href="GHC.Utils.Binary.html#getByte"><span class="hs-identifier hs-var">getByte</span></a></span><span> </span><span class="annot"><span class="annottext">ReadBinHandle
+</span><a href="#local-6989586621682522701"><span class="hs-identifier hs-var">bh</span></a></span><span>
+</span><span id="line-40"></span><span>    </span><span class="hs-keyword">case</span><span> </span><span class="annot"><a href="#local-6989586621682522702"><span class="hs-identifier hs-type">h</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-41"></span><span>      </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ForAllTyFlag -&gt; IO ForAllTyFlag
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><span class="hs-identifier hs-var">return</span></span><span> </span><span class="annot"><span class="annottext">ForAllTyFlag
+</span><a href="Language.Haskell.Syntax.Specificity.html#Required"><span class="hs-identifier hs-var">Required</span></a></span><span>
+</span><span id="line-42"></span><span>      </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">1</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ForAllTyFlag -&gt; IO ForAllTyFlag
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><span class="hs-identifier hs-var">return</span></span><span> </span><span class="annot"><span class="annottext">ForAllTyFlag
+</span><a href="Language.Haskell.Syntax.Specificity.html#Specified"><span class="hs-identifier hs-var">Specified</span></a></span><span>
+</span><span id="line-43"></span><span>      </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ForAllTyFlag -&gt; IO ForAllTyFlag
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><span class="hs-identifier hs-var">return</span></span><span> </span><span class="annot"><span class="annottext">ForAllTyFlag
+</span><a href="Language.Haskell.Syntax.Specificity.html#Inferred"><span class="hs-identifier hs-var">Inferred</span></a></span><span>
+</span><span id="line-44"></span><span>
+</span><span id="line-45"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="../../deepseq-1.5.1.0-inplace/src/Control.DeepSeq.html#NFData"><span class="hs-identifier hs-type">NFData</span></a></span><span> </span><span class="annot"><a href="Language.Haskell.Syntax.Specificity.html#Specificity"><span class="hs-identifier hs-type">Specificity</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-46"></span><span>  </span><span id="local-6989586621682522706"><span class="annot"><span class="annottext">rnf :: Specificity -&gt; ()
+</span><a href="#local-6989586621682522706"><span class="hs-identifier hs-var hs-var hs-var">rnf</span></a></span></span><span> </span><span class="annot"><span class="annottext">Specificity
+</span><a href="Language.Haskell.Syntax.Specificity.html#SpecifiedSpec"><span class="hs-identifier hs-var">SpecifiedSpec</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-47"></span><span>  </span><span class="annot"><a href="../../deepseq-1.5.1.0-inplace/src/Control.DeepSeq.html#rnf"><span class="hs-identifier hs-var">rnf</span></a></span><span> </span><span class="annot"><span class="annottext">Specificity
+</span><a href="Language.Haskell.Syntax.Specificity.html#InferredSpec"><span class="hs-identifier hs-var">InferredSpec</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-48"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="../../deepseq-1.5.1.0-inplace/src/Control.DeepSeq.html#NFData"><span class="hs-identifier hs-type">NFData</span></a></span><span> </span><span class="annot"><a href="Language.Haskell.Syntax.Specificity.html#ForAllTyFlag"><span class="hs-identifier hs-type">ForAllTyFlag</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-49"></span><span>  </span><span id="local-6989586621682522711"><span class="annot"><span class="annottext">rnf :: ForAllTyFlag -&gt; ()
+</span><a href="../../deepseq-1.5.1.0-inplace/src/Control.DeepSeq.html#rnf"><span class="hs-identifier hs-var hs-var hs-var">rnf</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Language.Haskell.Syntax.Specificity.html#Invisible"><span class="hs-identifier hs-type">Invisible</span></a></span><span> </span><span id="local-6989586621682522713"><span class="annot"><span class="annottext">Specificity
+</span><a href="#local-6989586621682522713"><span class="hs-identifier hs-var">spec</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Specificity -&gt; ()
+forall a. NFData a =&gt; a -&gt; ()
+</span><a href="../../deepseq-1.5.1.0-inplace/src/Control.DeepSeq.html#rnf"><span class="hs-identifier hs-var">rnf</span></a></span><span> </span><span class="annot"><span class="annottext">Specificity
+</span><a href="#local-6989586621682522713"><span class="hs-identifier hs-var">spec</span></a></span><span>
+</span><span id="line-50"></span><span>  </span><span class="annot"><a href="../../deepseq-1.5.1.0-inplace/src/Control.DeepSeq.html#rnf"><span class="hs-identifier hs-var">rnf</span></a></span><span> </span><span class="annot"><span class="annottext">ForAllTyFlag
+</span><a href="Language.Haskell.Syntax.Specificity.html#Required"><span class="hs-identifier hs-var">Required</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-51"></span><span>
+</span><span id="line-52"></span><span>
+</span><span id="line-53"></span></pre></body></html>

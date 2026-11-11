@@ -1,0 +1,1752 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span id="local-6989586621682463597"><span id="local-6989586621682463598"><span id="local-6989586621682463599"><span id="local-6989586621682463600"><span id="local-6989586621682463601"><span id="local-6989586621682463602"><span id="local-6989586621682463603"><span id="local-6989586621682463604"><span id="local-6989586621682463605"><span id="local-6989586621682463606"><span id="local-6989586621682463607"><span id="local-6989586621682463608"><span id="local-6989586621682463609"><span id="local-6989586621682463610"><span id="local-6989586621682463611"><span id="local-6989586621682463612"><span id="local-6989586621682463613"><span id="local-6989586621682463614"><span id="local-6989586621682463615"><span id="local-6989586621682463616"><span id="local-6989586621682463617"><span id="local-6989586621682463618"><span id="local-6989586621682463619"><span id="local-6989586621682463620"><span id="local-6989586621682463621"><span id="local-6989586621682463622"><span id="local-6989586621682463623"><span id="local-6989586621682463624"></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-pragma">{-# LANGUAGE DeriveDataTypeable #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE GeneralisedNewtypeDeriving #-}</span><span>
+</span><span id="line-3"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Language.Haskell.Syntax.Basic.html"><span class="hs-identifier">Language.Haskell.Syntax.Basic</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.21.2.0-inplace/src/Data.Data.html"><span class="hs-identifier">Data.Data</span></a></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.21.2.0-inplace/src/Data.Eq.html"><span class="hs-identifier">Data.Eq</span></a></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.21.2.0-inplace/src/Data.Ord.html"><span class="hs-identifier">Data.Ord</span></a></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.21.2.0-inplace/src/Data.Bool.html"><span class="hs-identifier">Data.Bool</span></a></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.21.2.0-inplace/src/Data.Int.html"><span class="hs-identifier">Data.Int</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Int</span></span><span class="hs-special">)</span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Data.FastString.html"><span class="hs-identifier">GHC.Data.FastString</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Data.FastString.html#FastString"><span class="hs-identifier">FastString</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../deepseq-1.5.1.0-inplace/src/Control.DeepSeq.html"><span class="hs-identifier">Control.DeepSeq</span></a></span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span class="hs-comment">{-
+************************************************************************
+*                                                                      *
+Boxity
+*                                                                      *
+************************************************************************
+-}</span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">data</span><span> </span><span id="Boxity"><span class="annot"><a href="Language.Haskell.Syntax.Basic.html#Boxity"><span class="hs-identifier hs-var">Boxity</span></a></span></span><span>
+</span><span id="line-23"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="Boxed"><span class="annot"><a href="Language.Haskell.Syntax.Basic.html#Boxed"><span class="hs-identifier hs-var">Boxed</span></a></span></span><span>
+</span><span id="line-24"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="Unboxed"><span class="annot"><a href="Language.Haskell.Syntax.Basic.html#Unboxed"><span class="hs-identifier hs-var">Unboxed</span></a></span></span><span>
+</span><span id="line-25"></span><span>  </span><span class="hs-keyword">deriving</span><span class="hs-special">(</span><span> </span><span id="local-6989586621682463628"><span id="local-6989586621682463633"><span class="annot"><span class="annottext">Boxity -&gt; Boxity -&gt; Bool
+(Boxity -&gt; Boxity -&gt; Bool)
+-&gt; (Boxity -&gt; Boxity -&gt; Bool) -&gt; Eq Boxity
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: Boxity -&gt; Boxity -&gt; Bool
+== :: Boxity -&gt; Boxity -&gt; Bool
+$c/= :: Boxity -&gt; Boxity -&gt; Bool
+/= :: Boxity -&gt; Boxity -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621682463640"><span id="local-6989586621682463642"><span id="local-6989586621682463644"><span id="local-6989586621682463646"><span id="local-6989586621682463648"><span id="local-6989586621682463654"><span id="local-6989586621682463659"><span id="local-6989586621682463662"><span id="local-6989586621682463665"><span id="local-6989586621682463668"><span id="local-6989586621682463671"><span id="local-6989586621682463674"><span id="local-6989586621682463679"><span id="local-6989586621682463684"><span class="annot"><span class="annottext">Typeable Boxity
+Typeable Boxity =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; Boxity -&gt; c Boxity)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c Boxity)
+-&gt; (Boxity -&gt; Constr)
+-&gt; (Boxity -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c Boxity))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c Boxity))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; Boxity -&gt; Boxity)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Boxity -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Boxity -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; Boxity -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; Boxity -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; Boxity -&gt; m Boxity)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; Boxity -&gt; m Boxity)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; Boxity -&gt; m Boxity)
+-&gt; Data Boxity
+Boxity -&gt; Constr
+Boxity -&gt; DataType
+(forall b. Data b =&gt; b -&gt; b) -&gt; Boxity -&gt; Boxity
+forall a.
+Typeable a =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; a -&gt; c a)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c a)
+-&gt; (a -&gt; Constr)
+-&gt; (a -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c a))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c a))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; a -&gt; a)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; Data a
+forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; Boxity -&gt; u
+forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; Boxity -&gt; [u]
+forall r r'.
+(r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Boxity -&gt; r
+forall r r'.
+(r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Boxity -&gt; r
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Boxity -&gt; m Boxity
+forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Boxity -&gt; m Boxity
+forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c Boxity
+forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; Boxity -&gt; c Boxity
+forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c Boxity)
+forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c Boxity)
+$cgfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; Boxity -&gt; c Boxity
+gfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; Boxity -&gt; c Boxity
+$cgunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c Boxity
+gunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c Boxity
+$ctoConstr :: Boxity -&gt; Constr
+toConstr :: Boxity -&gt; Constr
+$cdataTypeOf :: Boxity -&gt; DataType
+dataTypeOf :: Boxity -&gt; DataType
+$cdataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c Boxity)
+dataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c Boxity)
+$cdataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c Boxity)
+dataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c Boxity)
+$cgmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; Boxity -&gt; Boxity
+gmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; Boxity -&gt; Boxity
+$cgmapQl :: forall r r'.
+(r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Boxity -&gt; r
+gmapQl :: forall r r'.
+(r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Boxity -&gt; r
+$cgmapQr :: forall r r'.
+(r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Boxity -&gt; r
+gmapQr :: forall r r'.
+(r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Boxity -&gt; r
+$cgmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; Boxity -&gt; [u]
+gmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; Boxity -&gt; [u]
+$cgmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; Boxity -&gt; u
+gmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; Boxity -&gt; u
+$cgmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Boxity -&gt; m Boxity
+gmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Boxity -&gt; m Boxity
+$cgmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Boxity -&gt; m Boxity
+gmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Boxity -&gt; m Boxity
+$cgmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Boxity -&gt; m Boxity
+gmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Boxity -&gt; m Boxity
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Data</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span class="annot"><a href="Language.Haskell.Syntax.Basic.html#isBoxed"><span class="hs-identifier hs-type">isBoxed</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Language.Haskell.Syntax.Basic.html#Boxity"><span class="hs-identifier hs-type">Boxity</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span>
+</span><span id="line-28"></span><span id="isBoxed"><span class="annot"><span class="annottext">isBoxed :: Boxity -&gt; Bool
+</span><a href="Language.Haskell.Syntax.Basic.html#isBoxed"><span class="hs-identifier hs-var hs-var">isBoxed</span></a></span></span><span> </span><span class="annot"><span class="annottext">Boxity
+</span><a href="Language.Haskell.Syntax.Basic.html#Boxed"><span class="hs-identifier hs-var">Boxed</span></a></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span>
+</span><span id="line-29"></span><span class="annot"><a href="Language.Haskell.Syntax.Basic.html#isBoxed"><span class="hs-identifier hs-var">isBoxed</span></a></span><span> </span><span class="annot"><span class="annottext">Boxity
+</span><a href="Language.Haskell.Syntax.Basic.html#Unboxed"><span class="hs-identifier hs-var">Unboxed</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span>
+</span><span id="line-30"></span><span>
+</span><span id="line-31"></span><span class="hs-comment">{-
+************************************************************************
+*                                                                      *
+Counts and indices
+*                                                                      *
+************************************************************************
+-}</span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span class="annot"><span class="hs-comment">-- | The width of an unboxed sum</span></span><span>
+</span><span id="line-40"></span><span class="hs-keyword">type</span><span> </span><span id="SumWidth"><span class="annot"><a href="Language.Haskell.Syntax.Basic.html#SumWidth"><span class="hs-identifier hs-var">SumWidth</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span>
+</span><span id="line-41"></span><span>
+</span><span id="line-42"></span><span class="hs-comment">-- | A *one-index* constructor tag</span><span>
+</span><span id="line-43"></span><span class="hs-comment">--</span><span>
+</span><span id="line-44"></span><span class="hs-comment">-- Type of the tags associated with each constructor possibility or superclass</span><span>
+</span><span id="line-45"></span><span class="hs-comment">-- selector</span><span>
+</span><span id="line-46"></span><span class="hs-keyword">type</span><span> </span><span id="ConTag"><span class="annot"><a href="Language.Haskell.Syntax.Basic.html#ConTag"><span class="hs-identifier hs-var">ConTag</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span>
+</span><span id="line-47"></span><span>
+</span><span id="line-48"></span><span class="hs-comment">{-
+************************************************************************
+*                                                                      *
+Field Labels
+*                                                                      *
+************************************************************************
+-}</span><span>
+</span><span id="line-55"></span><span>
+</span><span id="line-56"></span><span class="hs-comment">-- | Field labels are just represented as strings;</span><span>
+</span><span id="line-57"></span><span class="hs-comment">-- they are not necessarily unique (even within a module)</span><span>
+</span><span id="line-58"></span><span class="hs-keyword">newtype</span><span> </span><span id="FieldLabelString"><span class="annot"><a href="Language.Haskell.Syntax.Basic.html#FieldLabelString"><span class="hs-identifier hs-var">FieldLabelString</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="FieldLabelString"><span class="annot"><a href="Language.Haskell.Syntax.Basic.html#FieldLabelString"><span class="hs-identifier hs-var">FieldLabelString</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="field_label"><span class="annot"><span class="annottext">FieldLabelString -&gt; FastString
+</span><a href="Language.Haskell.Syntax.Basic.html#field_label"><span class="hs-identifier hs-var hs-var">field_label</span></a></span></span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Data.FastString.html#FastString"><span class="hs-identifier hs-type">FastString</span></a></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-59"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621682463701"><span id="local-6989586621682463705"><span id="local-6989586621682463708"><span id="local-6989586621682463710"><span id="local-6989586621682463712"><span id="local-6989586621682463718"><span id="local-6989586621682463723"><span id="local-6989586621682463726"><span id="local-6989586621682463729"><span id="local-6989586621682463732"><span id="local-6989586621682463735"><span id="local-6989586621682463738"><span id="local-6989586621682463743"><span id="local-6989586621682463748"><span class="annot"><span class="annottext">Typeable FieldLabelString
+Typeable FieldLabelString =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; FieldLabelString -&gt; c FieldLabelString)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c FieldLabelString)
+-&gt; (FieldLabelString -&gt; Constr)
+-&gt; (FieldLabelString -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c FieldLabelString))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e))
+    -&gt; Maybe (c FieldLabelString))
+-&gt; ((forall b. Data b =&gt; b -&gt; b)
+    -&gt; FieldLabelString -&gt; FieldLabelString)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; FieldLabelString -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; FieldLabelString -&gt; r)
+-&gt; (forall u.
+    (forall d. Data d =&gt; d -&gt; u) -&gt; FieldLabelString -&gt; [u])
+-&gt; (forall u.
+    Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; FieldLabelString -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d)
+    -&gt; FieldLabelString -&gt; m FieldLabelString)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d)
+    -&gt; FieldLabelString -&gt; m FieldLabelString)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d)
+    -&gt; FieldLabelString -&gt; m FieldLabelString)
+-&gt; Data FieldLabelString
+FieldLabelString -&gt; Constr
+FieldLabelString -&gt; DataType
+(forall b. Data b =&gt; b -&gt; b)
+-&gt; FieldLabelString -&gt; FieldLabelString
+forall a.
+Typeable a =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; a -&gt; c a)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c a)
+-&gt; (a -&gt; Constr)
+-&gt; (a -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c a))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c a))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; a -&gt; a)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; Data a
+forall u.
+Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; FieldLabelString -&gt; u
+forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; FieldLabelString -&gt; [u]
+forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; FieldLabelString -&gt; r
+forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; FieldLabelString -&gt; r
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; FieldLabelString -&gt; m FieldLabelString
+forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; FieldLabelString -&gt; m FieldLabelString
+forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c FieldLabelString
+forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; FieldLabelString -&gt; c FieldLabelString
+forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c FieldLabelString)
+forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c FieldLabelString)
+$cgfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; FieldLabelString -&gt; c FieldLabelString
+gfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; FieldLabelString -&gt; c FieldLabelString
+$cgunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c FieldLabelString
+gunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c FieldLabelString
+$ctoConstr :: FieldLabelString -&gt; Constr
+toConstr :: FieldLabelString -&gt; Constr
+$cdataTypeOf :: FieldLabelString -&gt; DataType
+dataTypeOf :: FieldLabelString -&gt; DataType
+$cdataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c FieldLabelString)
+dataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c FieldLabelString)
+$cdataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c FieldLabelString)
+dataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c FieldLabelString)
+$cgmapT :: (forall b. Data b =&gt; b -&gt; b)
+-&gt; FieldLabelString -&gt; FieldLabelString
+gmapT :: (forall b. Data b =&gt; b -&gt; b)
+-&gt; FieldLabelString -&gt; FieldLabelString
+$cgmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; FieldLabelString -&gt; r
+gmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; FieldLabelString -&gt; r
+$cgmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; FieldLabelString -&gt; r
+gmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; FieldLabelString -&gt; r
+$cgmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; FieldLabelString -&gt; [u]
+gmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; FieldLabelString -&gt; [u]
+$cgmapQi :: forall u.
+Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; FieldLabelString -&gt; u
+gmapQi :: forall u.
+Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; FieldLabelString -&gt; u
+$cgmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; FieldLabelString -&gt; m FieldLabelString
+gmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; FieldLabelString -&gt; m FieldLabelString
+$cgmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; FieldLabelString -&gt; m FieldLabelString
+gmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; FieldLabelString -&gt; m FieldLabelString
+$cgmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; FieldLabelString -&gt; m FieldLabelString
+gmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; FieldLabelString -&gt; m FieldLabelString
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Data</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621682463753"><span id="local-6989586621682463758"><span class="annot"><span class="annottext">FieldLabelString -&gt; FieldLabelString -&gt; Bool
+(FieldLabelString -&gt; FieldLabelString -&gt; Bool)
+-&gt; (FieldLabelString -&gt; FieldLabelString -&gt; Bool)
+-&gt; Eq FieldLabelString
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: FieldLabelString -&gt; FieldLabelString -&gt; Bool
+== :: FieldLabelString -&gt; FieldLabelString -&gt; Bool
+$c/= :: FieldLabelString -&gt; FieldLabelString -&gt; Bool
+/= :: FieldLabelString -&gt; FieldLabelString -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621682463764"><span class="annot"><span class="annottext">FieldLabelString -&gt; ()
+(FieldLabelString -&gt; ()) -&gt; NFData FieldLabelString
+forall a. (a -&gt; ()) -&gt; NFData a
+$crnf :: FieldLabelString -&gt; ()
+rnf :: FieldLabelString -&gt; ()
+</span><a href="../../deepseq-1.5.1.0-inplace/src/Control.DeepSeq.html#NFData"><span class="hs-identifier hs-var hs-var hs-var hs-var">NFData</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-60"></span><span>
+</span><span id="line-61"></span><span class="hs-comment">{-
+************************************************************************
+*                                                                      *
+Field Labels
+*                                                                      *
+************************************************************************
+-}</span><span>
+</span><span id="line-68"></span><span>
+</span><span id="line-69"></span><span class="hs-comment">-- | See Note [Roles] in GHC.Core.Coercion</span><span>
+</span><span id="line-70"></span><span class="hs-comment">--</span><span>
+</span><span id="line-71"></span><span class="hs-comment">-- Order of constructors matters: the Ord instance coincides with the *super*typing</span><span>
+</span><span id="line-72"></span><span class="hs-comment">-- relation on roles.</span><span>
+</span><span id="line-73"></span><span class="hs-keyword">data</span><span> </span><span id="Role"><span class="annot"><a href="Language.Haskell.Syntax.Basic.html#Role"><span class="hs-identifier hs-var">Role</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Nominal"><span class="annot"><a href="Language.Haskell.Syntax.Basic.html#Nominal"><span class="hs-identifier hs-var">Nominal</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="Representational"><span class="annot"><a href="Language.Haskell.Syntax.Basic.html#Representational"><span class="hs-identifier hs-var">Representational</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="Phantom"><span class="annot"><a href="Language.Haskell.Syntax.Basic.html#Phantom"><span class="hs-identifier hs-var">Phantom</span></a></span></span><span>
+</span><span id="line-74"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621682463775"><span id="local-6989586621682463779"><span class="annot"><span class="annottext">Role -&gt; Role -&gt; Bool
+(Role -&gt; Role -&gt; Bool) -&gt; (Role -&gt; Role -&gt; Bool) -&gt; Eq Role
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: Role -&gt; Role -&gt; Bool
+== :: Role -&gt; Role -&gt; Bool
+$c/= :: Role -&gt; Role -&gt; Bool
+/= :: Role -&gt; Role -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621682463785"><span id="local-6989586621682463789"><span id="local-6989586621682463793"><span id="local-6989586621682463797"><span id="local-6989586621682463800"><span id="local-6989586621682463803"><span id="local-6989586621682463806"><span class="annot"><span class="annottext">Eq Role
+Eq Role =&gt;
+(Role -&gt; Role -&gt; Ordering)
+-&gt; (Role -&gt; Role -&gt; Bool)
+-&gt; (Role -&gt; Role -&gt; Bool)
+-&gt; (Role -&gt; Role -&gt; Bool)
+-&gt; (Role -&gt; Role -&gt; Bool)
+-&gt; (Role -&gt; Role -&gt; Role)
+-&gt; (Role -&gt; Role -&gt; Role)
+-&gt; Ord Role
+Role -&gt; Role -&gt; Bool
+Role -&gt; Role -&gt; Ordering
+Role -&gt; Role -&gt; Role
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: Role -&gt; Role -&gt; Ordering
+compare :: Role -&gt; Role -&gt; Ordering
+$c&lt; :: Role -&gt; Role -&gt; Bool
+&lt; :: Role -&gt; Role -&gt; Bool
+$c&lt;= :: Role -&gt; Role -&gt; Bool
+&lt;= :: Role -&gt; Role -&gt; Bool
+$c&gt; :: Role -&gt; Role -&gt; Bool
+&gt; :: Role -&gt; Role -&gt; Bool
+$c&gt;= :: Role -&gt; Role -&gt; Bool
+&gt;= :: Role -&gt; Role -&gt; Bool
+$cmax :: Role -&gt; Role -&gt; Role
+max :: Role -&gt; Role -&gt; Role
+$cmin :: Role -&gt; Role -&gt; Role
+min :: Role -&gt; Role -&gt; Role
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621682463816"><span id="local-6989586621682463818"><span id="local-6989586621682463820"><span id="local-6989586621682463822"><span id="local-6989586621682463824"><span id="local-6989586621682463830"><span id="local-6989586621682463835"><span id="local-6989586621682463838"><span id="local-6989586621682463841"><span id="local-6989586621682463844"><span id="local-6989586621682463847"><span id="local-6989586621682463850"><span id="local-6989586621682463855"><span id="local-6989586621682463860"><span class="annot"><span class="annottext">Typeable Role
+Typeable Role =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; Role -&gt; c Role)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c Role)
+-&gt; (Role -&gt; Constr)
+-&gt; (Role -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c Role))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c Role))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; Role -&gt; Role)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Role -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Role -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; Role -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; Role -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; Role -&gt; m Role)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; Role -&gt; m Role)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; Role -&gt; m Role)
+-&gt; Data Role
+Role -&gt; Constr
+Role -&gt; DataType
+(forall b. Data b =&gt; b -&gt; b) -&gt; Role -&gt; Role
+forall a.
+Typeable a =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; a -&gt; c a)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c a)
+-&gt; (a -&gt; Constr)
+-&gt; (a -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c a))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c a))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; a -&gt; a)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; Data a
+forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; Role -&gt; u
+forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; Role -&gt; [u]
+forall r r'.
+(r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Role -&gt; r
+forall r r'.
+(r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Role -&gt; r
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Role -&gt; m Role
+forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Role -&gt; m Role
+forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c Role
+forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; Role -&gt; c Role
+forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c Role)
+forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c Role)
+$cgfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; Role -&gt; c Role
+gfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; Role -&gt; c Role
+$cgunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c Role
+gunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c Role
+$ctoConstr :: Role -&gt; Constr
+toConstr :: Role -&gt; Constr
+$cdataTypeOf :: Role -&gt; DataType
+dataTypeOf :: Role -&gt; DataType
+$cdataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c Role)
+dataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c Role)
+$cdataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c Role)
+dataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c Role)
+$cgmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; Role -&gt; Role
+gmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; Role -&gt; Role
+$cgmapQl :: forall r r'.
+(r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Role -&gt; r
+gmapQl :: forall r r'.
+(r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Role -&gt; r
+$cgmapQr :: forall r r'.
+(r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Role -&gt; r
+gmapQr :: forall r r'.
+(r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Role -&gt; r
+$cgmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; Role -&gt; [u]
+gmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; Role -&gt; [u]
+$cgmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; Role -&gt; u
+gmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; Role -&gt; u
+$cgmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Role -&gt; m Role
+gmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Role -&gt; m Role
+$cgmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Role -&gt; m Role
+gmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Role -&gt; m Role
+$cgmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Role -&gt; m Role
+gmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Role -&gt; m Role
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Data</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-75"></span><span>
+</span><span id="line-76"></span><span class="hs-comment">{-
+************************************************************************
+*                                                                      *
+Source Strictness and Unpackedness
+*                                                                      *
+************************************************************************
+-}</span><span>
+</span><span id="line-83"></span><span>
+</span><span id="line-84"></span><span class="hs-comment">-- | Haskell Bang</span><span>
+</span><span id="line-85"></span><span class="hs-comment">--</span><span>
+</span><span id="line-86"></span><span class="hs-comment">-- Bangs on data constructor arguments written by the user.</span><span>
+</span><span id="line-87"></span><span class="hs-comment">--</span><span>
+</span><span id="line-88"></span><span class="hs-comment">-- @(HsBang SrcUnpack SrcLazy)@ and</span><span>
+</span><span id="line-89"></span><span class="hs-comment">-- @(HsBang SrcUnpack NoSrcStrict)@ (without StrictData) makes no sense, we</span><span>
+</span><span id="line-90"></span><span class="hs-comment">-- emit a warning (in checkValidDataCon) and treat it like</span><span>
+</span><span id="line-91"></span><span class="hs-comment">-- @(HsBang NoSrcUnpack SrcLazy)@</span><span>
+</span><span id="line-92"></span><span class="hs-comment">--</span><span>
+</span><span id="line-93"></span><span class="hs-comment">-- 'GHC.Core.DataCon.HsSrcBang' is a wrapper around this, associating it with</span><span>
+</span><span id="line-94"></span><span class="hs-comment">-- a 'GHC.Types.SourceText.SourceText' as written by the user.</span><span>
+</span><span id="line-95"></span><span class="hs-comment">-- In the AST, the @SourceText@ is hidden inside the extension point</span><span>
+</span><span id="line-96"></span><span class="hs-comment">-- 'Language.Haskell.Syntax.Extension.XBangTy'.</span><span>
+</span><span id="line-97"></span><span class="hs-keyword">data</span><span> </span><span id="HsBang"><span class="annot"><a href="Language.Haskell.Syntax.Basic.html#HsBang"><span class="hs-identifier hs-var">HsBang</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-98"></span><span>  </span><span id="HsBang"><span class="annot"><a href="Language.Haskell.Syntax.Basic.html#HsBang"><span class="hs-identifier hs-var">HsBang</span></a></span></span><span> </span><span class="annot"><a href="Language.Haskell.Syntax.Basic.html#SrcUnpackedness"><span class="hs-identifier hs-type">SrcUnpackedness</span></a></span><span>
+</span><span id="line-99"></span><span>         </span><span class="annot"><a href="Language.Haskell.Syntax.Basic.html#SrcStrictness"><span class="hs-identifier hs-type">SrcStrictness</span></a></span><span>
+</span><span id="line-100"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span id="local-6989586621682463868"><span id="local-6989586621682463874"><span id="local-6989586621682463878"><span id="local-6989586621682463880"><span id="local-6989586621682463882"><span id="local-6989586621682463888"><span id="local-6989586621682463893"><span id="local-6989586621682463896"><span id="local-6989586621682463899"><span id="local-6989586621682463902"><span id="local-6989586621682463905"><span id="local-6989586621682463908"><span id="local-6989586621682463913"><span id="local-6989586621682463918"><span class="annot"><span class="annottext">Typeable HsBang
+Typeable HsBang =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; HsBang -&gt; c HsBang)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c HsBang)
+-&gt; (HsBang -&gt; Constr)
+-&gt; (HsBang -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c HsBang))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c HsBang))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; HsBang -&gt; HsBang)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; HsBang -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; HsBang -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; HsBang -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; HsBang -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; HsBang -&gt; m HsBang)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; HsBang -&gt; m HsBang)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; HsBang -&gt; m HsBang)
+-&gt; Data HsBang
+HsBang -&gt; Constr
+HsBang -&gt; DataType
+(forall b. Data b =&gt; b -&gt; b) -&gt; HsBang -&gt; HsBang
+forall a.
+Typeable a =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; a -&gt; c a)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c a)
+-&gt; (a -&gt; Constr)
+-&gt; (a -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c a))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c a))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; a -&gt; a)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; Data a
+forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; HsBang -&gt; u
+forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; HsBang -&gt; [u]
+forall r r'.
+(r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; HsBang -&gt; r
+forall r r'.
+(r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; HsBang -&gt; r
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; HsBang -&gt; m HsBang
+forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; HsBang -&gt; m HsBang
+forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c HsBang
+forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; HsBang -&gt; c HsBang
+forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c HsBang)
+forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c HsBang)
+$cgfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; HsBang -&gt; c HsBang
+gfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; HsBang -&gt; c HsBang
+$cgunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c HsBang
+gunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c HsBang
+$ctoConstr :: HsBang -&gt; Constr
+toConstr :: HsBang -&gt; Constr
+$cdataTypeOf :: HsBang -&gt; DataType
+dataTypeOf :: HsBang -&gt; DataType
+$cdataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c HsBang)
+dataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c HsBang)
+$cdataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c HsBang)
+dataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c HsBang)
+$cgmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; HsBang -&gt; HsBang
+gmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; HsBang -&gt; HsBang
+$cgmapQl :: forall r r'.
+(r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; HsBang -&gt; r
+gmapQl :: forall r r'.
+(r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; HsBang -&gt; r
+$cgmapQr :: forall r r'.
+(r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; HsBang -&gt; r
+gmapQr :: forall r r'.
+(r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; HsBang -&gt; r
+$cgmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; HsBang -&gt; [u]
+gmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; HsBang -&gt; [u]
+$cgmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; HsBang -&gt; u
+gmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; HsBang -&gt; u
+$cgmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; HsBang -&gt; m HsBang
+gmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; HsBang -&gt; m HsBang
+$cgmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; HsBang -&gt; m HsBang
+gmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; HsBang -&gt; m HsBang
+$cgmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; HsBang -&gt; m HsBang
+gmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; HsBang -&gt; m HsBang
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Data</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span>
+</span><span id="line-101"></span><span>
+</span><span id="line-102"></span><span class="hs-comment">-- | Source Strictness</span><span>
+</span><span id="line-103"></span><span class="hs-comment">--</span><span>
+</span><span id="line-104"></span><span class="hs-comment">-- What strictness annotation the user wrote</span><span>
+</span><span id="line-105"></span><span class="hs-keyword">data</span><span> </span><span id="SrcStrictness"><span class="annot"><a href="Language.Haskell.Syntax.Basic.html#SrcStrictness"><span class="hs-identifier hs-var">SrcStrictness</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="SrcLazy"><span class="annot"><a href="Language.Haskell.Syntax.Basic.html#SrcLazy"><span class="hs-identifier hs-var">SrcLazy</span></a></span></span><span> </span><span class="annot"><span class="hs-comment">-- ^ Lazy, ie '~'</span></span><span>
+</span><span id="line-106"></span><span>                   </span><span class="hs-glyph">|</span><span> </span><span id="SrcStrict"><span class="annot"><a href="Language.Haskell.Syntax.Basic.html#SrcStrict"><span class="hs-identifier hs-var">SrcStrict</span></a></span></span><span> </span><span class="annot"><span class="hs-comment">-- ^ Strict, ie '!'</span></span><span>
+</span><span id="line-107"></span><span>                   </span><span class="hs-glyph">|</span><span> </span><span id="NoSrcStrict"><span class="annot"><a href="Language.Haskell.Syntax.Basic.html#NoSrcStrict"><span class="hs-identifier hs-var">NoSrcStrict</span></a></span></span><span> </span><span class="annot"><span class="hs-comment">-- ^ no strictness annotation</span></span><span>
+</span><span id="line-108"></span><span>     </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621682463926"><span id="local-6989586621682463930"><span class="annot"><span class="annottext">SrcStrictness -&gt; SrcStrictness -&gt; Bool
+(SrcStrictness -&gt; SrcStrictness -&gt; Bool)
+-&gt; (SrcStrictness -&gt; SrcStrictness -&gt; Bool) -&gt; Eq SrcStrictness
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: SrcStrictness -&gt; SrcStrictness -&gt; Bool
+== :: SrcStrictness -&gt; SrcStrictness -&gt; Bool
+$c/= :: SrcStrictness -&gt; SrcStrictness -&gt; Bool
+/= :: SrcStrictness -&gt; SrcStrictness -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621682463936"><span id="local-6989586621682463938"><span id="local-6989586621682463940"><span id="local-6989586621682463942"><span id="local-6989586621682463944"><span id="local-6989586621682463949"><span id="local-6989586621682463954"><span id="local-6989586621682463957"><span id="local-6989586621682463960"><span id="local-6989586621682463963"><span id="local-6989586621682463966"><span id="local-6989586621682463969"><span id="local-6989586621682463974"><span id="local-6989586621682463979"><span class="annot"><span class="annottext">Typeable SrcStrictness
+Typeable SrcStrictness =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; SrcStrictness -&gt; c SrcStrictness)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c SrcStrictness)
+-&gt; (SrcStrictness -&gt; Constr)
+-&gt; (SrcStrictness -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c SrcStrictness))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e))
+    -&gt; Maybe (c SrcStrictness))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; SrcStrictness -&gt; SrcStrictness)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; SrcStrictness -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; SrcStrictness -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; SrcStrictness -&gt; [u])
+-&gt; (forall u.
+    Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; SrcStrictness -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; SrcStrictness -&gt; m SrcStrictness)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; SrcStrictness -&gt; m SrcStrictness)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; SrcStrictness -&gt; m SrcStrictness)
+-&gt; Data SrcStrictness
+SrcStrictness -&gt; Constr
+SrcStrictness -&gt; DataType
+(forall b. Data b =&gt; b -&gt; b) -&gt; SrcStrictness -&gt; SrcStrictness
+forall a.
+Typeable a =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; a -&gt; c a)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c a)
+-&gt; (a -&gt; Constr)
+-&gt; (a -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c a))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c a))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; a -&gt; a)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; Data a
+forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; SrcStrictness -&gt; u
+forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; SrcStrictness -&gt; [u]
+forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; SrcStrictness -&gt; r
+forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; SrcStrictness -&gt; r
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; SrcStrictness -&gt; m SrcStrictness
+forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; SrcStrictness -&gt; m SrcStrictness
+forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c SrcStrictness
+forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; SrcStrictness -&gt; c SrcStrictness
+forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c SrcStrictness)
+forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c SrcStrictness)
+$cgfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; SrcStrictness -&gt; c SrcStrictness
+gfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; SrcStrictness -&gt; c SrcStrictness
+$cgunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c SrcStrictness
+gunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c SrcStrictness
+$ctoConstr :: SrcStrictness -&gt; Constr
+toConstr :: SrcStrictness -&gt; Constr
+$cdataTypeOf :: SrcStrictness -&gt; DataType
+dataTypeOf :: SrcStrictness -&gt; DataType
+$cdataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c SrcStrictness)
+dataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c SrcStrictness)
+$cdataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c SrcStrictness)
+dataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c SrcStrictness)
+$cgmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; SrcStrictness -&gt; SrcStrictness
+gmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; SrcStrictness -&gt; SrcStrictness
+$cgmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; SrcStrictness -&gt; r
+gmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; SrcStrictness -&gt; r
+$cgmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; SrcStrictness -&gt; r
+gmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; SrcStrictness -&gt; r
+$cgmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; SrcStrictness -&gt; [u]
+gmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; SrcStrictness -&gt; [u]
+$cgmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; SrcStrictness -&gt; u
+gmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; SrcStrictness -&gt; u
+$cgmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; SrcStrictness -&gt; m SrcStrictness
+gmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; SrcStrictness -&gt; m SrcStrictness
+$cgmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; SrcStrictness -&gt; m SrcStrictness
+gmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; SrcStrictness -&gt; m SrcStrictness
+$cgmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; SrcStrictness -&gt; m SrcStrictness
+gmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; SrcStrictness -&gt; m SrcStrictness
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Data</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-109"></span><span>
+</span><span id="line-110"></span><span class="hs-comment">-- | Source Unpackedness</span><span>
+</span><span id="line-111"></span><span class="hs-comment">--</span><span>
+</span><span id="line-112"></span><span class="hs-comment">-- What unpackedness the user requested</span><span>
+</span><span id="line-113"></span><span class="hs-keyword">data</span><span> </span><span id="SrcUnpackedness"><span class="annot"><a href="Language.Haskell.Syntax.Basic.html#SrcUnpackedness"><span class="hs-identifier hs-var">SrcUnpackedness</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="SrcUnpack"><span class="annot"><a href="Language.Haskell.Syntax.Basic.html#SrcUnpack"><span class="hs-identifier hs-var">SrcUnpack</span></a></span></span><span> </span><span class="annot"><span class="hs-comment">-- ^ {-# UNPACK #-} specified</span></span><span>
+</span><span id="line-114"></span><span>                     </span><span class="hs-glyph">|</span><span> </span><span id="SrcNoUnpack"><span class="annot"><a href="Language.Haskell.Syntax.Basic.html#SrcNoUnpack"><span class="hs-identifier hs-var">SrcNoUnpack</span></a></span></span><span> </span><span class="annot"><span class="hs-comment">-- ^ {-# NOUNPACK #-} specified</span></span><span>
+</span><span id="line-115"></span><span>                     </span><span class="hs-glyph">|</span><span> </span><span id="NoSrcUnpack"><span class="annot"><a href="Language.Haskell.Syntax.Basic.html#NoSrcUnpack"><span class="hs-identifier hs-var">NoSrcUnpack</span></a></span></span><span> </span><span class="annot"><span class="hs-comment">-- ^ no unpack pragma</span></span><span>
+</span><span id="line-116"></span><span>     </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621682463987"><span id="local-6989586621682463991"><span class="annot"><span class="annottext">SrcUnpackedness -&gt; SrcUnpackedness -&gt; Bool
+(SrcUnpackedness -&gt; SrcUnpackedness -&gt; Bool)
+-&gt; (SrcUnpackedness -&gt; SrcUnpackedness -&gt; Bool)
+-&gt; Eq SrcUnpackedness
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: SrcUnpackedness -&gt; SrcUnpackedness -&gt; Bool
+== :: SrcUnpackedness -&gt; SrcUnpackedness -&gt; Bool
+$c/= :: SrcUnpackedness -&gt; SrcUnpackedness -&gt; Bool
+/= :: SrcUnpackedness -&gt; SrcUnpackedness -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621682463997"><span id="local-6989586621682463999"><span id="local-6989586621682464001"><span id="local-6989586621682464003"><span id="local-6989586621682464005"><span id="local-6989586621682464010"><span id="local-6989586621682464015"><span id="local-6989586621682464018"><span id="local-6989586621682464021"><span id="local-6989586621682464024"><span id="local-6989586621682464027"><span id="local-6989586621682464030"><span id="local-6989586621682464035"><span id="local-6989586621682464040"><span class="annot"><span class="annottext">Typeable SrcUnpackedness
+Typeable SrcUnpackedness =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; SrcUnpackedness -&gt; c SrcUnpackedness)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c SrcUnpackedness)
+-&gt; (SrcUnpackedness -&gt; Constr)
+-&gt; (SrcUnpackedness -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c SrcUnpackedness))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e))
+    -&gt; Maybe (c SrcUnpackedness))
+-&gt; ((forall b. Data b =&gt; b -&gt; b)
+    -&gt; SrcUnpackedness -&gt; SrcUnpackedness)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; SrcUnpackedness -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; SrcUnpackedness -&gt; r)
+-&gt; (forall u.
+    (forall d. Data d =&gt; d -&gt; u) -&gt; SrcUnpackedness -&gt; [u])
+-&gt; (forall u.
+    Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; SrcUnpackedness -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d)
+    -&gt; SrcUnpackedness -&gt; m SrcUnpackedness)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d)
+    -&gt; SrcUnpackedness -&gt; m SrcUnpackedness)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d)
+    -&gt; SrcUnpackedness -&gt; m SrcUnpackedness)
+-&gt; Data SrcUnpackedness
+SrcUnpackedness -&gt; Constr
+SrcUnpackedness -&gt; DataType
+(forall b. Data b =&gt; b -&gt; b) -&gt; SrcUnpackedness -&gt; SrcUnpackedness
+forall a.
+Typeable a =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; a -&gt; c a)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c a)
+-&gt; (a -&gt; Constr)
+-&gt; (a -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c a))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c a))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; a -&gt; a)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; Data a
+forall u.
+Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; SrcUnpackedness -&gt; u
+forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; SrcUnpackedness -&gt; [u]
+forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; SrcUnpackedness -&gt; r
+forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; SrcUnpackedness -&gt; r
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; SrcUnpackedness -&gt; m SrcUnpackedness
+forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; SrcUnpackedness -&gt; m SrcUnpackedness
+forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c SrcUnpackedness
+forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; SrcUnpackedness -&gt; c SrcUnpackedness
+forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c SrcUnpackedness)
+forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c SrcUnpackedness)
+$cgfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; SrcUnpackedness -&gt; c SrcUnpackedness
+gfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; SrcUnpackedness -&gt; c SrcUnpackedness
+$cgunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c SrcUnpackedness
+gunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c SrcUnpackedness
+$ctoConstr :: SrcUnpackedness -&gt; Constr
+toConstr :: SrcUnpackedness -&gt; Constr
+$cdataTypeOf :: SrcUnpackedness -&gt; DataType
+dataTypeOf :: SrcUnpackedness -&gt; DataType
+$cdataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c SrcUnpackedness)
+dataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c SrcUnpackedness)
+$cdataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c SrcUnpackedness)
+dataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c SrcUnpackedness)
+$cgmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; SrcUnpackedness -&gt; SrcUnpackedness
+gmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; SrcUnpackedness -&gt; SrcUnpackedness
+$cgmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; SrcUnpackedness -&gt; r
+gmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; SrcUnpackedness -&gt; r
+$cgmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; SrcUnpackedness -&gt; r
+gmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; SrcUnpackedness -&gt; r
+$cgmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; SrcUnpackedness -&gt; [u]
+gmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; SrcUnpackedness -&gt; [u]
+$cgmapQi :: forall u.
+Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; SrcUnpackedness -&gt; u
+gmapQi :: forall u.
+Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; SrcUnpackedness -&gt; u
+$cgmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; SrcUnpackedness -&gt; m SrcUnpackedness
+gmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; SrcUnpackedness -&gt; m SrcUnpackedness
+$cgmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; SrcUnpackedness -&gt; m SrcUnpackedness
+gmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; SrcUnpackedness -&gt; m SrcUnpackedness
+$cgmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; SrcUnpackedness -&gt; m SrcUnpackedness
+gmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; SrcUnpackedness -&gt; m SrcUnpackedness
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Data</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-117"></span><span>
+</span><span id="line-118"></span><span class="hs-comment">{-
+************************************************************************
+*                                                                      *
+Fixity
+*                                                                      *
+************************************************************************
+-}</span><span>
+</span><span id="line-125"></span><span>
+</span><span id="line-126"></span><span class="hs-comment">-- | Captures the fixity of declarations as they are parsed. This is not</span><span>
+</span><span id="line-127"></span><span class="hs-comment">-- necessarily the same as the fixity declaration, as the normal fixity may be</span><span>
+</span><span id="line-128"></span><span class="hs-comment">-- overridden using parens or backticks.</span><span>
+</span><span id="line-129"></span><span class="hs-keyword">data</span><span> </span><span id="LexicalFixity"><span class="annot"><a href="Language.Haskell.Syntax.Basic.html#LexicalFixity"><span class="hs-identifier hs-var">LexicalFixity</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Prefix"><span class="annot"><a href="Language.Haskell.Syntax.Basic.html#Prefix"><span class="hs-identifier hs-var">Prefix</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="Infix"><span class="annot"><a href="Language.Haskell.Syntax.Basic.html#Infix"><span class="hs-identifier hs-var">Infix</span></a></span></span><span> </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621682464047"><span id="local-6989586621682464051"><span class="annot"><span class="annottext">LexicalFixity -&gt; LexicalFixity -&gt; Bool
+(LexicalFixity -&gt; LexicalFixity -&gt; Bool)
+-&gt; (LexicalFixity -&gt; LexicalFixity -&gt; Bool) -&gt; Eq LexicalFixity
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: LexicalFixity -&gt; LexicalFixity -&gt; Bool
+== :: LexicalFixity -&gt; LexicalFixity -&gt; Bool
+$c/= :: LexicalFixity -&gt; LexicalFixity -&gt; Bool
+/= :: LexicalFixity -&gt; LexicalFixity -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621682464057"><span id="local-6989586621682464059"><span id="local-6989586621682464061"><span id="local-6989586621682464063"><span id="local-6989586621682464065"><span id="local-6989586621682464071"><span id="local-6989586621682464076"><span id="local-6989586621682464079"><span id="local-6989586621682464082"><span id="local-6989586621682464085"><span id="local-6989586621682464088"><span id="local-6989586621682464091"><span id="local-6989586621682464096"><span id="local-6989586621682464101"><span class="annot"><span class="annottext">Typeable LexicalFixity
+Typeable LexicalFixity =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; LexicalFixity -&gt; c LexicalFixity)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c LexicalFixity)
+-&gt; (LexicalFixity -&gt; Constr)
+-&gt; (LexicalFixity -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c LexicalFixity))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e))
+    -&gt; Maybe (c LexicalFixity))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; LexicalFixity -&gt; LexicalFixity)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; LexicalFixity -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; LexicalFixity -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; LexicalFixity -&gt; [u])
+-&gt; (forall u.
+    Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; LexicalFixity -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; LexicalFixity -&gt; m LexicalFixity)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; LexicalFixity -&gt; m LexicalFixity)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; LexicalFixity -&gt; m LexicalFixity)
+-&gt; Data LexicalFixity
+LexicalFixity -&gt; Constr
+LexicalFixity -&gt; DataType
+(forall b. Data b =&gt; b -&gt; b) -&gt; LexicalFixity -&gt; LexicalFixity
+forall a.
+Typeable a =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; a -&gt; c a)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c a)
+-&gt; (a -&gt; Constr)
+-&gt; (a -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c a))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c a))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; a -&gt; a)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; Data a
+forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; LexicalFixity -&gt; u
+forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; LexicalFixity -&gt; [u]
+forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; LexicalFixity -&gt; r
+forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; LexicalFixity -&gt; r
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; LexicalFixity -&gt; m LexicalFixity
+forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; LexicalFixity -&gt; m LexicalFixity
+forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c LexicalFixity
+forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; LexicalFixity -&gt; c LexicalFixity
+forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c LexicalFixity)
+forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c LexicalFixity)
+$cgfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; LexicalFixity -&gt; c LexicalFixity
+gfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; LexicalFixity -&gt; c LexicalFixity
+$cgunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c LexicalFixity
+gunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c LexicalFixity
+$ctoConstr :: LexicalFixity -&gt; Constr
+toConstr :: LexicalFixity -&gt; Constr
+$cdataTypeOf :: LexicalFixity -&gt; DataType
+dataTypeOf :: LexicalFixity -&gt; DataType
+$cdataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c LexicalFixity)
+dataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c LexicalFixity)
+$cdataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c LexicalFixity)
+dataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c LexicalFixity)
+$cgmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; LexicalFixity -&gt; LexicalFixity
+gmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; LexicalFixity -&gt; LexicalFixity
+$cgmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; LexicalFixity -&gt; r
+gmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; LexicalFixity -&gt; r
+$cgmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; LexicalFixity -&gt; r
+gmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; LexicalFixity -&gt; r
+$cgmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; LexicalFixity -&gt; [u]
+gmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; LexicalFixity -&gt; [u]
+$cgmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; LexicalFixity -&gt; u
+gmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; LexicalFixity -&gt; u
+$cgmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; LexicalFixity -&gt; m LexicalFixity
+gmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; LexicalFixity -&gt; m LexicalFixity
+$cgmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; LexicalFixity -&gt; m LexicalFixity
+gmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; LexicalFixity -&gt; m LexicalFixity
+$cgmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; LexicalFixity -&gt; m LexicalFixity
+gmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; LexicalFixity -&gt; m LexicalFixity
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Data</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-130"></span><span>
+</span><span id="line-131"></span><span class="hs-keyword">data</span><span> </span><span id="FixityDirection"><span class="annot"><a href="Language.Haskell.Syntax.Basic.html#FixityDirection"><span class="hs-identifier hs-var">FixityDirection</span></a></span></span><span>
+</span><span id="line-132"></span><span>   </span><span class="hs-glyph">=</span><span> </span><span id="InfixL"><span class="annot"><a href="Language.Haskell.Syntax.Basic.html#InfixL"><span class="hs-identifier hs-var">InfixL</span></a></span></span><span>
+</span><span id="line-133"></span><span>   </span><span class="hs-glyph">|</span><span> </span><span id="InfixR"><span class="annot"><a href="Language.Haskell.Syntax.Basic.html#InfixR"><span class="hs-identifier hs-var">InfixR</span></a></span></span><span>
+</span><span id="line-134"></span><span>   </span><span class="hs-glyph">|</span><span> </span><span id="InfixN"><span class="annot"><a href="Language.Haskell.Syntax.Basic.html#InfixN"><span class="hs-identifier hs-var">InfixN</span></a></span></span><span>
+</span><span id="line-135"></span><span>   </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621682464109"><span id="local-6989586621682464113"><span class="annot"><span class="annottext">FixityDirection -&gt; FixityDirection -&gt; Bool
+(FixityDirection -&gt; FixityDirection -&gt; Bool)
+-&gt; (FixityDirection -&gt; FixityDirection -&gt; Bool)
+-&gt; Eq FixityDirection
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: FixityDirection -&gt; FixityDirection -&gt; Bool
+== :: FixityDirection -&gt; FixityDirection -&gt; Bool
+$c/= :: FixityDirection -&gt; FixityDirection -&gt; Bool
+/= :: FixityDirection -&gt; FixityDirection -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621682464119"><span id="local-6989586621682464121"><span id="local-6989586621682464123"><span id="local-6989586621682464125"><span id="local-6989586621682464127"><span id="local-6989586621682464133"><span id="local-6989586621682464138"><span id="local-6989586621682464141"><span id="local-6989586621682464144"><span id="local-6989586621682464147"><span id="local-6989586621682464150"><span id="local-6989586621682464153"><span id="local-6989586621682464158"><span id="local-6989586621682464163"><span class="annot"><span class="annottext">Typeable FixityDirection
+Typeable FixityDirection =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; FixityDirection -&gt; c FixityDirection)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c FixityDirection)
+-&gt; (FixityDirection -&gt; Constr)
+-&gt; (FixityDirection -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c FixityDirection))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e))
+    -&gt; Maybe (c FixityDirection))
+-&gt; ((forall b. Data b =&gt; b -&gt; b)
+    -&gt; FixityDirection -&gt; FixityDirection)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; FixityDirection -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; FixityDirection -&gt; r)
+-&gt; (forall u.
+    (forall d. Data d =&gt; d -&gt; u) -&gt; FixityDirection -&gt; [u])
+-&gt; (forall u.
+    Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; FixityDirection -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d)
+    -&gt; FixityDirection -&gt; m FixityDirection)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d)
+    -&gt; FixityDirection -&gt; m FixityDirection)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d)
+    -&gt; FixityDirection -&gt; m FixityDirection)
+-&gt; Data FixityDirection
+FixityDirection -&gt; Constr
+FixityDirection -&gt; DataType
+(forall b. Data b =&gt; b -&gt; b) -&gt; FixityDirection -&gt; FixityDirection
+forall a.
+Typeable a =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; a -&gt; c a)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c a)
+-&gt; (a -&gt; Constr)
+-&gt; (a -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c a))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c a))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; a -&gt; a)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; Data a
+forall u.
+Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; FixityDirection -&gt; u
+forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; FixityDirection -&gt; [u]
+forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; FixityDirection -&gt; r
+forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; FixityDirection -&gt; r
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; FixityDirection -&gt; m FixityDirection
+forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; FixityDirection -&gt; m FixityDirection
+forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c FixityDirection
+forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; FixityDirection -&gt; c FixityDirection
+forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c FixityDirection)
+forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c FixityDirection)
+$cgfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; FixityDirection -&gt; c FixityDirection
+gfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; FixityDirection -&gt; c FixityDirection
+$cgunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c FixityDirection
+gunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c FixityDirection
+$ctoConstr :: FixityDirection -&gt; Constr
+toConstr :: FixityDirection -&gt; Constr
+$cdataTypeOf :: FixityDirection -&gt; DataType
+dataTypeOf :: FixityDirection -&gt; DataType
+$cdataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c FixityDirection)
+dataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c FixityDirection)
+$cdataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c FixityDirection)
+dataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c FixityDirection)
+$cgmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; FixityDirection -&gt; FixityDirection
+gmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; FixityDirection -&gt; FixityDirection
+$cgmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; FixityDirection -&gt; r
+gmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; FixityDirection -&gt; r
+$cgmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; FixityDirection -&gt; r
+gmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; FixityDirection -&gt; r
+$cgmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; FixityDirection -&gt; [u]
+gmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; FixityDirection -&gt; [u]
+$cgmapQi :: forall u.
+Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; FixityDirection -&gt; u
+gmapQi :: forall u.
+Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; FixityDirection -&gt; u
+$cgmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; FixityDirection -&gt; m FixityDirection
+gmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; FixityDirection -&gt; m FixityDirection
+$cgmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; FixityDirection -&gt; m FixityDirection
+gmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; FixityDirection -&gt; m FixityDirection
+$cgmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; FixityDirection -&gt; m FixityDirection
+gmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; FixityDirection -&gt; m FixityDirection
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Data</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-136"></span><span>
+</span><span id="line-137"></span><span class="hs-keyword">data</span><span> </span><span id="Fixity"><span class="annot"><a href="Language.Haskell.Syntax.Basic.html#Fixity"><span class="hs-identifier hs-var">Fixity</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Fixity"><span class="annot"><a href="Language.Haskell.Syntax.Basic.html#Fixity"><span class="hs-identifier hs-var">Fixity</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="annot"><a href="Language.Haskell.Syntax.Basic.html#FixityDirection"><span class="hs-identifier hs-type">FixityDirection</span></a></span><span>
+</span><span id="line-138"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621682464169"><span id="local-6989586621682464174"><span class="annot"><span class="annottext">Fixity -&gt; Fixity -&gt; Bool
+(Fixity -&gt; Fixity -&gt; Bool)
+-&gt; (Fixity -&gt; Fixity -&gt; Bool) -&gt; Eq Fixity
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: Fixity -&gt; Fixity -&gt; Bool
+== :: Fixity -&gt; Fixity -&gt; Bool
+$c/= :: Fixity -&gt; Fixity -&gt; Bool
+/= :: Fixity -&gt; Fixity -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621682464180"><span id="local-6989586621682464185"><span id="local-6989586621682464189"><span id="local-6989586621682464191"><span id="local-6989586621682464193"><span id="local-6989586621682464199"><span id="local-6989586621682464204"><span id="local-6989586621682464207"><span id="local-6989586621682464210"><span id="local-6989586621682464213"><span id="local-6989586621682464216"><span id="local-6989586621682464219"><span id="local-6989586621682464224"><span id="local-6989586621682464229"><span class="annot"><span class="annottext">Typeable Fixity
+Typeable Fixity =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; Fixity -&gt; c Fixity)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c Fixity)
+-&gt; (Fixity -&gt; Constr)
+-&gt; (Fixity -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c Fixity))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c Fixity))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; Fixity -&gt; Fixity)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Fixity -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Fixity -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; Fixity -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; Fixity -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; Fixity -&gt; m Fixity)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; Fixity -&gt; m Fixity)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; Fixity -&gt; m Fixity)
+-&gt; Data Fixity
+Fixity -&gt; Constr
+Fixity -&gt; DataType
+(forall b. Data b =&gt; b -&gt; b) -&gt; Fixity -&gt; Fixity
+forall a.
+Typeable a =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; a -&gt; c a)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c a)
+-&gt; (a -&gt; Constr)
+-&gt; (a -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c a))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c a))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; a -&gt; a)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; Data a
+forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; Fixity -&gt; u
+forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; Fixity -&gt; [u]
+forall r r'.
+(r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Fixity -&gt; r
+forall r r'.
+(r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Fixity -&gt; r
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Fixity -&gt; m Fixity
+forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Fixity -&gt; m Fixity
+forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c Fixity
+forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; Fixity -&gt; c Fixity
+forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c Fixity)
+forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c Fixity)
+$cgfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; Fixity -&gt; c Fixity
+gfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; Fixity -&gt; c Fixity
+$cgunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c Fixity
+gunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c Fixity
+$ctoConstr :: Fixity -&gt; Constr
+toConstr :: Fixity -&gt; Constr
+$cdataTypeOf :: Fixity -&gt; DataType
+dataTypeOf :: Fixity -&gt; DataType
+$cdataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c Fixity)
+dataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c Fixity)
+$cdataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c Fixity)
+dataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c Fixity)
+$cgmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; Fixity -&gt; Fixity
+gmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; Fixity -&gt; Fixity
+$cgmapQl :: forall r r'.
+(r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Fixity -&gt; r
+gmapQl :: forall r r'.
+(r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Fixity -&gt; r
+$cgmapQr :: forall r r'.
+(r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Fixity -&gt; r
+gmapQr :: forall r r'.
+(r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Fixity -&gt; r
+$cgmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; Fixity -&gt; [u]
+gmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; Fixity -&gt; [u]
+$cgmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; Fixity -&gt; u
+gmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; Fixity -&gt; u
+$cgmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Fixity -&gt; m Fixity
+gmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Fixity -&gt; m Fixity
+$cgmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Fixity -&gt; m Fixity
+gmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Fixity -&gt; m Fixity
+$cgmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Fixity -&gt; m Fixity
+gmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Fixity -&gt; m Fixity
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Data</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-139"></span></pre></body></html>

@@ -1,0 +1,159 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Language.Haskell.Syntax.Module.Name.html"><span class="hs-identifier">Language.Haskell.Syntax.Module.Name</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.21.2.0-inplace/src/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.21.2.0-inplace/src/Data.Char.html"><span class="hs-identifier">Data.Char</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">isAlphaNum</span></span><span class="hs-special">)</span><span>
+</span><span id="line-6"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../deepseq-1.5.1.0-inplace/src/Control.DeepSeq.html"><span class="hs-identifier">Control.DeepSeq</span></a></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../../base-4.21.2.0-inplace/src/Text.ParserCombinators.ReadP.html"><span class="hs-identifier">Text.ParserCombinators.ReadP</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Parse</span></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../filepath-1.5.5.0-inplace/src/System.FilePath.html"><span class="hs-identifier">System.FilePath</span></a></span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Data.FastString.html"><span class="hs-identifier">GHC.Data.FastString</span></a></span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="annot"><span class="hs-comment">-- | A ModuleName is essentially a simple string, e.g. @Data.List@.</span></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">newtype</span><span> </span><span id="ModuleName"><span class="annot"><a href="Language.Haskell.Syntax.Module.Name.html#ModuleName"><span class="hs-identifier hs-var">ModuleName</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="ModuleName"><span class="annot"><a href="Language.Haskell.Syntax.Module.Name.html#ModuleName"><span class="hs-identifier hs-var">ModuleName</span></a></span></span><span> </span><span class="annot"><a href="GHC.Data.FastString.html#FastString"><span class="hs-identifier hs-type">FastString</span></a></span><span> </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621682465467"><span id="local-6989586621682465473"><span id="local-6989586621682465477"><span class="annot"><span class="annottext">Int -&gt; ModuleName -&gt; ShowS
+[ModuleName] -&gt; ShowS
+ModuleName -&gt; String
+(Int -&gt; ModuleName -&gt; ShowS)
+-&gt; (ModuleName -&gt; String)
+-&gt; ([ModuleName] -&gt; ShowS)
+-&gt; Show ModuleName
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; ModuleName -&gt; ShowS
+showsPrec :: Int -&gt; ModuleName -&gt; ShowS
+$cshow :: ModuleName -&gt; String
+show :: ModuleName -&gt; String
+$cshowList :: [ModuleName] -&gt; ShowS
+showList :: [ModuleName] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621682465482"><span id="local-6989586621682465487"><span class="annot"><span class="annottext">ModuleName -&gt; ModuleName -&gt; Bool
+(ModuleName -&gt; ModuleName -&gt; Bool)
+-&gt; (ModuleName -&gt; ModuleName -&gt; Bool) -&gt; Eq ModuleName
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: ModuleName -&gt; ModuleName -&gt; Bool
+== :: ModuleName -&gt; ModuleName -&gt; Bool
+$c/= :: ModuleName -&gt; ModuleName -&gt; Bool
+/= :: ModuleName -&gt; ModuleName -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621682465497"><span id="local-6989586621682465501"><span id="local-6989586621682465504"><span id="local-6989586621682465507"><span id="local-6989586621682465510"><span id="local-6989586621682465513"><span class="annot"><span class="hs-identifier hs-type">Ord</span></span><span> </span><span class="annot"><a href="Language.Haskell.Syntax.Module.Name.html#ModuleName"><span class="hs-identifier hs-type">ModuleName</span></a></span></span></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-16"></span><span>  </span><span id="local-6989586621682465516"><span class="annot"><span class="annottext">ModuleName
+</span><a href="#local-6989586621682465516"><span class="hs-identifier hs-var">nm1</span></a></span></span><span> </span><span id="local-6989586621682465517"><span class="annot"><span class="annottext">compare :: ModuleName -&gt; ModuleName -&gt; Ordering
+</span><a href="#local-6989586621682465517"><span class="hs-operator hs-var hs-var hs-var">`compare`</span></a></span></span><span> </span><span id="local-6989586621682465519"><span class="annot"><span class="annottext">ModuleName
+</span><a href="#local-6989586621682465519"><span class="hs-identifier hs-var">nm2</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ModuleName -&gt; ModuleName -&gt; Ordering
+</span><a href="Language.Haskell.Syntax.Module.Name.html#stableModuleNameCmp"><span class="hs-identifier hs-var">stableModuleNameCmp</span></a></span><span> </span><span class="annot"><span class="annottext">ModuleName
+</span><a href="#local-6989586621682465516"><span class="hs-identifier hs-var">nm1</span></a></span><span> </span><span class="annot"><span class="annottext">ModuleName
+</span><a href="#local-6989586621682465519"><span class="hs-identifier hs-var">nm2</span></a></span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="../../deepseq-1.5.1.0-inplace/src/Control.DeepSeq.html#NFData"><span class="hs-identifier hs-type">NFData</span></a></span><span> </span><span class="annot"><a href="Language.Haskell.Syntax.Module.Name.html#ModuleName"><span class="hs-identifier hs-type">ModuleName</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-19"></span><span>  </span><span id="local-6989586621682465524"><span class="annot"><span class="annottext">rnf :: ModuleName -&gt; ()
+</span><a href="#local-6989586621682465524"><span class="hs-identifier hs-var hs-var hs-var">rnf</span></a></span></span><span> </span><span id="local-6989586621682465526"><span class="annot"><span class="annottext">ModuleName
+</span><a href="#local-6989586621682465526"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ModuleName
+</span><a href="#local-6989586621682465526"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">ModuleName -&gt; () -&gt; ()
+forall a b. a -&gt; b -&gt; b
+</span><span class="hs-operator hs-var">`seq`</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span class="annot"><a href="Language.Haskell.Syntax.Module.Name.html#stableModuleNameCmp"><span class="hs-identifier hs-type">stableModuleNameCmp</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Language.Haskell.Syntax.Module.Name.html#ModuleName"><span class="hs-identifier hs-type">ModuleName</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Language.Haskell.Syntax.Module.Name.html#ModuleName"><span class="hs-identifier hs-type">ModuleName</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Ordering</span></span><span>
+</span><span id="line-22"></span><span class="annot"><span class="hs-comment">-- ^ Compares module names lexically, rather than by their 'Unique's</span></span><span>
+</span><span id="line-23"></span><span id="stableModuleNameCmp"><span class="annot"><span class="annottext">stableModuleNameCmp :: ModuleName -&gt; ModuleName -&gt; Ordering
+</span><a href="Language.Haskell.Syntax.Module.Name.html#stableModuleNameCmp"><span class="hs-identifier hs-var hs-var">stableModuleNameCmp</span></a></span></span><span> </span><span id="local-6989586621682465527"><span class="annot"><span class="annottext">ModuleName
+</span><a href="#local-6989586621682465527"><span class="hs-identifier hs-var">n1</span></a></span></span><span> </span><span id="local-6989586621682465528"><span class="annot"><span class="annottext">ModuleName
+</span><a href="#local-6989586621682465528"><span class="hs-identifier hs-var">n2</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ModuleName -&gt; FastString
+</span><a href="Language.Haskell.Syntax.Module.Name.html#moduleNameFS"><span class="hs-identifier hs-var">moduleNameFS</span></a></span><span> </span><span class="annot"><span class="annottext">ModuleName
+</span><a href="#local-6989586621682465527"><span class="hs-identifier hs-var">n1</span></a></span><span> </span><span class="annot"><span class="annottext">FastString -&gt; FastString -&gt; Ordering
+</span><a href="GHC.Data.FastString.html#lexicalCompareFS"><span class="hs-operator hs-var">`lexicalCompareFS`</span></a></span><span> </span><span class="annot"><span class="annottext">ModuleName -&gt; FastString
+</span><a href="Language.Haskell.Syntax.Module.Name.html#moduleNameFS"><span class="hs-identifier hs-var">moduleNameFS</span></a></span><span> </span><span class="annot"><span class="annottext">ModuleName
+</span><a href="#local-6989586621682465528"><span class="hs-identifier hs-var">n2</span></a></span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span class="annot"><a href="Language.Haskell.Syntax.Module.Name.html#moduleNameFS"><span class="hs-identifier hs-type">moduleNameFS</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Language.Haskell.Syntax.Module.Name.html#ModuleName"><span class="hs-identifier hs-type">ModuleName</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Data.FastString.html#FastString"><span class="hs-identifier hs-type">FastString</span></a></span><span>
+</span><span id="line-26"></span><span id="moduleNameFS"><span class="annot"><span class="annottext">moduleNameFS :: ModuleName -&gt; FastString
+</span><a href="Language.Haskell.Syntax.Module.Name.html#moduleNameFS"><span class="hs-identifier hs-var hs-var">moduleNameFS</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Language.Haskell.Syntax.Module.Name.html#ModuleName"><span class="hs-identifier hs-type">ModuleName</span></a></span><span> </span><span id="local-6989586621682465531"><span class="annot"><span class="annottext">FastString
+</span><a href="#local-6989586621682465531"><span class="hs-identifier hs-var">mod</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">FastString
+</span><a href="#local-6989586621682465531"><span class="hs-identifier hs-var">mod</span></a></span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span class="annot"><a href="Language.Haskell.Syntax.Module.Name.html#moduleNameString"><span class="hs-identifier hs-type">moduleNameString</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Language.Haskell.Syntax.Module.Name.html#ModuleName"><span class="hs-identifier hs-type">ModuleName</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span>
+</span><span id="line-29"></span><span id="moduleNameString"><span class="annot"><span class="annottext">moduleNameString :: ModuleName -&gt; String
+</span><a href="Language.Haskell.Syntax.Module.Name.html#moduleNameString"><span class="hs-identifier hs-var hs-var">moduleNameString</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Language.Haskell.Syntax.Module.Name.html#ModuleName"><span class="hs-identifier hs-type">ModuleName</span></a></span><span> </span><span id="local-6989586621682465533"><span class="annot"><span class="annottext">FastString
+</span><a href="#local-6989586621682465533"><span class="hs-identifier hs-var">mod</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">FastString -&gt; String
+</span><a href="GHC.Data.FastString.html#unpackFS"><span class="hs-identifier hs-var">unpackFS</span></a></span><span> </span><span class="annot"><span class="annottext">FastString
+</span><a href="#local-6989586621682465533"><span class="hs-identifier hs-var">mod</span></a></span><span>
+</span><span id="line-30"></span><span>
+</span><span id="line-31"></span><span class="annot"><a href="Language.Haskell.Syntax.Module.Name.html#mkModuleName"><span class="hs-identifier hs-type">mkModuleName</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Language.Haskell.Syntax.Module.Name.html#ModuleName"><span class="hs-identifier hs-type">ModuleName</span></a></span><span>
+</span><span id="line-32"></span><span id="mkModuleName"><span class="annot"><span class="annottext">mkModuleName :: String -&gt; ModuleName
+</span><a href="Language.Haskell.Syntax.Module.Name.html#mkModuleName"><span class="hs-identifier hs-var hs-var">mkModuleName</span></a></span></span><span> </span><span id="local-6989586621682465536"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621682465536"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">FastString -&gt; ModuleName
+</span><a href="Language.Haskell.Syntax.Module.Name.html#ModuleName"><span class="hs-identifier hs-var">ModuleName</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; FastString
+</span><a href="GHC.Data.FastString.html#mkFastString"><span class="hs-identifier hs-var">mkFastString</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621682465536"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span>
+</span><span id="line-34"></span><span class="annot"><a href="Language.Haskell.Syntax.Module.Name.html#mkModuleNameFS"><span class="hs-identifier hs-type">mkModuleNameFS</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Data.FastString.html#FastString"><span class="hs-identifier hs-type">FastString</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Language.Haskell.Syntax.Module.Name.html#ModuleName"><span class="hs-identifier hs-type">ModuleName</span></a></span><span>
+</span><span id="line-35"></span><span id="mkModuleNameFS"><span class="annot"><span class="annottext">mkModuleNameFS :: FastString -&gt; ModuleName
+</span><a href="Language.Haskell.Syntax.Module.Name.html#mkModuleNameFS"><span class="hs-identifier hs-var hs-var">mkModuleNameFS</span></a></span></span><span> </span><span id="local-6989586621682465539"><span class="annot"><span class="annottext">FastString
+</span><a href="#local-6989586621682465539"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">FastString -&gt; ModuleName
+</span><a href="Language.Haskell.Syntax.Module.Name.html#ModuleName"><span class="hs-identifier hs-var">ModuleName</span></a></span><span> </span><span class="annot"><span class="annottext">FastString
+</span><a href="#local-6989586621682465539"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span class="hs-comment">-- |Returns the string version of the module name, with dots replaced by slashes.</span><span>
+</span><span id="line-38"></span><span class="hs-comment">--</span><span>
+</span><span id="line-39"></span><span class="annot"><a href="Language.Haskell.Syntax.Module.Name.html#moduleNameSlashes"><span class="hs-identifier hs-type">moduleNameSlashes</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Language.Haskell.Syntax.Module.Name.html#ModuleName"><span class="hs-identifier hs-type">ModuleName</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span>
+</span><span id="line-40"></span><span id="moduleNameSlashes"><span class="annot"><span class="annottext">moduleNameSlashes :: ModuleName -&gt; String
+</span><a href="Language.Haskell.Syntax.Module.Name.html#moduleNameSlashes"><span class="hs-identifier hs-var hs-var">moduleNameSlashes</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ShowS
+</span><a href="#local-6989586621682465541"><span class="hs-identifier hs-var">dots_to_slashes</span></a></span><span> </span><span class="annot"><span class="annottext">ShowS -&gt; (ModuleName -&gt; String) -&gt; ModuleName -&gt; String
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">ModuleName -&gt; String
+</span><a href="Language.Haskell.Syntax.Module.Name.html#moduleNameString"><span class="hs-identifier hs-var">moduleNameString</span></a></span><span>
+</span><span id="line-41"></span><span>  </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621682465541"><span class="annot"><span class="annottext">dots_to_slashes :: ShowS
+</span><a href="#local-6989586621682465541"><span class="hs-identifier hs-var hs-var">dots_to_slashes</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Char -&gt; Char) -&gt; ShowS
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><span class="hs-identifier hs-var">map</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621682465544"><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621682465544"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621682465544"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Char -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'.'</span></span><span> </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="../../filepath-1.5.5.0-inplace/src/System.FilePath.Posix.html#pathSeparator"><span class="hs-identifier hs-var">pathSeparator</span></a></span><span> </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621682465544"><span class="hs-identifier hs-var">c</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span>
+</span><span id="line-43"></span><span class="hs-comment">-- |Returns the string version of the module name, with dots replaced by colons.</span><span>
+</span><span id="line-44"></span><span class="hs-comment">--</span><span>
+</span><span id="line-45"></span><span class="annot"><a href="Language.Haskell.Syntax.Module.Name.html#moduleNameColons"><span class="hs-identifier hs-type">moduleNameColons</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Language.Haskell.Syntax.Module.Name.html#ModuleName"><span class="hs-identifier hs-type">ModuleName</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span>
+</span><span id="line-46"></span><span id="moduleNameColons"><span class="annot"><span class="annottext">moduleNameColons :: ModuleName -&gt; String
+</span><a href="Language.Haskell.Syntax.Module.Name.html#moduleNameColons"><span class="hs-identifier hs-var hs-var">moduleNameColons</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ShowS
+</span><a href="#local-6989586621682465547"><span class="hs-identifier hs-var">dots_to_colons</span></a></span><span> </span><span class="annot"><span class="annottext">ShowS -&gt; (ModuleName -&gt; String) -&gt; ModuleName -&gt; String
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">ModuleName -&gt; String
+</span><a href="Language.Haskell.Syntax.Module.Name.html#moduleNameString"><span class="hs-identifier hs-var">moduleNameString</span></a></span><span>
+</span><span id="line-47"></span><span>  </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621682465547"><span class="annot"><span class="annottext">dots_to_colons :: ShowS
+</span><a href="#local-6989586621682465547"><span class="hs-identifier hs-var hs-var">dots_to_colons</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Char -&gt; Char) -&gt; ShowS
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><span class="hs-identifier hs-var">map</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621682465549"><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621682465549"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621682465549"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Char -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'.'</span></span><span> </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">':'</span></span><span> </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621682465549"><span class="hs-identifier hs-var">c</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-48"></span><span>
+</span><span id="line-49"></span><span class="annot"><a href="Language.Haskell.Syntax.Module.Name.html#parseModuleName"><span class="hs-identifier hs-type">parseModuleName</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Parse.ReadP</span></span><span> </span><span class="annot"><a href="Language.Haskell.Syntax.Module.Name.html#ModuleName"><span class="hs-identifier hs-type">ModuleName</span></a></span><span>
+</span><span id="line-50"></span><span id="parseModuleName"><span class="annot"><span class="annottext">parseModuleName :: ReadP ModuleName
+</span><a href="Language.Haskell.Syntax.Module.Name.html#parseModuleName"><span class="hs-identifier hs-var hs-var">parseModuleName</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(String -&gt; ModuleName) -&gt; ReadP String -&gt; ReadP ModuleName
+forall a b. (a -&gt; b) -&gt; ReadP a -&gt; ReadP b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-identifier hs-var">fmap</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; ModuleName
+</span><a href="Language.Haskell.Syntax.Module.Name.html#mkModuleName"><span class="hs-identifier hs-var">mkModuleName</span></a></span><span>
+</span><span id="line-51"></span><span>                </span><span class="annot"><span class="annottext">(ReadP String -&gt; ReadP ModuleName)
+-&gt; ReadP String -&gt; ReadP ModuleName
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">(Char -&gt; Bool) -&gt; ReadP String
+</span><span class="hs-identifier hs-var">Parse.munch1</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621682465552"><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621682465552"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Char -&gt; Bool
+</span><span class="hs-identifier hs-var">isAlphaNum</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621682465552"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><span class="hs-operator hs-var">||</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621682465552"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; String -&gt; Bool
+forall a. Eq a =&gt; a -&gt; [a] -&gt; Bool
+forall (t :: * -&gt; *) a. (Foldable t, Eq a) =&gt; a -&gt; t a -&gt; Bool
+</span><span class="hs-operator hs-var">`elem`</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;_.'&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-52"></span><span>
+</span><span id="line-53"></span></pre></body></html>
