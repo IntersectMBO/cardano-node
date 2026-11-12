@@ -16,6 +16,8 @@ import           Cardano.Tracer.Acceptors.Run
 import           Cardano.Tracer.CLI
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Environment
+import qualified Cardano.Tracer.Handlers.Alarms.Registry as Alarms
+import           Cardano.Tracer.Handlers.Alarms.Server (runAlarms)
 import           Cardano.Tracer.Handlers.Logs.Rotator
 import           Cardano.Tracer.Handlers.Metrics.Servers
 import           Cardano.Tracer.Handlers.ReForwarder
@@ -92,6 +94,10 @@ doRunCardanoTracer config stateDir tr protocolsBrake dpRequestors = do
   registry <- newRegistry
 
   !timeseriesHandle <- for (hasTimeseries config) (const $ Timeseries.create @(Tree _) tr.timeseries Nothing)
+  !alarmRegistry    <- for (alarms config) (Alarms.newAlarmRegistry tr.assorted)
+  case (alarmRegistry, timeseriesHandle) of
+    (Just reg, Just ts) -> Alarms.runTimeseriesEvaluator reg ts
+    _                   -> pure ()
 
   -- Environment for all following functions.
   let tracerEnv :: TracerEnv
@@ -110,6 +116,7 @@ doRunCardanoTracer config stateDir tr protocolsBrake dpRequestors = do
         , teStateDir              = stateDir
         , teMetricsHelp           = mHelp
         , teTimeseriesHandle      = timeseriesHandle
+        , teAlarmRegistry         = alarmRegistry
         }
 
   -- Specify what should be done before 'cardano-tracer' stops.
@@ -123,6 +130,7 @@ doRunCardanoTracer config stateDir tr protocolsBrake dpRequestors = do
     [ runLogsRotator    tracerEnv
     , runMetricsServers tracerEnv
     , runAcceptors      tracerEnv
+    , runAlarms         tracerEnv
     ]
 
 -- NB. this fails silently if there's any read or decode error when an external JSON file is provided
