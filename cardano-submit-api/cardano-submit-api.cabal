@@ -46,6 +46,7 @@ library
                       , containers
                       , ekg-core
                       , http-media
+                      , http-types
                       , mtl
                       , network
                       , optparse-applicative-fork
@@ -60,11 +61,13 @@ library
                       , text
                       , transformers-except
                       , trace-dispatcher
+                      , wai
                       , warp
 
   hs-source-dirs:       src
 
   exposed-modules:      Cardano.TxSubmit
+                      , Cardano.TxSubmit.Deprecation
 
   other-modules:        Cardano.TxSubmit.CLI.Parsers
                       , Cardano.TxSubmit.CLI.Types

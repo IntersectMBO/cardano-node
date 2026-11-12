@@ -1,0 +1,5 @@
+pr: 6738
+kind:
+  - compatible
+description: |
+  Deprecated `cardano-submit-api` in favour of the UTxO RPC interface built into `cardano-node` (cardano-rpc); it will be removed in a future release. The executable now prints a deprecation warning to stderr at start-up, which the logging configuration cannot silence, and `--help` marks it as deprecated. It also logs the warning at Warning severity. Every HTTP response now carries `Deprecation` and `Link: <...>; rel="deprecation"` headers that point to the migration guide. See [`cardano-submit-api/DEPRECATION.md`](https://github.com/IntersectMBO/cardano-node/blob/master/cardano-submit-api/DEPRECATION.md) for how to migrate.
