@@ -1,0 +1,6 @@
+pr: 6683
+project: cardano-testnet
+kind:
+  - test
+description: |
+  The cardano-testnet test suite now covers the UTxO RPC mempool methods end to end against a running testnet: ReadMempool returns the pending transactions, WatchMempool streams mempool changes as they happen, and WaitForTx waits until a submitted transaction is confirmed, including the error returned for an invalid transaction reference. The existing RPC tests were also tidied, and the FollowTip test now uses the streaming helper from cardano-rpc. The cardano-testnet library API is unchanged.

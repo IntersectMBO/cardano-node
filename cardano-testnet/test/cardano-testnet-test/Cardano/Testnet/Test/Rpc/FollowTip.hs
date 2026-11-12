@@ -26,11 +26,10 @@ import           Cardano.Testnet.Test.Utils (testEra)
 
 import           Prelude
 
-import           Control.Exception (catch, throwIO, try)
-import           Control.Monad (replicateM, void, (>=>))
+import           Control.Exception (try)
+import           Control.Monad (replicateM, void)
 import qualified Data.ByteString as BS
 import           Data.Default.Class
-import           Data.IORef (newIORef, readIORef, writeIORef)
 import           Data.List.NonEmpty (NonEmpty ((:|)))
 import           GHC.Stack (HasCallStack, callStack)
 import           Lens.Micro
@@ -39,6 +38,7 @@ import           Network.GRPC.Spec (GrpcError (..), GrpcException (..), NextElem
 import           Testnet.Property.Util (integrationRetryWorkspace)
 import           Testnet.Types
 
+import           Hedgehog
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras as H
 
@@ -68,23 +68,12 @@ hprop_rpc_follow_tip = integrationRetryWorkspace 2 "rpc-follow-tip" $ \tempAbsBa
         :: [Rpc.Proto U5c.BlockRef]
         -> (IO (NextElem (Rpc.Proto U5c.FollowTipResponse)) -> IO a)
         -> H.Integration a
-      withFollowTip intersectRefs body = do
-        (result, cancelled) <- H.evalIO $ do
-          resultRef <- newIORef Nothing
-          let stream =
-                Rpc.withConnection def rpcServer $ \conn ->
-                  Rpc.serverStreaming conn (Rpc.rpc @(Rpc.Protobuf U5c.SyncService "followTip")) (def & U5c.intersect .~ intersectRefs) $
-                    body >=> (writeIORef resultRef . Just)
-          cancelled <- (False <$ stream) `catch` \e@GrpcException{grpcError} ->
-            if grpcError == GrpcCancelled then pure True else throwIO e
-          r <- readIORef resultRef
-          pure (r, cancelled)
-        -- A cancel after the body finished is the client closing the
-        -- connection; only one that cut the body short is a failure.
-        case result of
-          Nothing | cancelled ->
-            H.failMessage callStack "FollowTip stream was cancelled before the body finished"
-          _ -> H.nothingFail result
+      withFollowTip intersectRefs body =
+        H.evalIO . Rpc.withConnection def rpcServer $ \conn ->
+          Rpc.withRPC conn def (Proxy @(Rpc.Protobuf U5c.SyncService "followTip")) $ \call -> do
+            Rpc.expectCancellation call
+            Rpc.sendFinalInput call (def & U5c.intersect .~ intersectRefs)
+            body (Rpc.recvNextOutputElem call)
 
       -- Open a fresh FollowTip stream intersecting at the given references,
       -- read exactly the requested number of messages, then let the
@@ -161,7 +150,7 @@ hprop_rpc_follow_tip = integrationRetryWorkspace 2 "rpc-follow-tip" $ \tempAbsBa
     apply3 <- nextElemFail applyElem3
 
     resetRef <- H.nothingFail (resetMsg ^. U5c.maybe'reset)
-    resetRef ^. U5c.slot H.=== 0
+    resetRef ^. U5c.slot === 0
     H.assertWith (resetRef ^. U5c.hash) BS.null
 
     tipAfterReset <- H.nothingFail (resetMsg ^. U5c.maybe'tip)
@@ -190,8 +179,8 @@ hprop_rpc_follow_tip = integrationRetryWorkspace 2 "rpc-follow-tip" $ \tempAbsBa
     [resumeElem] <- followTipN 1 [def & U5c.slot .~ seenSlot & U5c.hash .~ seenHash]
     resumeMsg <- nextElemFail resumeElem
     resumeResetRef <- H.nothingFail (resumeMsg ^. U5c.maybe'reset)
-    resumeResetRef ^. U5c.slot H.=== seenSlot
-    resumeResetRef ^. U5c.hash H.=== seenHash
+    resumeResetRef ^. U5c.slot === seenSlot
+    resumeResetRef ^. U5c.hash === seenHash
 
   do
     H.note_ "An empty intersect list follows from the current tip: the reset lands at or after the previously observed tip"
@@ -263,7 +252,7 @@ hprop_rpc_follow_tip = integrationRetryWorkspace 2 "rpc-follow-tip" $ \tempAbsBa
       Rpc.nonStreaming conn (Rpc.rpc @(Rpc.Protobuf Submit.SubmitService "submitTx")) $
         def & Submit.tx .~ (def & Submit.raw .~ serialiseToRawBytes (Exp.SignedTx signedLedgerTx))
     submittedTxId <- H.leftFail . deserialiseFromRawBytes AsTxId $ submitResponse ^. Submit.ref
-    txId' H.=== submittedTxId
+    txId' === submittedTxId
 
     H.note_ "Tailing FollowTip from the pre-submission tip until the submitted transaction appears in an apply message"
     foundTx <- followTipUntilTx [preSubmissionTip] txHash 30
@@ -273,9 +262,9 @@ hprop_rpc_follow_tip = integrationRetryWorkspace 2 "rpc-follow-tip" $ \tempAbsBa
         H.failMessage callStack "submitted transaction did not appear in a FollowTip apply message within 30 apply messages"
 
     H.note_ "The found transaction's hash, fee and parsed inputs/outputs match what was submitted"
-    tx ^. U5c.hash H.=== txHash
+    tx ^. U5c.hash === txHash
     txFee <- H.leftFail $ tx ^. U5c.fee . to utxoRpcBigIntToInteger
-    txFee H.=== fee
+    txFee === fee
     H.assertWith (tx ^. U5c.inputs) $ not . null
     H.assertWith (tx ^. U5c.outputs) $ not . null
 
