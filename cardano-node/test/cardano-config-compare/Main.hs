@@ -17,6 +17,10 @@
 -- @config-envelope.json@ is @config.json@ put through @cardano-node config migrate@.
 -- They sit in the same directory, so both resolve the same (relative) genesis
 -- file paths and can be compared field by field.
+--
+-- @config-experimental-off.json@ is @config.json@ with
+-- @ExperimentalHardForksEnabled@ off and a @TestDijkstraHardForkAtEpoch@ added,
+-- so it names Dijkstra settings that both parsers must ignore.
 module Main (main) where
 
 import           Control.Exception (SomeException, evaluate, try)
@@ -71,6 +75,11 @@ legacyConfigPath = (</> "config.json") <$> fixtureDir
 envelopeConfigPath :: IO FilePath
 envelopeConfigPath = (</> "config-envelope.json") <$> fixtureDir
 
+-- | 'legacyConfigPath' with @ExperimentalHardForksEnabled@ off. It still names
+-- the Dijkstra genesis and a Dijkstra hard-fork epoch.
+experimentalOffConfigPath :: IO FilePath
+experimentalOffConfigPath = (</> "config-experimental-off.json") <$> fixtureDir
+
 -- | Labels ('compareConfigurations' prefixes each divergence with one) that are
 -- documented, expected divergences on this fixture. They fall into three kinds,
 -- and none is an adapter defect — the adapter faithfully reflects what
@@ -110,7 +119,9 @@ tests = testGroup "cardano-config configuration dialects"
   , testGroup "legacy dialect (both parsers)"
       [ testCase "the fixture is classified as legacy" testLegacyClassification
       , testCase "the two parsers diverge only on the documented residuals"
-          testLegacyDualParse
+          (testLegacyDualParse legacyConfigPath)
+      , testCase "with ExperimentalHardForksEnabled off, both parsers ignore the Dijkstra settings"
+          (testLegacyDualParse experimentalOffConfigPath)
       , testCase "an absent --port means the same ephemeral port to both parsers"
           testFlaglessPortAgrees
       ]
@@ -152,11 +163,11 @@ testLegacyClassification :: Assertion
 testLegacyClassification =
   legacyConfigPath >>= classifyConfigurationFile >>= (@?= LegacyDialect)
 
--- | Resolve the fixture both ways and check that the divergences stay inside the
--- documented residual set.
-testLegacyDualParse :: Assertion
-testLegacyDualParse = do
-  configPath <- legacyConfigPath
+-- | Resolve a legacy fixture both ways and check that the divergences stay inside
+-- the documented residual set.
+testLegacyDualParse :: IO FilePath -> Assertion
+testLegacyDualParse getConfigPath = do
+  configPath <- getConfigPath
   adapted <- resolveWithCardanoConfig configPath
   pomNc <- resolveWithPom configPath
 

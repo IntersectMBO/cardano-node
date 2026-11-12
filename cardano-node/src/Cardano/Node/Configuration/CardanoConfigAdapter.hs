@@ -373,6 +373,14 @@ nodeProtocolConfigurationFromCardanoConfig cfg =
   testCfg = Cfg.testingConfiguration cfg
   configDir = takeDirectory (Cfg.configFilePath cfg)
 
+  -- As in POM, the Dijkstra genesis and hard-fork triggers only apply when
+  -- ExperimentalHardForksEnabled is on. cardano-config keeps them when it is
+  -- off (it only skips reading the genesis file), so they are dropped here.
+  ifExperimental :: Maybe a -> Maybe a
+  ifExperimental x
+    | runIdentity (Cfg.experimentalHardForksEnabled testCfg) = x
+    | otherwise = Nothing
+
   genFile :: Cfg.Hashed FilePath -> GenesisFile
   genFile h = GenesisFile (configDir </> Cfg.hashed h)
 
@@ -416,7 +424,7 @@ nodeProtocolConfigurationFromCardanoConfig cfg =
   dijkstraConfig =
     fmap
       (\h -> NodeDijkstraProtocolConfiguration (genFile h) (genHash h))
-      (strictMaybeToMaybe (Cfg.experimentalGenesis testCfg))
+      (ifExperimental (strictMaybeToMaybe (Cfg.experimentalGenesis testCfg)))
 
   hardforkConfig =
     NodeHardForkProtocolConfiguration
@@ -433,8 +441,10 @@ nodeProtocolConfigurationFromCardanoConfig cfg =
       , npcTestBabbageHardForkAtVersion = strictMaybeToMaybe (Cfg.testBabbageHardForkAtVersion testCfg)
       , npcTestConwayHardForkAtEpoch = epochOf (Cfg.testConwayHardForkAtEpoch testCfg)
       , npcTestConwayHardForkAtVersion = strictMaybeToMaybe (Cfg.testConwayHardForkAtVersion testCfg)
-      , npcTestDijkstraHardForkAtEpoch = epochOf (Cfg.testDijkstraHardForkAtEpoch testCfg)
-      , npcTestDijkstraHardForkAtVersion = strictMaybeToMaybe (Cfg.testDijkstraHardForkAtVersion testCfg)
+      , npcTestDijkstraHardForkAtEpoch =
+          ifExperimental (epochOf (Cfg.testDijkstraHardForkAtEpoch testCfg))
+      , npcTestDijkstraHardForkAtVersion =
+          ifExperimental (strictMaybeToMaybe (Cfg.testDijkstraHardForkAtVersion testCfg))
       }
 
   -- The checkpoints file is optional, and so is its hash once the file is given
