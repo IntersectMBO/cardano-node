@@ -3,11 +3,13 @@
 
 module Main (main) where
 
+import           Cardano.Benchmarking.GeneratorTx.SizedMetadata
+
 import           Prelude
+
 import           Test.Tasty
 import           Test.Tasty.HUnit
 
-import           Cardano.Benchmarking.GeneratorTx.SizedMetadata
 import           TestnetDiscoveryTest (testnetDiscoveryTests)
 
 main :: IO ()
