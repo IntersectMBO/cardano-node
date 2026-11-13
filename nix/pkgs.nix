@@ -63,6 +63,12 @@ in with final;
           flags.support_s2n_bignum =
             lib.mkIf (lib.versionAtLeast config.package.identifier.version "2") false;
         };
+        # prettyprinter-configurable (Apache-2.0 in IntersectMBO/plutus) omits
+        # `license:` in its .cabal file (parsed as NONE), and dependent-map
+        # (BSD-3-Clause from containers on Hackage, pulled in by HLS) declares
+        # `OtherLicense`; nixpkgs check-meta (>= 2026-11) rejects both as unfree.
+        packages.prettyprinter-configurable.package.license = lib.mkForce "Apache-2.0";
+        packages.dependent-map.package.license = lib.mkForce "BSD-3-Clause";
       })
     ];
   };
