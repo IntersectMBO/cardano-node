@@ -119,6 +119,12 @@ data NodeConfiguration
          -- versions.
        , ncExperimentalProtocolsEnabled :: !Bool
 
+         -- | Enable the Peras experimental feature flag.
+         --
+         -- This flag defaults to 'False' and should only be set to 'True' when
+         -- testing Peras-enabled node-to-node features.
+       , ncPerasEnabled :: !Bool
+
          -- BlockFetch configuration
        , ncMaxConcurrencyBulkSync :: !(Maybe MaxConcurrencyBulkSync)
        , ncMaxConcurrencyDeadline :: !(Maybe MaxConcurrencyDeadline)
@@ -246,6 +252,7 @@ data PartialNodeConfiguration
        , pncDiffusionMode      :: !(Last DiffusionMode)
 
        , pncExperimentalProtocolsEnabled :: !(Last Bool)
+       , pncPerasEnabled :: !(Last Bool)
 
          -- BlockFetch configuration
        , pncMaxConcurrencyBulkSync :: !(Last MaxConcurrencyBulkSync)
@@ -342,6 +349,8 @@ instance FromJSON PartialNodeConfiguration where
 
         pure mValue
 
+      pncPerasEnabled <- Last <$> v .:? "PerasEnabled"
+
       -- Blockfetch parameters
       pncMaxConcurrencyBulkSync <- Last <$> v .:? "MaxConcurrencyBulkSync"
       pncMaxConcurrencyDeadline <- Last <$> v .:? "MaxConcurrencyDeadline"
@@ -426,6 +435,7 @@ instance FromJSON PartialNodeConfiguration where
            , pncSocketConfig = Last . Just $ SocketConfig mempty mempty mempty pncSocketPath
            , pncDiffusionMode
            , pncExperimentalProtocolsEnabled
+           , pncPerasEnabled
            , pncMaxConcurrencyBulkSync
            , pncMaxConcurrencyDeadline
            , pncTraceForwardSocket = mempty
@@ -769,6 +779,7 @@ defaultPartialNodeConfiguration =
     , pncSocketConfig = Last . Just $ SocketConfig mempty mempty mempty mempty
     , pncDiffusionMode = Last $ Just InitiatorAndResponderDiffusionMode
     , pncExperimentalProtocolsEnabled = Last $ Just False
+    , pncPerasEnabled = Last $ Just False
     , pncTopologyFile = Last . Just $ TopologyFile "configuration/cardano/mainnet-topology.json"
     , pncProtocolFiles = Last . Just $ ProtocolFilepaths Nothing Nothing Nothing Nothing Nothing Nothing
     , pncValidateDB = Last $ Just False
@@ -997,6 +1008,10 @@ makeNodeConfiguration pnc = do
     lastToEither "Missing ExperimentalProtocolsEnabled" $
       pncExperimentalProtocolsEnabled pnc
 
+  perasEnabled <-
+    lastToEither "Missing PerasEnabled" $
+      pncPerasEnabled pnc
+
   ncRpcConfig <- makeRpcConfig $ (pncRpcConfig pnc){nodeSocketPath=ncSocketPath socketConfig}
 
   return $ NodeConfiguration
@@ -1011,6 +1026,7 @@ makeNodeConfiguration pnc = do
              , ncSocketConfig = socketConfig
              , ncDiffusionMode = diffusionMode
              , ncExperimentalProtocolsEnabled = experimentalProtocols
+             , ncPerasEnabled = perasEnabled
              , ncMaxConcurrencyBulkSync = getLast $ pncMaxConcurrencyBulkSync pnc
              , ncMaxConcurrencyDeadline = getLast $ pncMaxConcurrencyDeadline pnc
              , ncTraceForwardSocket = getLast $ pncTraceForwardSocket pnc
