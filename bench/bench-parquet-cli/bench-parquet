@@ -9,19 +9,25 @@ DUCKDB=${DUCKDB:-duckdb}
 
 converter_version=0.1
 raw_schema_version=1
+zstd_default=15
+# Rows per row group. Smaller than DuckDB's default (122,880) so that reading the payload
+# of a small namespace decompresses less of its neighbours: on the Leios run, 32,768 made
+# block_ranking 3x faster for +1.8 % size (DUCKDB.md, "Backend comparison").
+row_group_size=32768
 
 usage() {
     cat <<EOF
 Usage: bench-parquet COMMAND ARGS..
 
-  convert-run RUNDIR [--force] [--mem-16g] [--jobs N] [--keep-temp]
+  convert-run RUNDIR [--force] [--jobs N] [--keep-temp] [--zstd-level N]
         Convert node-*/{stdout,stderr} and generator/{stdout,stderr} of RUNDIR
         into RUNDIR/parquets/<process>/<stream>.parquet, plus run.parquet and
         files.parquet (metadata).
           --force      replace an existing parquets/ (only once the new one is complete)
-          --mem-16g    16 GiB memory limit per conversion instead of 4 GiB
-          --jobs N     conversions in parallel (default: from available memory and cores)
+          --jobs N     slots (default: from available memory and cores); a log larger
+                       than total size / slots gets its share of the slots
           --keep-temp  keep the temporary directory when a conversion fails
+          --zstd-level N  zstd compression level (default: $zstd_default)
 
   restore RUNDIR PROCESS [--stream stdout|stderr] -o FILE [--verify]
         Reconstruct a process log from Parquet. --verify checks the sha256
@@ -68,11 +74,10 @@ check_parquets() {
 
 # Convert one log file. Runs as a background job; all output to stderr.
 convert_one() {
-    local src=$1 process=$2 stream=$3 dst=$4 stats=$5 spill=$6 mem=$7 threads=$8
+    local src=$1 process=$2 stream=$3 dst=$4 stats=$5 spill=$6 mem=$7 threads=$8 zstd=$9
 
     local size sha final_nl
     size=$(stat -L -c%s "$src")
-    sha=$(sha256sum "$src" | cut -d' ' -f1)
     if test "$size" -eq 0
     then final_nl=false
     elif test "$(tail -c1 "$src" | wc -l)" -eq 1
@@ -80,27 +85,23 @@ convert_one() {
     else final_nl=false
     fi
 
-    # Characters the line reader can't carry through unchanged.
-    local cr rs
-    cr=$(grep -c $'\r' "$src" || true)
-    rs=$(grep -c $'\x1e' "$src" || true)
-    test "$cr" -eq 0 || { msg "$process/$stream: $cr lines contain CR; not supported"; return 1; }
-    test "$rs" -eq 0 || { msg "$process/$stream: $rs lines contain the ASCII record separator (0x1e); not supported"; return 1; }
-
     mkdir -p "$spill"
-    local stats_sql
-    stats_sql="SELECT $(sqlq "$process") AS process, $(sqlq "$stream") AS stream,
-                      $(sqlq "$src") AS source, ${size}::UBIGINT AS size_bytes,
-                      $(sqlq "$sha") AS sha256, ${final_nl} AS final_newline"
+    stats_sql() {
+        echo "SELECT $(sqlq "$process") AS process, $(sqlq "$stream") AS stream,
+                     $(sqlq "$src") AS source, ${size}::UBIGINT AS size_bytes,
+                     $(sqlq "$sha") AS sha256, ${final_nl} AS final_newline"
+    }
 
     if test "$size" -eq 0
     then
+        sha=$(sha256sum "$src" | cut -d' ' -f1)
+        local stats_sql; stats_sql=$(stats_sql)
         "$DUCKDB" -init /dev/null -c "
             COPY (SELECT NULL::VARCHAR AS process, NULL::UBIGINT AS seq, NULL::TIMESTAMP_NS AS \"at\",
                          NULL::VARCHAR AS ns, NULL::VARCHAR AS sev, NULL::VARCHAR AS thread,
                          NULL::VARCHAR AS host, NULL::VARCHAR AS data, NULL::VARCHAR AS line
                   WHERE false)
-              TO $(sqlq "$dst") (FORMAT parquet, COMPRESSION zstd, COMPRESSION_LEVEL 3);
+              TO $(sqlq "$dst") (FORMAT parquet, COMPRESSION zstd, COMPRESSION_LEVEL $zstd, ROW_GROUP_SIZE $row_group_size);
             COPY (SELECT *, 0::UBIGINT AS lines_total, 0::UBIGINT AS lines_json, 0::UBIGINT AS lines_text,
                          0::UBIGINT AS lines_text_after_json, 0::UBIGINT AS lines_json_verbatim
                   FROM ($stats_sql))
@@ -115,72 +116,132 @@ SET memory_limit = '$mem';
 SET threads = $threads;
 SET temp_directory = $(sqlq "$spill");
 .read $(sqlq "$sql_dir/lib.sql")
--- Lines arrive numbered by awk: "<n>\x1f<line>".
-CREATE TEMP TABLE l AS
-  SELECT l[1:i-1]::UBIGINT AS seq, l[i+1:] AS orig
-  FROM (SELECT l, instr(l, E'\x1f') AS i
-        FROM read_csv('/dev/stdin', columns={'l': 'VARCHAR'}, header=false, delim=E'\x1e',
-                      quote='', escape='', auto_detect=false, max_line_size=8388608));
--- A JSON line: an object with a namespace and a parseable timestamp. Anything
--- else is a text line, kept verbatim.
-CREATE TEMP TABLE c AS
-  SELECT seq, orig,
-         CASE WHEN left(orig, 1) = '{' AND json_valid(orig)
-              THEN (orig->>'ns') IS NOT NULL AND TRY_CAST(orig->>'at' AS TIMESTAMP_NS) IS NOT NULL
-              ELSE false
-         END AS j
-  FROM l;
-DROP TABLE l;
-CREATE TEMP TABLE r AS
-  SELECT seq,
-         CASE WHEN j THEN CAST(orig->>'at' AS TIMESTAMP_NS) END AS "at",
-         CASE WHEN j THEN orig->>'ns'     END AS ns,
-         CASE WHEN j THEN orig->>'sev'    END AS sev,
-         CASE WHEN j THEN orig->>'thread' END AS thread,
-         CASE WHEN j THEN orig->>'host'   END AS host,
-         -- The payload verbatim; the regex assumes the canonical envelope order.
-         -- Otherwise the parsed form (not verbatim): the line then fails the
-         -- rebuild check below and is kept whole.
-         CASE WHEN j THEN coalesce(nullif(regexp_extract(orig, '"data":(.*),"sev":', 1), ''),
-                                   (orig->'data')::VARCHAR) END AS data,
-         orig
-  FROM c;
-DROP TABLE c;
-CREATE TEMP TABLE out AS
+-- One pass: parse, sort and write, without materialising intermediate tables
+-- (each would spill to disk for large logs).
+COPY (
+  WITH
+  -- Lines arrive numbered by awk: "<n>\x1f<line>".
+  l AS (SELECT l[1:i-1]::UBIGINT AS seq, l[i+1:] AS orig
+        FROM (SELECT l, instr(l, E'\x1f') AS i
+              FROM read_csv('/dev/stdin', columns={'l': 'VARCHAR'}, header=false, delim=E'\x1e',
+                            quote='', escape='', auto_detect=false, max_line_size=8388608))),
+  -- A JSON line: an object with a namespace and a parseable timestamp. Anything
+  -- else is a text line, kept verbatim.
+  c AS (SELECT seq, orig,
+               CASE WHEN left(orig, 1) = '{' AND json_valid(orig)
+                    THEN (orig->>'ns') IS NOT NULL AND TRY_CAST(orig->>'at' AS TIMESTAMP_NS) IS NOT NULL
+                    ELSE false
+               END AS j
+        FROM l),
+  r AS (SELECT seq, orig,
+               CASE WHEN j THEN CAST(orig->>'at' AS TIMESTAMP_NS) END AS "at",
+               CASE WHEN j THEN orig->>'ns'     END AS ns,
+               CASE WHEN j THEN orig->>'sev'    END AS sev,
+               CASE WHEN j THEN orig->>'thread' END AS thread,
+               CASE WHEN j THEN orig->>'host'   END AS host,
+               -- The payload verbatim; the regex assumes the canonical envelope order.
+               -- Otherwise the parsed form (not verbatim): the line then fails the
+               -- rebuild check below and is kept whole.
+               CASE WHEN j THEN coalesce(nullif(regexp_extract(orig, '"data":(.*),"sev":', 1), ''),
+                                         (orig->'data')::VARCHAR) END AS data
+        FROM c)
   SELECT $(sqlq "$process") AS process, seq, "at", ns, sev, thread, host, data,
          CASE WHEN ns IS NULL
                 OR bp_rebuild_line("at", ns, data, sev, thread, host) IS DISTINCT FROM orig
               THEN orig
          END AS line
-  FROM r;
-DROP TABLE r;
-COPY (SELECT * FROM out ORDER BY ns NULLS LAST, "at", seq)
-  TO $(sqlq "$dst") (FORMAT parquet, COMPRESSION zstd, COMPRESSION_LEVEL 3);
-COPY (SELECT s.*,
-             count(*)::UBIGINT                                        AS lines_total,
-             count(o.ns)::UBIGINT                                     AS lines_json,
-             (count(*) - count(o.ns))::UBIGINT                        AS lines_text,
-             count(*) FILTER (WHERE o.ns IS NULL
-                                AND o.seq > (SELECT min(seq) FROM out WHERE ns IS NOT NULL))::UBIGINT
-                                                                      AS lines_text_after_json,
-             count(*) FILTER (WHERE o.ns IS NOT NULL AND o.line IS NOT NULL)::UBIGINT
-                                                                      AS lines_json_verbatim
-      FROM out o, ($stats_sql) s
-      GROUP BY ALL)
-  TO $(sqlq "$stats") (FORMAT parquet);
+  FROM r
+  ORDER BY ns NULLS LAST, "at", seq)
+TO $(sqlq "$dst") (FORMAT parquet, COMPRESSION zstd, COMPRESSION_LEVEL $zstd, ROW_GROUP_SIZE $row_group_size);
 EOF
-    awk '{ printf "%d\037%s\n", NR, $0 }' "$src" |
-        "$DUCKDB" -init /dev/null -c ".read $(sqlq "$script")" >/dev/null
+    # One read of the log feeds the sha256 (through a named pipe), the checks for
+    # characters the line reader can't carry through unchanged (CR, the ASCII
+    # record separator 0x1e; awk fails at the end if it saw any) and the line
+    # numbering for DuckDB.
+    local fifo=$spill/sha256.fifo shafile=$spill/sha256 shapid
+    mkfifo "$fifo"
+    sha256sum < "$fifo" > "$shafile" & shapid=$!
+    local status=0
+    tee "$fifo" < "$src" |
+        awk -v label="$process/$stream" '
+            /[\r\036]/ { if (index($0, "\r")) cr++; if (index($0, "\036")) rs++ }
+            { printf "%d\037%s\n", NR, $0 }
+            END { if (cr) printf "bench-parquet: %s: %d lines contain CR; not supported\n", label, cr > "/dev/stderr"
+                  if (rs) printf "bench-parquet: %s: %d lines contain the ASCII record separator (0x1e); not supported\n", label, rs > "/dev/stderr"
+                  if (cr || rs) exit 3 }' |
+        "$DUCKDB" -init /dev/null -c ".read $(sqlq "$script")" >/dev/null || status=$?
+    wait $shapid || true
+    test $status -eq 0 || return $status
+    sha=$(cut -d' ' -f1 "$shafile")
+    test ${#sha} -eq 64 || { msg "$process/$stream: no sha256 computed"; return 1; }
+
+    # Statistics from the written file (reads only the small columns).
+    local stats_sql; stats_sql=$(stats_sql)
+    "$DUCKDB" -init /dev/null -c "
+        COPY (SELECT s.*,
+                     count(*)::UBIGINT                                        AS lines_total,
+                     count(o.ns)::UBIGINT                                     AS lines_json,
+                     (count(*) - count(o.ns))::UBIGINT                        AS lines_text,
+                     count(*) FILTER (WHERE o.ns IS NULL
+                                        AND o.seq > (SELECT min(seq) FROM read_parquet($(sqlq "$dst"))
+                                                     WHERE ns IS NOT NULL))::UBIGINT
+                                                                              AS lines_text_after_json,
+                     count(*) FILTER (WHERE o.ns IS NOT NULL AND o.line IS NOT NULL)::UBIGINT
+                                                                              AS lines_json_verbatim
+              FROM read_parquet($(sqlq "$dst")) o, ($stats_sql) s
+              GROUP BY ALL)
+          TO $(sqlq "$stats") (FORMAT parquet);" >/dev/null
+}
+
+# Memory this process may use, in MiB, and where the figure comes from:
+# MemAvailable, lowered by the tightest cgroup memory limit on the way up the
+# hierarchy (a Nomad alloc's limit may sit on a parent cgroup). Page cache counts
+# towards a cgroup's usage but is reclaimable, so usage excludes file pages.
+mem_available() {
+    local avail src=MemAvailable path d max used room
+    avail=$(awk '/^MemAvailable:/ { printf "%d", $2 / 1024 }' /proc/meminfo)
+    path=$(awk -F: '$1 == "0" { print $3; exit }' /proc/self/cgroup 2>/dev/null)
+    if test -n "$path" -a -r /sys/fs/cgroup/cgroup.controllers
+    then # cgroup v2
+         d=/sys/fs/cgroup${path%/}
+         while :
+         do if test -r "$d/memory.max" -a -r "$d/memory.current" -a -r "$d/memory.stat"
+            then max=$(cat "$d/memory.max")
+                 if test "$max" != max
+                 then used=$(( $(cat "$d/memory.current") - $(awk '$1 == "file" { print $2 }' "$d/memory.stat") ))
+                      room=$(( (max - used) / 1048576 ))
+                      if test $room -lt "$avail"
+                      then avail=$room; src="cgroup ${d#/sys/fs/cgroup}"; fi
+                 fi
+            fi
+            test "$d" = /sys/fs/cgroup && break
+            d=$(dirname "$d")
+         done
+    else # cgroup v1
+         path=$(awk -F: '$2 ~ /(^|,)memory(,|$)/ { print $3; exit }' /proc/self/cgroup 2>/dev/null)
+         d=/sys/fs/cgroup/memory${path%/}
+         if test -n "$path" -a -r "$d/memory.limit_in_bytes" -a -r "$d/memory.usage_in_bytes"
+         then max=$(cat "$d/memory.limit_in_bytes")
+              if test ${#max} -lt 19      # unlimited is ~2^63
+              then used=$(( $(cat "$d/memory.usage_in_bytes") - $(awk '$1 == "total_cache" { print $2 }' "$d/memory.stat") ))
+                   room=$(( (max - used) / 1048576 ))
+                   if test $room -lt "$avail"
+                   then avail=$room; src="cgroup v1 $path"; fi
+              fi
+         fi
+    fi
+    test "$avail" -ge 0 || avail=0
+    echo "$avail $src"
 }
 
 convert_run() {
-    local dir= force= mem=4GiB budget_gib=5 jobs= keep_temp=
+    local dir= force= mem_gib=4 jobs= keep_temp= zstd=$zstd_default
     while test $# -gt 0
     do case "$1" in
            --force )     force=t;;
-           --mem-16g )   mem=16GiB; budget_gib=17;;
            --jobs )      jobs=${2:?--jobs needs a number}; shift;;
            --keep-temp ) keep_temp=t;;
+           --zstd-level ) zstd=${2:?--zstd-level needs a number}; shift;;
            -* )          die "convert-run: unknown option: $1";;
            * )           test -z "$dir" || die "convert-run: more than one RUNDIR"; dir=$1;;
        esac; shift; done
@@ -202,6 +263,15 @@ convert_run() {
        do test -f "$d/$stream" && sources+=("$process/$stream"); done
     done
     test ${#sources[@]} -gt 0 || die "no node-*/stdout or generator/stdout in $dir"
+    # Largest first: the longest conversion starts at once and overlaps with the
+    # rest instead of running alone at the end.
+    local -A size_of=()
+    local sorted=() total=0
+    for src in "${sources[@]}"
+    do size_of[$src]=$(stat -L -c%s "$dir/$src"); total=$(( total + size_of[$src] )); done
+    mapfile -t sorted < <(for src in "${sources[@]}"; do printf '%s\t%s\n' "${size_of[$src]}" "$src"; done |
+                          sort -t$'\t' -k1,1nr | cut -f2)
+    sources=("${sorted[@]}")
 
     # Genesis timing and run id.
     local genesis=$dir/genesis/genesis.shelley.json
@@ -213,40 +283,68 @@ convert_run() {
     system_start=$(jq -r '.systemStart | sub("Z$"; "")' "$genesis")
     slot_length=$(jq -r '.slotLength' "$genesis")
 
-    # Parallelism: memory budget per job (limit + measured overshoot ~0.7 GiB),
-    # and 4 DuckDB threads per job.
-    local threads=4 ncpu mem_avail_gib
+    # Parallelism: memory budget per slot = DuckDB's limit + 1.5 GiB for what it
+    # uses beyond the limit (measured: 0.7 GiB over for a 4 GiB job, 2.7 GiB over
+    # for an 8 GiB job of 2 slots), and 4 DuckDB threads per slot.
+    local threads=4 ncpu mem_avail_mib mem_src budget_mib
     ncpu=$(nproc)
-    mem_avail_gib=$(awk '/^MemAvailable:/ { printf "%d", $2 / 1048576 }' /proc/meminfo)
+    budget_mib=$(( mem_gib * 1024 + 1536 ))
+    read -r mem_avail_mib mem_src < <(mem_available)
     if test -z "$jobs"
-    then jobs=$(( mem_avail_gib / budget_gib ))
+    then jobs=$(( mem_avail_mib / budget_mib ))
          test $jobs -le $(( ncpu / threads )) || jobs=$(( ncpu / threads ))
          test $jobs -ge 1 || jobs=1
     fi
 
+    # Slots per log: a log larger than an even share of the work (total / jobs)
+    # would finish last on one slot; it gets its share of the slots instead,
+    # round(size * jobs / total), as one job with that many times the threads and
+    # memory, so it ends about when the rest does. Memory stays within budget.
+    # (Rounding, not ceiling: two equal halves of the work get half the slots each.)
+    local -A slots_of=()
+    local k
+    for src in "${sources[@]}"
+    do if test "$total" -gt 0 -a $(( size_of[$src] * jobs )) -gt "$total"
+       then k=$(( (2 * size_of[$src] * jobs + total) / (2 * total) ))
+            test $k -le "$jobs" || k=$jobs
+       else k=1; fi
+       slots_of[$src]=$k
+    done
+
     local tmp=$dir/.parquets.tmp.$$
     mkdir -p "$tmp"/spill "$tmp"/stats
-    msg "converting ${#sources[@]} logs of $(basename "$dir"): $jobs in parallel, memory limit $mem each"
+    msg "converting ${#sources[@]} logs of $(basename "$dir"): $jobs slots, each ${threads} threads and ${mem_gib} GiB memory limit"
+    msg "  memory available: $(( mem_avail_mib / 1024 )) GiB ($mem_src), cores: $ncpu"
+    for src in "${sources[@]}"
+    do test "${slots_of[$src]}" -eq 1 ||
+           msg "  $src ($(( size_of[$src] / 1048576 )) MiB of $(( total / 1048576 )) MiB): ${slots_of[$src]} slots"
+    done
 
-    local -A running=()
-    local failed=() src label pid status
+    local -A running=() started=() weight=()
+    local failed=() src label pid status used=0
     reap_one() {
         if wait -n -p pid; then status=0; else status=$?; fi
         label=${running[$pid]}
-        unset "running[$pid]"
+        local took=$(( SECONDS - started[$pid] ))
+        used=$(( used - weight[$pid] ))
+        unset "running[$pid]" "started[$pid]" "weight[$pid]"
         if test $status -eq 0
-        then msg "done: $label"
-        else msg "failed: $label (exit $status)"; failed+=("$label"); fi
+        then msg "done: $label in ${took} s (at $(( SECONDS - t0 )) s)"
+        else msg "failed: $label (exit $status, after ${took} s)"; failed+=("$label"); fi
     }
     local t0=$SECONDS
     for src in "${sources[@]}"
     do process=${src%/*}; stream=${src#*/}
        mkdir -p "$tmp/$process"
-       while test ${#running[@]} -ge "$jobs"; do reap_one; done
+       k=${slots_of[$src]}
+       while test $(( used + k )) -gt "$jobs"; do reap_one; done
        convert_one "$dir/$src" "$process" "$stream" \
                    "$tmp/$process/$stream.parquet" "$tmp/stats/$process.$stream.parquet" \
-                   "$tmp/spill/$process-$stream" "$mem" "$threads" &
+                   "$tmp/spill/$process-$stream" "$(( k * mem_gib ))GiB" "$(( k * threads ))" "$zstd" &
        running[$!]=$src
+       started[$!]=$SECONDS
+       weight[$!]=$k
+       used=$(( used + k ))
     done
     while test ${#running[@]} -gt 0; do reap_one; done
 
@@ -285,10 +383,24 @@ convert_run() {
     then mv "$out" "$tmp.old"; mv "$tmp" "$out"; rm -rf "$tmp.old"
     else mv "$tmp" "$out"; fi
 
+    # Summary: totals per stream, then only the logs worth a look.
+    local files=$(sqlq "$out/files.parquet") notable
+    local cond="(stream = 'stderr' AND lines_total > 0) OR lines_text_after_json > 0 OR lines_json_verbatim > 0"
     "$DUCKDB" -init /dev/null -c "
-        SELECT process, stream, size_bytes, lines_total, lines_json, lines_text,
-               lines_text_after_json, lines_json_verbatim
-        FROM read_parquet($(sqlq "$out/files.parquet")) ORDER BY process, stream;" >&2
+        SELECT stream, count(*) AS logs, sum(size_bytes) AS size_bytes, sum(lines_total) AS lines_total,
+               sum(lines_json) AS lines_json, sum(lines_text) AS lines_text,
+               sum(lines_text_after_json) AS lines_text_after_json,
+               sum(lines_json_verbatim) AS lines_json_verbatim
+        FROM read_parquet($files) GROUP BY stream ORDER BY stream DESC;" >&2
+    notable=$("$DUCKDB" -init /dev/null -noheader -list -c "SELECT count(*) FROM read_parquet($files) WHERE $cond;")
+    if test "$notable" -gt 0
+    then msg "$notable logs with non-empty stderr, text after JSON started, or JSON lines kept verbatim:"
+         "$DUCKDB" -init /dev/null -c "
+            SELECT process, stream, size_bytes, lines_total, lines_json, lines_text,
+                   lines_text_after_json, lines_json_verbatim
+            FROM read_parquet($files) WHERE $cond ORDER BY process, stream;" >&2
+    else msg "no log with non-empty stderr, text after JSON started, or JSON lines kept verbatim"
+    fi
     msg "wrote $out ($(du -sh "$out" | cut -f1)) in $(( SECONDS - t0 )) s"
 }
 
@@ -303,6 +415,10 @@ session_init() {
         echo "SET VARIABLE parquets = $(sqlq "$pq");"
         echo ".read $(sqlq "$sql_dir/lib.sql")"
         echo ".read $(sqlq "$sql_dir/session.sql")"
+        if compgen -G "$pq/*/stderr.parquet" >/dev/null
+        then echo "CREATE OR REPLACE VIEW raw_stderr AS SELECT * FROM read_parquet(getvariable('parquets') || '/*/stderr.parquet');"
+        else echo "CREATE OR REPLACE VIEW raw_stderr AS SELECT * FROM raw WHERE false;"
+        fi
         # One view per namespace present, named by the quoted namespace.
         "$DUCKDB" -init /dev/null -noheader -list -c "
             SELECT DISTINCT ns FROM read_parquet($(sqlq "$pq/*/stdout.parquet"))
@@ -319,7 +435,7 @@ session_init() {
 with_session() {
     local dir=$1; shift
     dir=$(realpath "$dir")
-    check_rundir "$dir"
+    test -d "$dir" || die "not a directory: $dir"
     check_parquets "$dir"
     local init status=0
     init=$(mktemp --suffix=.sql)
@@ -361,7 +477,7 @@ restore_cmd() {
        esac; shift; done
     test -n "$dir" -a -n "$process" -a -n "$outf" || die "restore: RUNDIR PROCESS -o FILE required"
     dir=$(realpath "$dir")
-    check_rundir "$dir"; check_parquets "$dir"
+    test -d "$dir" || die "not a directory: $dir"; check_parquets "$dir"
     local pqf=$dir/parquets/$process/$stream.parquet
     test -f "$pqf" || die "no $pqf"
     test "$(realpath -m "$outf")" != "$dir/$process/$stream" || die "refusing to overwrite the original $dir/$process/$stream"
@@ -413,7 +529,7 @@ excerpt_cmd() {
     test -n "$dir" -a -n "$outdir" || die "excerpt: RUNDIR and -o OUTDIR required"
     test -n "$at" -o -n "$ns" || die "excerpt: --at or --ns required"
     dir=$(realpath "$dir")
-    check_rundir "$dir"; check_parquets "$dir"
+    test -d "$dir" || die "not a directory: $dir"; check_parquets "$dir"
     local pq=$dir/parquets
 
     local pfilter=true p

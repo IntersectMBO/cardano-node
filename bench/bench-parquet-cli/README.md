@@ -4,7 +4,7 @@ Prototype (bash + SQL): converts the process logs of a workbench run into Parque
 losslessly, and makes them queryable with DuckDB.
 
 ```bash
-wb run create-parquets RUN [--force] [--mem-16g] [--jobs N] [--keep-temp]   # = bench-parquet convert-run
+wb run create-parquets RUN [--force] [--jobs N] [--keep-temp] [--zstd-level N]   # = bench-parquet convert-run
 bench-parquet restore RUNDIR PROCESS [--stream stdout|stderr] -o FILE [--verify]
 bench-parquet excerpt RUNDIR (--at TIMESTAMP | --ns NAMESPACE [--where SQL]) [--before S] [--after S] [--process P].. -o OUTDIR
 bench-parquet query RUNDIR          # interactive DuckDB session
@@ -28,6 +28,13 @@ parquets/run.parquet     run id, genesis system start and slot length, versions
 
 Conversion writes to `RUN/.parquets.tmp.<pid>/` (spill directories inside) and renames it to
 `parquets/` only when every log converted; with `--force` the old `parquets/` is replaced only then.
+
+Scheduling: logs are converted largest first, in `--jobs` slots (default: from available memory and
+cores; a cgroup memory limit, e.g. of a Nomad alloc, counts), each slot 4 DuckDB threads and a
+4 GiB memory limit, budgeted at 5.5 GiB. A log larger than an even share
+of the work (total size / slots) gets round(size × slots / total) slots as one job with that many times
+the threads and memory, so it finishes about when the rest does. Each log is read once: the same read
+feeds its sha256, the check for CR / 0x1e characters and DuckDB.
 
 ## Schema (raw schema version 1)
 
@@ -60,6 +67,11 @@ separator (0x1e) are rejected.
 - macros for stable fields (strict casts): `slot_no`, `mempool_txs`, `mempool_bytes`, `res_cpu`,
   `res_rss`, `res_heap`, `res_live`, `res_alloc`, `res_gcs_major`, …; `sev_level(sev) >= 'Warning'`;
 - `bp_rebuild_line` / `bp_fmt_at` (the original line of a row);
-- curated views from `sql/curated/` (e.g. `forge_steps`).
+- curated views from `sql/curated/`, loaded in file-name order (a view can only refer to views
+  created before it): `forge_steps`; `slot` and `block_ranking`, ported from Federico's Leios analysis.
 
-DuckDB keyword: `at` must be quoted in some positions (`ORDER BY "at"`).
+DuckDB pitfalls:
+
+- `at` must be quoted in some positions (`ORDER BY "at"`).
+- **Parenthesise JSON extractions in comparisons**: `(f.data->>'$.block') = (a.data->>'$.blockHash')`.
+  Without the parentheses `=` binds first and the condition silently never matches.
