@@ -468,6 +468,9 @@ traceLeiosVoteStateToStderr = \case
   TraceLeiosVoteAwaitingWindow vote early ->
     hPutStrLn stderr ("TraceLeiosVoteAwaitingWindow " <> showVote vote <> " " <> show early)
   TraceLeiosVoteValidated{} -> pure ()
+  TraceLeiosCertified rbHash _cert -> hPutStrLn stderr ("TraceLeiosCertified " <> show rbHash)
+  ev@TraceLeiosAggregationFailed{} -> hPutStrLn stderr (show ev)
+  ev@TraceLeiosQuorumMissed{} -> hPutStrLn stderr (show ev)
 
 -- | The endorser blocks and closures the node acquires go to stderr too, for
 -- the acceptance demo.
