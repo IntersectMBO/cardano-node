@@ -167,8 +167,8 @@ if impl(ghc >= 9.14)
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: 1f2984cc9726f3c9f33a9e92298a6b3ce1237d88
-  --sha256: sha256-loNldxpkab6BnUv+rGSSTekNNrjrPm3ArVOQsb+l4oI=
+  tag: e651152750388ccf20700eb28149751981a396f4
+  --sha256: sha256-HF2ZKLUnW24a/ol8p8DCAs6v0wSz33rBRETqUhKfBoU=
 
 -- ouroboros-network leios-prototype with the egress scheduler
 source-repository-package
@@ -237,8 +237,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-api
-  tag: b8023269a78db9eb19aea8a6fd037280ee6fc6cd
-  --sha256: sha256-T+sK1TIh2ei2L/LslSxKNKwluVS0Mgvw5Z3ejhtr10U=
+  tag: ca330c505b1c0ead3fa93341f93886a1723581ea
+  --sha256: sha256-yd+HgTa8CBgGHmWmQHQZe4BG8HN2mE/xCR6p6ZnfeBY=
   subdir:
     cardano-api
     cardano-api-gen
