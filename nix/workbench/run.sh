@@ -58,6 +58,14 @@ usage_run() {
 
     $(helpcmd stop RUN)              Stop the named run
 
+    $(helpcmd create-parquets RUN [--force] [--mem-16g] [--jobs N] [--keep-temp])
+                          Convert the process logs (node-*, generator; stdout and stderr)
+                            into RUN/parquets/, losslessly (bench/bench-parquet-cli).
+                            --force      replace an existing parquets/
+                            --mem-16g    16 GiB memory limit per conversion instead of 4 GiB
+                            --jobs N     conversions in parallel (default: from memory and cores)
+                            --keep-temp  keep the temporary directory when a conversion fails
+
     $(helpcmd restart [--no-generator] BACKEND-START-ARGS..)
                           Stop and restart the current run (without a new allocation)
 
@@ -834,6 +842,15 @@ EOF
              backend stop-cluster "$dir"
              progress "run" "cluster stopped"
         fi
+        ;;
+
+    create-parquets )
+        local usage="USAGE: wb run $op RUN [--force] [--mem-16g] [--jobs N] [--keep-temp]"
+        local run=${1:?$usage}; shift
+        local dir=$(run get "$run")
+        local repo=${WB_CARDANO_NODE_REPO_ROOT:-$global_basedir/../..}
+
+        "$repo"/bench/bench-parquet-cli/bench-parquet convert-run "$dir" "$@"
         ;;
 
     restart )
