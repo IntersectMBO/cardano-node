@@ -68,7 +68,12 @@ separator (0x1e) are rejected.
   `res_rss`, `res_heap`, `res_live`, `res_alloc`, `res_gcs_major`, …; `sev_level(sev) >= 'Warning'`;
 - `bp_rebuild_line` / `bp_fmt_at` (the original line of a row);
 - curated views from `sql/curated/`, loaded in file-name order (a view can only refer to views
-  created before it): `forge_steps`; `slot` and `block_ranking`, ported from Federico's Leios analysis.
+  created before it): `forge_steps`; `slot` and `block_ranking`, ported from Federico's Leios analysis;
+  `trace_pauses(threshold_s := 2)`, a table macro: gaps in each node's trace output with GC attribution
+  from the surrounding `Resources` samples. Nodes trace about once a second (`Resources`, leadership
+  checks), so thresholds below 1 s mostly find ordinary quiet periods; `heap_per_slot` (process, slot,
+  heap, live, RSS; select nodes with `WHERE process IN (…)`).
+- `slot_at(t)`: a timestamp on the run's slot grid (genesis system start and slot length).
 
 DuckDB pitfalls:
 

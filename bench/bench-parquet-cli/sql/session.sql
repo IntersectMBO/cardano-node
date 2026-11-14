@@ -11,6 +11,13 @@ CREATE OR REPLACE VIEW raw        AS SELECT * FROM read_parquet(getvariable('par
 CREATE OR REPLACE VIEW run_meta   AS SELECT * FROM read_parquet(getvariable('parquets') || '/run.parquet');
 CREATE OR REPLACE VIEW files      AS SELECT * FROM read_parquet(getvariable('parquets') || '/files.parquet');
 
+-- A timestamp on the run's slot grid (genesis system start and slot length):
+-- the slot whose interval contains it. As locli places Resources samples
+-- (impliedSlot); not a statement about which slot a node was working on.
+CREATE OR REPLACE MACRO slot_at(t) AS
+  CAST(floor(  (epoch_ns(t) - (SELECT epoch_ns(system_start) FROM run_meta))
+             / ((SELECT slot_length_s FROM run_meta) * 1e9)) AS BIGINT);
+
 -- Severity, ordered as in trace-dispatcher's SeverityS. Stored as text; this type
 -- only serves comparisons: sev_level(sev) >= 'Warning'. Strict: an unknown value
 -- is an error.
