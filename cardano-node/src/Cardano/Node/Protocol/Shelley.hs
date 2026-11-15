@@ -179,10 +179,14 @@ readLeaderCredentialsSingleton
 readLeaderCredentialsSingleton
   ProtocolFilepaths { shelleyCertFile = Just opCertFile,
                       shelleyVRFFile = Just vrfFile,
+                      shelleyBLSFile = mBlsFile,
                       shelleyKESSource = Just kesSource
                     } = do
     vrfSKey <-
       firstExceptT FileError (newExceptT $ readFileTextEnvelope (File vrfFile))
+    blsSKey <-
+      forM mBlsFile $ \blsFile ->
+        firstExceptT FileError (newExceptT $ readFileTextEnvelope (File blsFile))
 
     (credentialsSource, vkey) <- case kesSource of
       KESKeyFilePath kesFile -> do
@@ -197,7 +201,7 @@ readLeaderCredentialsSingleton
         OperationalCertificate _ vkey <- firstExceptT FileError $ newExceptT $ readFileTextEnvelope $ File opCertFile
         pure (PraosCredentialsAgent socketFile, vkey)
 
-    return [mkPraosLeaderCredentials credentialsSource vkey vrfSKey]
+    return [mkPraosLeaderCredentials credentialsSource vkey vrfSKey blsSKey]
 
 -- But not OK to supply some of the files without the others.
 readLeaderCredentialsSingleton ProtocolFilepaths {shelleyCertFile = Nothing} =
@@ -247,7 +251,7 @@ readLeaderCredentialsBulk ProtocolFilepaths { shelleyBulkCredsFile = mfp } =
      KesSigningKey kesKey <- parseEnvelope scKes
      let credentialsSource = PraosCredentialsUnsound opCert kesKey
      vrfSKey <- parseEnvelope scVrf
-     pure $ mkPraosLeaderCredentials credentialsSource vkey vrfSKey
+     pure $ mkPraosLeaderCredentials credentialsSource vkey vrfSKey Nothing
 
    readBulkFile
      :: Maybe FilePath
@@ -272,11 +276,14 @@ mkPraosLeaderCredentials ::
      PraosCredentialsSource StandardCrypto
   -> VerificationKey StakePoolKey
   -> SigningKey VrfKey
+  -> Maybe (SigningKey BlsKey)
+  -- ^ The Leios voting key, if the pool votes.
   -> ShelleyLeaderCredentials StandardCrypto
 mkPraosLeaderCredentials
     credentialsSource
     (StakePoolVerificationKey vkey)
-    (VrfSigningKey vrfKey) =
+    (VrfSigningKey vrfKey)
+    blsKey =
     ShelleyLeaderCredentials
     { shelleyLeaderCredentialsCanBeLeader =
         PraosCanBeLeader {
@@ -284,7 +291,8 @@ mkPraosLeaderCredentials
           praosCanBeLeaderColdVerKey = coerceKeyRole vkey,
           praosCanBeLeaderSignKeyVRF = vrfKey
         },
-      shelleyLeaderCredentialsLabel = "Shelley"
+      shelleyLeaderCredentialsLabel = "Shelley",
+      shelleyLeaderCredentialsBLSKey = (\(BlsSigningKey k) -> k) <$> blsKey
     }
 
 parseEnvelope ::

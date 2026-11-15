@@ -180,6 +180,7 @@ data ProtocolFilepaths =
      , byronKeyFile         :: !(Maybe FilePath)
      , shelleyKESSource     :: !(Maybe KESSource)
      , shelleyVRFFile       :: !(Maybe FilePath)
+     , shelleyBLSFile       :: !(Maybe FilePath)
      , shelleyCertFile      :: !(Maybe FilePath)
      , shelleyBulkCredsFile :: !(Maybe FilePath)
      } deriving (Eq, Show)

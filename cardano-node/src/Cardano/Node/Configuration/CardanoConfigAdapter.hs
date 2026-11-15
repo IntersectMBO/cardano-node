@@ -346,6 +346,7 @@ credentialsToProtocolFilepaths c =
     , byronKeyFile = strictMaybeToMaybe (Cfg.byronSigningKey c)
     , shelleyKESSource = fmap fromCfgKES (strictMaybeToMaybe (Cfg.shelleyKES c))
     , shelleyVRFFile = strictMaybeToMaybe (Cfg.shelleyVRFKey c)
+    , shelleyBLSFile = strictMaybeToMaybe (Cfg.shelleyBLSKey c)
     , shelleyCertFile = strictMaybeToMaybe (Cfg.shelleyOperationalCertificate c)
     , shelleyBulkCredsFile = strictMaybeToMaybe (Cfg.bulkCredentialsFile c)
     }
