@@ -203,16 +203,24 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: 177ae5eb1d5c947c081ad950ffdfb6f9a401039c
-  --sha256: sha256-Cc3JCAxxuaYqBsnSZOcqWUe/w/lmHp8TpY1LZxzlhLU=
+  tag: ffafdf83a3dcdbee0108784d0406178a28f845db
+  --sha256: sha256-9Frrrr0zmMp4DgI1nXXncGHDd5grWJGrJ1T3hclcidg=
 
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-api
-  tag: 3d6d14332b7644b93826fbc69a76a2677acf8764
-  --sha256: sha256-wyRmfUIwrdK420O8U3Qu5hRLm0cwPW7Xi8nRX+2QzHo=
+  tag: 25a80127703e9e64dde85c01ed23130073420dc7
+  --sha256: sha256-Uv+cjhqdiPMvHI+WzbV52/iuevSeHLT3yNcjYIbzxeA=
   subdir:
     cardano-api
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-cli
+  tag: a58b1eb82eda4f2a369d8f4943f29487f6ce760d
+  --sha256: sha256-b+/clUZAzj8ADUfheKCpReww/xlN4al/ySw13+f6wJY=
+  subdir:
+    cardano-cli
 
 allow-newer:
     , cardano-config:cardano-ledger-alonzo
