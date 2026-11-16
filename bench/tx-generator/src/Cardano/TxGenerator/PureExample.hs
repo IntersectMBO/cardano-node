@@ -21,7 +21,6 @@ import           Cardano.TxGenerator.UTxO (keyOutput, outputFunds, outputTxOut)
 import           Control.Monad (foldM)
 import           Control.Monad.Trans.State.Strict
 import           Data.Aeson (eitherDecodeFileStrict')
-import           Data.Either (fromRight)
 import           Data.List as List (foldl')
 import           Data.String (fromString)
 import           System.Exit (die)
@@ -62,7 +61,7 @@ demo' parametersFile = do
       return newState
 
 signingKey :: SigningKey PaymentKey
-signingKey = fromRight (error "signingKey: parseError") $ parseSigningKeyTE keyData
+signingKey = either (error . show) id $ parseSigningKeyTE keyData
   where
     keyData = TextEnvelope { teType = TextEnvelopeType "GenesisUTxOSigningKey_ed25519"
               , teDescription = fromString "Genesis Initial UTxO Signing Key"
