@@ -271,7 +271,8 @@ instance Error TxGenError where
   prettyError = \case
     ApiError e        -> prettyError e
     ProtocolError e   -> prettyError e
-    _                 -> ""
+    PlutusError e     -> pshow e
+    TxGenError e      -> pretty e
 
 {-
 Note [Tx additional size]

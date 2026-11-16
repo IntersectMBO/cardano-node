@@ -78,7 +78,6 @@ cardano-tracer/cardano-tracer-test
 .idea/
 
 .codex
-
 .serena/
 
 # workbench run debris, dropped at the repo root by a cluster run.
