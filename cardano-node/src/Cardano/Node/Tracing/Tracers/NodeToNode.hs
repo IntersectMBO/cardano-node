@@ -15,7 +15,7 @@ module Cardano.Node.Tracing.Tracers.NodeToNode
 import           Cardano.Logging
 import           Ouroboros.Consensus.Block (ConvertRawHash, GetHeader, StandardHash, getHeader)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, HasTxId, HasTxs,
-                   LedgerSupportsMempool, extractTxs, txId)
+                   LedgerSupportsMempool, extractAsMempoolTxs, txId)
 import           Ouroboros.Consensus.Node.Run (SerialiseNodeToNodeConstraints, estimateBlockSize)
 import           Ouroboros.Consensus.Tracing (ConvertTxId, renderHeaderHash, renderTxIdForDetails)
 import           Ouroboros.Network.Block (Point, Serialised (..), blockHash)
@@ -57,7 +57,7 @@ instance ( ConvertTxId blk
              , "agency" .= String (pack $ show stok)
              , "blockHash" .= renderHeaderHash (Proxy @blk) (blockHash blk)
              , "blockSize" .= toJSON (estimateBlockSize (getHeader blk))
-             , "txIds" .= toJSON (presentTx <$> extractTxs blk)
+             , "txIds" .= toJSON (presentTx <$> extractAsMempoolTxs blk)
              ]
       where
         presentTx :: GenTx blk -> Value
