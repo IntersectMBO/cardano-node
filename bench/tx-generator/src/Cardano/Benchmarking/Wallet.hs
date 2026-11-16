@@ -41,7 +41,7 @@ type WalletRef = MVar FundQueue
 -- @
 -- type TxStream m era = Stream (Of (Tx era)) m (Maybe TxGenError)
 -- @
-type TxStream m era = Stream (Of (Either TxGenError (Tx era))) m ()
+type TxStream m era = Stream (Of (Either TxGenError (Exp.SignedTx era))) m ()
 
 -- | This creates a new `MVar` with an `emptyFundQueue` vs. truly
 -- initializing a preexisting `WalletRef`.
@@ -123,7 +123,7 @@ payTo d values = do
 -- | 'storeOutputs' stores the funds that the outputs of transaction @txId@
 -- become in their destinations' wallets, in output order, and counts them as
 -- paid. @outputs@ are given in the order the transaction creates them.
-storeOutputs :: Exp.EraCommonConstraints era => TxId -> [TxOutput era] -> IO ()
+storeOutputs :: IsShelleyBasedEra era => TxId -> [TxOutput era] -> IO ()
 storeOutputs txId outputs = sequence_
   [ do walletRefInsertFund (destinationWallet d) (outputFund txId txIx output)
        modifyIORef' (destinationPaid d) (+ 1)
@@ -131,11 +131,11 @@ storeOutputs txId outputs = sequence_
 
 -- | 'buildAndStore' builds the transaction spending @inFunds@ into @outputs@
 -- with @txGenerator@, and stores the funds its outputs become.
-buildAndStore :: Exp.EraCommonConstraints era
+buildAndStore :: IsShelleyBasedEra era
   => TxGenerator era
   -> [Fund]
   -> [TxOutput era]
-  -> ExceptT TxGenError IO (Tx era)
+  -> ExceptT TxGenError IO (Exp.SignedTx era)
 buildAndStore txGenerator inFunds outputs = do
   (tx, txId) <- hoistEither $ txGenerator inFunds (map txOutputTxOut outputs)
   liftIO $ storeOutputs txId outputs

@@ -9,13 +9,18 @@ module  Cardano.TxGenerator.Tx
         where
 
 import           Cardano.Api hiding (txId)
+import           Cardano.Api.Compatible (CompatibleTxBodyContent (..), CompatibleTxError,
+                   createCompatibleTx, defaultCompatibleTxBodyContent)
+import qualified Cardano.Api.Compatible as Compatible (addWitnesses)
 import qualified Cardano.Api.Experimental as Exp
 import qualified Cardano.Api.Experimental.Tx as Exp
 
 import qualified Cardano.Ledger.Coin as L
-import qualified Cardano.Ledger.Core as L (PParams, addrTxWitsL, txIdTx, witsTxL)
+import qualified Cardano.Ledger.Core as L (PParams, addrTxWitsL, bodyTxL, txIdTx, witsTxL)
+import           Cardano.Ledger.Tools (estimateMinFeeTx)
 import           Cardano.TxGenerator.Fund
 import           Cardano.TxGenerator.Types
+import           Cardano.TxGenerator.Utils (txIdFromSignedTx)
 
 import           Data.Bifunctor (first)
 import qualified Data.ByteString as BS (length)
@@ -26,28 +31,49 @@ import qualified Data.Set as Set
 import           Lens.Micro ((.~), (^.))
 
 
--- | 'genTx' builds and signs a transaction with the experimental API
--- ('Exp.makeUnsignedTx', 'Exp.makeKeyWitness' and 'Exp.signTx'), lifting
--- a 'Exp.MakeUnsignedTxError' to 'Cardano.TxGenerator.Types.TxGenError' as
--- an 'Cardano.TxGenerator.Types.ApiError' case. The signed ledger transaction
--- is returned as an old-API 'Tx', which is what the submission code consumes.
+-- | 'genTx' builds and signs a transaction with
+-- 'Cardano.Api.Compatible.createCompatibleTx', in any Shelley-based era.
 -- Partially applied to its first 4 arguments, it is a 'TxGenerator': a
 -- function from the funds to spend and the outputs to create.
-genTx :: forall era. ()
-  => Exp.EraCommonConstraints era
+genTx :: forall era. IsShelleyBasedEra era
   => L.PParams (ShelleyLedgerEra era)
   -> ([TxIn], [Fund])
   -- ^ Collateral inputs, and the funds they spend (for their signing keys)
   -> L.Coin
-  -> TxMetadata
+  -> TxMetadataInEra era
   -> TxGenerator era
-genTx ledgerParameters collateral fee metadata inFunds outputs =
-  signedTopLevelTx ledgerParameters collateral fee metadata inFunds outputs id
+genTx ledgerParameters (collateralIns, collFunds) fee metadata inFunds outputs =
+  shelleyBasedEraConstraints sbe $ do
+    let bodyContent = (defaultCompatibleTxBodyContent sbe)
+          { compatibleTxIns = map (\f -> (getFundTxIn f, getFundWitness @era f)) inFunds
+          , compatibleTxOuts = outputs
+          , compatibleTxFee = fee
+          , compatibleTxInsCollateral = collateralIns
+          , compatibleTxProtocolParams = Just ledgerParameters
+          , compatibleTxMetadata = metadata
+          }
+    unsignedTx@(ShelleyTx _ unsignedLedgerTx) <-
+      first (\err -> TxGenError $ "genTx: " ++ show (err :: CompatibleTxError)) $
+        createCompatibleTx sbe bodyContent
+    let ledgerBody = unsignedLedgerTx ^. L.bodyTxL
+        witVKeys = [ makeShelleyKeyWitness' sbe ledgerBody (WitnessPaymentKey key)
+                   | key <- mapMaybe getFundKey $ inFunds ++ collFunds ]
+        ShelleyTx _ signedLedgerTx = Compatible.addWitnesses witVKeys unsignedTx
+        tx = Exp.SignedTx signedLedgerTx
+    Right (tx, txIdFromSignedTx tx)
+ where
+  sbe = shelleyBasedEra @era
 
 -- | 'genNestedTx' is 'genTx' for a Dijkstra transaction that also carries
 -- sub-transactions. Each sub-transaction spends its funds into its outputs,
 -- with no fee, and is signed with the keys of its own funds; the top-level
 -- transaction pays the fee for all of them.
+--
+-- It builds with the experimental API rather than 'Cardano.Api.Compatible',
+-- which has no sub-transactions yet. Once it does, 'genNestedTx' shall go,
+-- and 'Cardano.Benchmarking.Script.Types.NestedNtoM' build with 'genTx'.
+-- Until then, without sub-transactions it builds the same transaction as
+-- 'genTx' (checked by the tests).
 genNestedTx ::
      L.PParams (ShelleyLedgerEra DijkstraEra)
   -> ([TxIn], [Fund])
@@ -55,12 +81,25 @@ genNestedTx ::
   -> L.Coin
   -> TxMetadata
   -> NestedTxGenerator DijkstraEra
-genNestedTx ledgerParameters collateral fee metadata inFunds outputs subTxs = do
+genNestedTx ledgerParameters (collateralIns, collFunds) fee metadata inFunds outputs subTxs = do
   signedSubTxs <- mapM (uncurry signedSubTx) subTxs
-  (tx, txId) <- signedTopLevelTx ledgerParameters collateral fee metadata inFunds outputs
-                  (Exp.setTxSignedSubTransactions signedSubTxs)
-  return (tx, txId, map Exp.getSignedSubTxId signedSubTxs)
+  unsignedTx <- first ApiError $ Exp.makeUnsignedTx Exp.DijkstraEra $ Exp.defaultTxBodyContent
+    & Exp.setTxIns (map (\f -> (getFundTxIn f, getFundWitness @DijkstraEra f)) inFunds)
+    -- A fund whose script is supplied by reference needs that output among
+    -- the transaction's reference inputs ('genTx' adds them itself).
+    & Exp.setTxInsReference (Exp.TxInsReference referenceInputs Set.empty)
+    & Exp.setTxInsCollateral collateralIns
+    & Exp.setTxOuts outputs
+    & Exp.setTxFee fee
+    & Exp.setTxMetadata metadata
+    & Exp.setTxProtocolParams ledgerParameters
+    & Exp.setTxSignedSubTransactions signedSubTxs
+  let keyWitnesses = map (Exp.makeKeyWitness Exp.DijkstraEra unsignedTx . WitnessPaymentKey) $
+        mapMaybe getFundKey $ inFunds ++ collFunds
+      tx@(Exp.SignedTx ledgerTx) = Exp.signTx Exp.DijkstraEra [] keyWitnesses unsignedTx
+  return (tx, fromShelleyTxId $ L.txIdTx ledgerTx, map Exp.getSignedSubTxId signedSubTxs)
  where
+  referenceInputs = nubOrd $ mapMaybe getFundReferenceInput inFunds
   signedSubTx :: [Fund] -> [Exp.TxOut (ShelleyLedgerEra DijkstraEra)] -> Either TxGenError Exp.SignedSubTx
   signedSubTx subFunds subOutputs = do
     unsignedSubTx <- first ApiError $ Exp.makeUnsignedSubTx $ Exp.defaultSubTxBodyContent
@@ -80,68 +119,40 @@ nestedTx ::
   -> NestedTxGenerator era
   -> ([Fund], [out])
   -> [([Fund], [out])]
-  -> Either TxGenError (Tx era, [(TxId, [out])])
+  -> Either TxGenError (Exp.SignedTx era, [(TxId, [out])])
 nestedTx txOut txGenerator (topFunds, topOutputs) subTxs = do
   (tx, txId, subTxIds) <- txGenerator topFunds (map txOut topOutputs)
                             [ (funds, map txOut outputs) | (funds, outputs) <- subTxs ]
   return (tx, (txId, topOutputs) : zip subTxIds (map snd subTxs))
 
--- | Builds and signs a top-level transaction; @extendBody@ can add to its
--- body content, e.g. sub-transactions.
-signedTopLevelTx :: forall era. ()
-  => Exp.EraCommonConstraints era
-  => L.PParams (ShelleyLedgerEra era)
-  -> ([TxIn], [Fund])
-  -> L.Coin
-  -> TxMetadata
-  -> [Fund]
-  -> [Exp.TxOut (ShelleyLedgerEra era)]
-  -> (Exp.TxBodyContent (ShelleyLedgerEra era) -> Exp.TxBodyContent (ShelleyLedgerEra era))
-  -> Either TxGenError (Tx era, TxId)
-signedTopLevelTx ledgerParameters (collateral, collFunds) fee metadata inFunds outputs extendBody = do
-  unsignedTx <- first ApiError $ Exp.makeUnsignedTx era txBodyContent
-  let keyWitnesses = map (Exp.makeKeyWitness era unsignedTx . WitnessPaymentKey) allKeys
-  case Exp.signTx era [] keyWitnesses unsignedTx of
-    Exp.SignedTx ledgerTx ->
-      return (ShelleyTx (shelleyBasedEra @era) ledgerTx, fromShelleyTxId $ L.txIdTx ledgerTx)
- where
-  era = Exp.useEra @era
-  allKeys = mapMaybe getFundKey $ inFunds ++ collFunds
-  -- A fund whose script is supplied by reference needs that output among the
-  -- transaction's reference inputs.
-  referenceInputs = nubOrd $ mapMaybe getFundReferenceInput inFunds
-  txBodyContent = extendBody $ Exp.defaultTxBodyContent
-    & Exp.setTxIns (map (\f -> (getFundTxIn f, getFundWitness @era f)) inFunds)
-    & Exp.setTxInsReference (Exp.TxInsReference referenceInputs Set.empty)
-    & Exp.setTxInsCollateral collateral
-    & Exp.setTxOuts outputs
-    & Exp.setTxFee fee
-    & Exp.setTxMetadata metadata
-    & Exp.setTxProtocolParams ledgerParameters
-
+-- | The metadata of 'genNestedTx', from that of 'genTx'.
+fromTxMetadataInEra :: TxMetadataInEra era -> TxMetadata
+fromTxMetadataInEra TxMetadataNone = mempty
+fromTxMetadataInEra (TxMetadataInEra _ metadata) = metadata
 
 -- | 'estimateTxFee' estimates the minimum fee of a transaction, counting
 -- @keyWitnesses@ key witnesses instead of the ones it already carries, so that
 -- a signed transaction preview is estimated like its unsigned counterpart, and
 -- @refScriptsSize@ bytes of the reference scripts it uses.
-estimateTxFee :: Exp.EraCommonConstraints era
+estimateTxFee :: forall era. IsShelleyBasedEra era
   => L.PParams (ShelleyLedgerEra era)
-  -> Tx era
+  -> Exp.SignedTx era
   -> Word
   -> Int
   -> L.Coin
-estimateTxFee ledgerParameters (ShelleyTx _ ledgerTx) keyWitnesses =
-  Exp.evaluateTransactionFee ledgerParameters unsignedTx keyWitnesses 0
- where
-  unsignedTx = Exp.UnsignedTx $ ledgerTx & L.witsTxL . L.addrTxWitsL .~ mempty
+estimateTxFee ledgerParameters (Exp.SignedTx ledgerTx) keyWitnesses refScriptsSize =
+  shelleyBasedEraConstraints (shelleyBasedEra @era) $
+    estimateMinFeeTx ledgerParameters (ledgerTx & L.witsTxL . L.addrTxWitsL .~ mempty)
+      (fromIntegral keyWitnesses) 0 refScriptsSize
 
 -- | The number of key witnesses a signed transaction carries: one for each
 -- key among the funds it spends and its collateral, a key used twice once.
-txKeyWitnesses :: Exp.EraCommonConstraints era => Tx era -> Word
-txKeyWitnesses (ShelleyTx _ ledgerTx) = fromIntegral $ Set.size $ ledgerTx ^. L.witsTxL . L.addrTxWitsL
+txKeyWitnesses :: forall era. IsShelleyBasedEra era => Exp.SignedTx era -> Word
+txKeyWitnesses (Exp.SignedTx ledgerTx) = shelleyBasedEraConstraints (shelleyBasedEra @era) $
+  fromIntegral $ Set.size $ ledgerTx ^. L.witsTxL . L.addrTxWitsL
 
 txSizeInBytes :: forall era. IsShelleyBasedEra era =>
-     Tx era
+     Exp.SignedTx era
   -> Int
-txSizeInBytes
-  = BS.length . serialiseToCBOR
+txSizeInBytes tx@(Exp.SignedTx _)
+  = BS.length $ serialiseToRawBytes tx

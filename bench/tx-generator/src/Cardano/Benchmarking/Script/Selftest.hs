@@ -42,7 +42,7 @@ import           Paths_tx_generator
 -- does 'show' and 'writeFile' on.
 runSelftest :: Env -> EnvConsts -> Maybe FilePath -> IO (Either Env.Error ())
 runSelftest env envConsts@EnvConsts { .. } outFile = do
-  protocolFile <-  getDataFileName "data/protocol-parameters.json"
+  protocolFile <-  getDataFileName "data/protocol-parameters-v10.json"
   let
     submitMode = maybe DiscardTX DumpToFile outFile
     fullScript = do
