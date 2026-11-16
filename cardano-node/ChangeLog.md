@@ -1,5 +1,11 @@
 # Changelog for cardano-node
 
+## 11.2.2 -- 2026-11-16
+
+- Update bounds: ouroboros-consensus-5.4.0.1. When using the LSM backend, the
+  time a thread spends waiting for IO to complete is no longer accounted as
+  IOWAIT.
+
 ## 11.2.1 -- 2026-11-06
 
 - Update bounds: cardano-api-11.12, cardano-cli-11.7, ouroboros-consensus-5.4

@@ -1,4 +1,10 @@
 # Changelog for cardano-node-chairman
+## 11.2.2 -- 2026-11-16
+
+- Bumped `ouroboros-consensus` to 5.4.0.1 in the node the tests run against.
+  (compatible)
+  [PR 6774](https://github.com/IntersectMBO/cardano-node/pull/6774)
+
 ## 11.2.1 -- 2026-11-06
 
 - Bumped the `cardano-cli` build tool used by the tests to 11.7.

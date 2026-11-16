@@ -1,5 +1,11 @@
 # Changelog for cardano-submit-api
 
+## 11.2.2 -- 2026-11-16
+
+- Bumped `ouroboros-consensus` to 5.4.0.1.
+  (compatible)
+  [PR 6774](https://github.com/IntersectMBO/cardano-node/pull/6774)
+
 ## 11.2.1 -- 2026-11-06
 
 - Bumped `cardano-api` to 11.12 and `cardano-cli` to 11.7.

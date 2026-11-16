@@ -1,5 +1,27 @@
 # Changelog for cardano-testnet
 
+## 11.3.0 -- 2026-11-16
+
+- Bumped `ouroboros-consensus` to 5.4.0.1.
+  (compatible)
+  [PR 6774](https://github.com/IntersectMBO/cardano-node/pull/6774)
+
+- The `cardano` and `create-env` commands no longer accept `--params-file`; use `--params-blockfrost-file` instead.
+  (breaking)
+  [PR 6769](https://github.com/IntersectMBO/cardano-node/pull/6769)
+
+- `cardano-testnet` now starts testnets in the Dijkstra era by default: `defaultEra` and the default `creationEra` are Dijkstra instead of Conway.
+  The default node configuration enables `ExperimentalHardForksEnabled`, which the node needs to produce blocks in Dijkstra.
+  `registerSingleSpo` takes an `Era` from `Cardano.Api.Experimental` instead of an `AnyShelleyBasedEra`. It generates a BLS key and uses it in the stake pool registration certificate when the era is Dijkstra.
+  (breaking)
+  [PR 6716](https://github.com/IntersectMBO/cardano-node/pull/6716)
+
+- Cleaned up the naming of the `*Conf*` constructors in `Testnet.Start.Types`:
+  - Removed `mkConf`. Its only difference with `mkConfig` was noting the path in the test log, which was redundant. Test code now uses the pure `mkConfig` directly, now exported in place of `mkConf`.
+  - Renamed `mkConfigAbs` to `mkConfigAbsolute`, and documented that, besides making the path absolute, it also creates the directory if it doesn't exist yet.
+  (breaking)
+  [PR 6637](https://github.com/IntersectMBO/cardano-node/pull/6637)
+
 ## 11.2.1 -- 2026-11-06
 
 - Bumped `cardano-api` to 11.12 and `cardano-cli` to 11.7.
