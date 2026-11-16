@@ -100,7 +100,7 @@ emptyDijkstraGenesis =
               , udppPerasQuorumThresholdSafetyMargin = minBound
               -- No pricing logic uses these yet, they are enabled by a later
               -- intra-era hard fork within the Dijkstra era.
-              , udppRefInputsCostPerMultiAssetPolicy = Coin 0
+              , udppRefInputsCostPerMultiAssetByte = CoinPerByte (CompactCoin 0)
               , udppRefInputsCostPerDatumByte = CoinPerByte (CompactCoin 0)
               }
       in DijkstraGenesis { dgUpgradePParams = upgradePParamsDef }
