@@ -13,13 +13,15 @@ module  Cardano.TxGenerator.Utils
         where
 
 import           Cardano.Api as Api
-import qualified Cardano.Api.Experimental as Exp
+import           Cardano.Api.Experimental (SignedTx (..))
 import qualified Cardano.Api.Parser.Text as P
 
 import qualified Cardano.Ledger.Coin as L
+import qualified Cardano.Ledger.Core as Ledger
 import           Cardano.TxGenerator.Types
 
 import           GHC.Stack
+import           Lens.Micro ((^.))
 
 
 -- | `keyAddress` determines an address for the relevant era.
@@ -52,55 +54,20 @@ includeChange fee spend have = case compare changeValue 0 of
   where changeValue = sum have - sum spend - fee
 
 
--- some convenience constructors
+-- | The id of a signed transaction.
+txIdFromSignedTx :: SignedTx era -> TxId
+txIdFromSignedTx (SignedTx tx) =
+  fromShelleyTxId $ Ledger.txIdTxBody (tx ^. Ledger.bodyTxL)
 
--- | `toAnyTxInWitness` converts an old-API witness for spending a transaction
--- input into the experimental API's `Exp.AnyWitness`, decoding a Plutus script
--- if there is one.
--- `Exp.legacyWitnessConversion` only looks at the `Exp.WitTxIn` constructor (to
--- pick the spending purpose) and not at the `TxIn` it carries, so a placeholder
--- is used: one witness is shared by all the funds paid to a script.
-toAnyTxInWitness :: forall era. Exp.EraCommonConstraints era
-  => Witness WitCtxTxIn era
-  -> Either TxGenError (Exp.AnyWitness (ShelleyLedgerEra era))
-toAnyTxInWitness witness =
-  case Exp.legacyWitnessConversion (convert $ Exp.useEra @era) [(Exp.WitTxIn placeholderTxIn, BuildTxWith witness)] of
-    Right [(_, anyWitness)] -> Right anyWitness
-    Right _                 -> Left $ TxGenError "toAnyTxInWitness: expected exactly one converted witness"
-    Left err                -> Left $ TxGenError $ "toAnyTxInWitness: " ++ show err
- where
-  placeholderTxIn = mkTxIn "0000000000000000000000000000000000000000000000000000000000000000#0"
+-- some convenience constructors
 
 -- | `mkTxInModeCardano` never uses the `TxInByronSpecial` constructor
 -- because its type enforces it being a Shelley-based era.
-mkTxInModeCardano :: IsShelleyBasedEra era => Tx era -> TxInMode
-mkTxInModeCardano = TxInMode shelleyBasedEra
+mkTxInModeCardano :: forall era. IsShelleyBasedEra era => SignedTx era -> TxInMode
+mkTxInModeCardano (SignedTx tx) =
+  TxInMode (shelleyBasedEra @era) (ShelleyTx (shelleyBasedEra @era) tx)
 
 -- | Convert text representation of a txin "hash#txid" to a TxIn e.g. "dbaff4e270cfb55612d9e2ac4658a27c79da4a5271c6f90853042d1403733810#0"
 -- Partial. Useful in tests.
 mkTxIn :: HasCallStack => Text -> TxIn
 mkTxIn = either error id . P.runParser parseTxIn
-
--- | 'plutusSpendingWitness' is the witness for spending an output locked by a
--- Plutus script: with the script included in the transaction, or, given the
--- output that carries it as a reference script, by reference.
-plutusSpendingWitness :: forall era. Exp.EraCommonConstraints era
-  => ScriptInAnyLang
-  -> Maybe TxIn
-  -> HashableScriptData
-  -> HashableScriptData
-  -> ExecutionUnits
-  -> Either TxGenError (Exp.AnyWitness (ShelleyLedgerEra era))
-plutusSpendingWitness (ScriptInAnyLang lang (PlutusScript version script)) reference datum redeemer executionUnits =
-  case scriptLanguageSupportedInEra (shelleyBasedEra @era) lang of
-    Nothing -> Left $ TxGenError $ "plutusSpendingWitness: " ++ show version ++ " not supported in era " ++ show (cardanoEra @era)
-    Just scriptLang -> toAnyTxInWitness $ ScriptWitness ScriptWitnessForSpending $
-      PlutusScriptWitness
-        scriptLang
-        version
-        (maybe (PScript script) PReferenceScript reference)
-        (ScriptDatumForTxIn $ Just datum)
-        redeemer
-        executionUnits
-plutusSpendingWitness _ _ _ _ _ =
-  Left $ TxGenError "plutusSpendingWitness: only Plutus scripts are supported"

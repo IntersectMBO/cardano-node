@@ -1,5 +1,4 @@
 {-# LANGUAGE CPP #-}
-{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
@@ -12,34 +11,43 @@
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 
 import           Cardano.Api
-import qualified Cardano.Api.Experimental as Exp
-import qualified Cardano.Api.Ledger as L
+import           Cardano.Api.Compatible (CompatibleTxBodyContent (..), createCompatibleTx,
+                   defaultCompatibleTxBodyContent)
+import qualified Cardano.Api.Compatible as Compatible (addWitnesses)
+import           Cardano.Api.Experimental (SignedTx (..))
+import qualified Cardano.Api.Experimental.Tx as Exp
+
+import           Cardano.Ledger.BaseTypes (getVersion)
+import           Cardano.Ledger.Core (bodyTxL, mkCoinTxOut)
+import qualified Cardano.Ledger.Core as L (eraProtVerHigh, eraProtVerLow)
+import           Cardano.Ledger.Tools (estimateMinFeeTx)
 
 import           Cardano.Benchmarking.Compiler (keyBenchmarkInputs)
 import           Cardano.Benchmarking.GeneratorTx.SizedMetadata (mkMetadata)
 import           Cardano.TxGenerator.Calibrate.Utils
-import           Cardano.TxGenerator.Fund (Fund (..), FundInEra (..))
 import           Cardano.TxGenerator.PlutusContext
 import           Cardano.TxGenerator.ProtocolParameters (ProtocolParameters (..),
                    convertToLedgerProtocolParameters)
 import           Cardano.TxGenerator.Setup.Plutus
-import           Cardano.TxGenerator.Tx (estimateTxFee, genTx, txSizeInBytes)
+import           Cardano.TxGenerator.Tx (txSizeInBytes)
 import           Cardano.TxGenerator.Types
-import           Cardano.TxGenerator.Utils (keyAddress, mkTxIn, toAnyTxInWitness)
-import           Cardano.TxGenerator.UTxO (mkTxOutToAddress)
+import           Cardano.TxGenerator.Utils (keyAddress, mkTxIn)
 
-import           Control.Exception
+import           Control.Exception.Safe (SomeException (..), catch)
 import           Data.Aeson (decodeFileStrict')
+import           Data.Bifunctor (first)
 import qualified Data.ByteString.Lazy.Char8 as BSL (writeFile)
+
 import           Data.Char
 import           Data.Function (on)
-import           Data.List (nub, sort, transpose)
+import           Data.List (find, nub, sort, transpose)
 import           Data.List.Extra (split)
-
 import           Data.Map.Strict as Map (Map, empty, fromList, union)
 import           Data.Maybe
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
+import           Data.Word (Word32)
+import           Lens.Micro ((^.))
 import           Numeric
 import           Numeric.Natural
 import           Options.Applicative as Opt
@@ -161,7 +169,9 @@ runPlutus s@TargetBlockExpenditure{} _ _ _ _
 runPlutus strategy budgetType protoParamFile plutusDef@PlutusOn{..} scales
   = do
     protocolParameters <- readProtocolParametersOrDie protoParamFile
-    (script, resolvedTo) <- either (error . show) pure =<< readPlutusScript plutusScript
+    AnyShelleyBasedEra era <- liftEitherError . eraForProtocolVersion $ protocolParamProtocolVersion protocolParameters
+    putStrLn $ "--> era: " ++ show era
+    (script, resolvedTo) <- liftEitherError =<< readPlutusScript plutusScript
 
     let
       redeemerDef   = Right plutusDef
@@ -170,35 +180,50 @@ runPlutus strategy budgetType protoParamFile plutusDef@PlutusOn{..} scales
     putStrLn $ "--> got script " ++ scriptNameExt
 
     redeemer :: ScriptData <-
-      resolveRedeemer redeemerDef >>= either
-        (error . show)
-        (pure . getScriptData)
+      fmap getScriptData . liftEitherError =<< resolveRedeemer redeemerDef
     printScriptData redeemer
 
+    maxTxExUnits <- liftEitherError $
+      protocolParamMaxTxExUnits protocolParameters ?! TxGenError "autoBudget: cannot find protocolParamMaxTxExUnits"
     let
       autoBudget = PlutusAutoBudget
-        { autoBudgetUnits = fromMaybe (error "autoBudget: cannot find protocolParamMaxTxExUnits") (protocolParamMaxTxExUnits protocolParameters)
+        { autoBudgetUnits = maxTxExUnits
         , autoBudgetDatum = ScriptDataNumber 0
         , autoBudgetRedeemer = unsafeHashableScriptData $ scriptDataModifyNumber (const 1_000_000) redeemer
         , autoBudgetUpperBoundHint = Nothing
         }
 
-      baseline@(baseSummary, _) =
-        summaryAndRedeermerOrDie "baseline"
-          $ plutusAutoScaleBlockfit protocolParameters (scriptNameExt, show strategy) script autoBudget strategy 1
-    summaries_ <- baseline `seq`
-      runScaling script budgetType protocolParameters baseSummary autoBudget scales
+    (baseSummary, baseBudget, _) <-
+      liftEitherError . first (TxGenError "baseline: " <>)
+        $ plutusAutoScaleBlockfit protocolParameters (scriptNameExt, show strategy) script autoBudget strategy 1
+    summaries_ <- runScaling script budgetType protocolParameters baseSummary autoBudget scales
 
     let
-      summaries = baseline : summaries_
+      summaries = (baseSummary, autoBudgetRedeemer baseBudget) : summaries_
       jsonName  = "summaries_" ++ scriptName <.> "json"
       csvName   = "scaling_" ++ scriptName <.> "csv"
 
-    summariesWithApprox <- mapM (approximateTxProperties script protocolParameters) summaries
+    ledgerProtocolParameters <- liftEitherError $ convertToLedgerProtocolParameters era protocolParameters
+    summariesWithApprox <- mapM (approximateTxProperties era script ledgerProtocolParameters) summaries
     writeResultsJSON jsonName summariesWithApprox
     writeResultsCSV csvName summariesWithApprox
 
 runPlutus _ _ _ _ _ = error "calibrate-script: implementation error"
+
+-- | The Shelley-based era whose ledger protocol version range contains the major protocol version.
+eraForProtocolVersion
+  :: (Natural, Word32)
+  -- ^ major and minor protocol version from the protocol parameters file
+  -> Either TxGenError AnyShelleyBasedEra
+eraForProtocolVersion (major, _) =
+  find (\(AnyShelleyBasedEra era) -> isEraOfMajorVersion era) [minBound .. maxBound]
+    ?! TxGenError ("eraForProtocolVersion: no Shelley-based era has major protocol version " ++ show major)
+  where
+    isEraOfMajorVersion :: forall era. ShelleyBasedEra era -> Bool
+    isEraOfMajorVersion era =
+      shelleyBasedEraConstraints era $
+        getVersion (L.eraProtVerLow @(ShelleyLedgerEra era)) <= major
+          && major <= getVersion (L.eraProtVerHigh @(ShelleyLedgerEra era))
 
 -- | Perform scaling run(s). When no explicit Scale values are provided, do auto-scaling.
 runScaling ::
@@ -486,74 +511,57 @@ writeResultsJSON jsonName summaries = do
 -- | Builds a dummy transaction that resembles the ones submitted during some Plutus benchmark and
 --   uses it to augment the budget summary with txn size and fee.
 --   * If anything fails to evaluate, the summary is returned unchanged.
---   * The transaction is in Dijkstra for protocol version 12 or later, else in Conway.
-approximateTxProperties :: ScriptInAnyLang -> ProtocolParameters -> (PlutusBudgetSummary, ScriptRedeemer) -> IO PlutusBudgetSummary
-approximateTxProperties script protocolParameters
-  | fst (protocolParamProtocolVersion protocolParameters) >= 12 =
-      approximateTxPropertiesIn ShelleyBasedEraDijkstra script protocolParameters
-  | otherwise =
-      approximateTxPropertiesIn ShelleyBasedEraConway script protocolParameters
-
-approximateTxPropertiesIn :: forall era. Exp.EraCommonConstraints era
-  => ShelleyBasedEra era -> ScriptInAnyLang -> ProtocolParameters -> (PlutusBudgetSummary, ScriptRedeemer) -> IO PlutusBudgetSummary
-approximateTxPropertiesIn era script protocolParameters (summary, redeemer) = do
-  putStrLn $ "--> approximating txn size and fee in " ++ show era ++ " for: " ++ messageId summary
-  evaluate $ summary
-    { projectedTxSize = Just $ txSizeInBytes dummyTx
-    , projectedTxFee  = Just $ estimateTxFee ledgerPParams dummyTx 2 0  -- 1 (script witness) + 1 (collateral) = 2; no reference scripts
-    }
-
-  `catch` \(SomeException e) -> do
-    putStrLn $ "approximation failed: " ++ show e
-            ++ "\n--> using unmodified summary"
-    pure summary
-  where
-    ledgerPParams :: L.PParams (ShelleyLedgerEra era)
-    ledgerPParams =
-      either (error . docToString . prettyError) unLedgerProtocolParameters
-        $ convertToLedgerProtocolParameters era protocolParameters
-
-    witness :: Exp.AnyWitness (ShelleyLedgerEra era)
-    witness =
-      either (error . show) id
-        $ toAnyTxInWitness
-        $ fromMaybe (error "could not get PlutusScriptWitness")
-        $ case script of
-            ScriptInAnyLang lang (PlutusScript version script') -> do
-              scriptLang <- scriptLanguageSupportedInEra era lang
-              pure
-                $ ScriptWitness ScriptWitnessForSpending
-                  $ PlutusScriptWitness
-                      scriptLang
-                      version
-                      (PScript script')
-                      (ScriptDatumForTxIn $ Just $ unsafeHashableScriptData $ ScriptDataNumber 0)
-                      redeemer
-                      (budgetUsedPerTxInput summary)
-            _ -> Nothing
-
-    -- build a dummy tx akin to what we'd get in the tx-generator's benchmarking workload;
-    -- it just needs to be sufficient to get our approximations.
-    dummyTx :: Tx era
-    dummyTx
-      = either (error . show) fst
-          $ genTx ledgerPParams ([dummyTxIn 1], [collateralFund]) 1_000_000 dummyMetadata [scriptFund] [dummyTxOut]
-
-    -- the script input, and a collateral input signed with the benchmarking key
-    scriptFund      = dummyFund (dummyTxIn 0) witness Nothing
-    collateralFund  = dummyFund (dummyTxIn 1) Exp.AnyKeyWitnessPlaceholder (Just keyBenchmarkInputs)
-    dummyFund txIn fundWitness key = Fund $ shelleyBasedEraConstraints era $ InAnyCardanoEra (toCardanoEra era) FundInEra
-      { _fundTxIn       = txIn
-      , _fundWitness    = fundWitness
-      , _fundVal        = 1_000_000
-      , _fundSigningKey = key
-      }
-
+approximateTxProperties
+  :: forall era
+   . ShelleyBasedEra era
+  -- ^ era of the dummy transaction
+  -> ScriptInAnyLang
+  -- ^ the calibrated script, spent by the dummy transaction
+  -> LedgerProtocolParameters era
+  -- ^ protocol parameters to build the dummy transaction and estimate its fee with
+  -> (PlutusBudgetSummary, ScriptRedeemer)
+  -- ^ summary to augment, and the redeemer it was calibrated with
+  -> IO PlutusBudgetSummary
+approximateTxProperties era script (LedgerProtocolParameters pparams) (summary, redeemer) = do
+  putStrLn $ "--> approximating txn size and fee for: " ++ messageId summary
+  shelleyBasedEraConstraints era (do
+    anyPlutusScript <- liftEitherError $ toAnyPlutusScript era script
     -- Corresponds to the metadata inserted in benchmarking workloads, which is why it's needed for the estimate.
     -- default value taken from: `add_tx_size` in nix/nixos/tx-generator-service.nix
-    dummyMetadata :: TxMetadata
-    dummyMetadata = either error id $ mkMetadata 100
+    dummyMetadata <- liftEitherError . first TxGenError $ mkMetadata @era 100
+    let
+      dummyDatum = unsafeHashableScriptData $ ScriptDataNumber 0
+      anyWitness = mkPlutusSpendingWitness anyPlutusScript Nothing dummyDatum redeemer (budgetUsedPerTxInput summary)
 
-    -- just placeholders
-    dummyTxIn ix = mkTxIn $ "900fc5da77a0747da53f7675cbb7d149d46779346dea2f879ab811ccc72a2162#" <> textShow @Int ix
-    dummyTxOut   = shelleyBasedEraConstraints era $ mkTxOutToAddress (keyAddress (Testnet (NetworkMagic 42)) keyBenchmarkInputs) 1_000_000
+      -- just placeholders
+      dummyTxIn ix = mkTxIn $ "900fc5da77a0747da53f7675cbb7d149d46779346dea2f879ab811ccc72a2162#" <> textShow @Int ix
+      dummyTxOut :: Exp.TxOut (ShelleyLedgerEra era)
+      dummyTxOut = Exp.TxOut $ mkCoinTxOut (toShelleyAddr $ keyAddress @era (Testnet (NetworkMagic 42)) keyBenchmarkInputs) (Coin 1_000_000)
+
+      -- build a dummy tx akin to what we'd get in the tx-generator's benchmarking workload;
+      -- it just needs to be sufficient to get our approximations.
+      txBodyContent = (defaultCompatibleTxBodyContent era)
+        { compatibleTxIns = [(dummyTxIn 0, anyWitness)]
+        , compatibleTxInsCollateral = [dummyTxIn 1]
+        , compatibleTxOuts = [dummyTxOut]
+        , compatibleTxFee = Coin 1_000_000
+        , compatibleTxMetadata = dummyMetadata
+        , compatibleTxProtocolParams = Just pparams
+        }
+
+    unsignedTx@(ShelleyTx _ unsignedLedgerTx) <- liftEitherError $ createCompatibleTx era txBodyContent
+
+    let
+      witVKey = makeShelleyKeyWitness' era (unsignedLedgerTx ^. bodyTxL) (WitnessPaymentKey keyBenchmarkInputs)
+      ShelleyTx _ signedLedgerTx = Compatible.addWitnesses [witVKey] unsignedTx
+      dummyTx :: SignedTx era
+      dummyTx = SignedTx signedLedgerTx
+
+    pure summary
+      { projectedTxSize = Just $ txSizeInBytes dummyTx
+      , projectedTxFee  = Just $ estimateMinFeeTx pparams unsignedLedgerTx 2 0 0  -- 1 (script witness) + 1 (collateral) = 2
+      }
+    ) `catch` \(SomeException e) -> do
+      putStrLn $ "approximation failed: " ++ show e
+              ++ "\n--> using unmodified summary"
+      pure summary
