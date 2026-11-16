@@ -209,12 +209,15 @@ executable calibrate-script
                       , aeson
                       , aeson-pretty
                       , bytestring
+                      , cardano-api
+                      , cardano-ledger-core
                       , containers
                       , directory
                       , extra
                       , filepath
+                      , microlens
                       , optparse-applicative
-                      , cardano-api
+                      , safe-exceptions
                       , text
                       , transformers
                       , transformers-except

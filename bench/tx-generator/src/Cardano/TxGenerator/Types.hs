@@ -41,7 +41,7 @@ type TxAdditionalSize     = Int
 type TPSRate              = Double
 
 
-type TxGenerator era = [Fund] -> [Exp.TxOut (ShelleyLedgerEra era)] -> Either TxGenError (Tx era, TxId)
+type TxGenerator era = [Fund] -> [Exp.TxOut (ShelleyLedgerEra era)] -> Either TxGenError (Exp.SignedTx era, TxId)
 
 -- | 'NestedTxGenerator' is 'TxGenerator' for a transaction with sub-transactions:
 -- besides the top-level funds and outputs, it takes the funds and outputs of
@@ -50,7 +50,7 @@ type NestedTxGenerator era
   =  [Fund]
   -> [Exp.TxOut (ShelleyLedgerEra era)]
   -> [([Fund], [Exp.TxOut (ShelleyLedgerEra era)])]
-  -> Either TxGenError (Tx era, TxId, [TxId])
+  -> Either TxGenError (Exp.SignedTx era, TxId, [TxId])
 
 type FundSource m       = m (Either TxGenError [Fund])
 
@@ -107,7 +107,7 @@ data TxEnvironment era = TxEnvironment
   -- , txEnvProtocolInfo     :: !SomeConsensusProtocol
   , txEnvProtocolParams   :: !ProtocolParameters
   , txEnvFee              :: L.Coin
-  , txEnvMetadata         :: TxMetadata
+  , txEnvMetadata         :: TxMetadataInEra era
   }
 
 

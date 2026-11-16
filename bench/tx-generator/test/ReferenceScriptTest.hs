@@ -26,7 +26,8 @@ import           Cardano.Api (AnyCardanoEra (..), AsType (AsPaymentKey), Cardano
                    ExecutionUnits (..), HashableScriptData, InAnyCardanoEra (..),
                    LedgerProtocolParameters (..), NetworkId (..), NetworkMagic (..), PaymentKey,
                    ScriptData (ScriptDataNumber), ScriptHash, ScriptInAnyLang (..), ShelleyLedgerEra,
-                   SigningKey, Tx (ShelleyTx), TxIn (..), TxIx (..), generateSigningKey, getScriptData,
+                   SigningKey, TxIn (..), TxIx (..), TxMetadataInEra (TxMetadataNone),
+                   generateSigningKey, getScriptData,
                    hashScript, shelleyBasedEra, toShelleyScriptHash, toShelleyTxIn,
                    unsafeHashableScriptData)
 import           Cardano.Api.Experimental qualified as Exp
@@ -56,11 +57,11 @@ import           Cardano.TxGenerator.PlutusContext (readScriptData, scriptDataMo
 import           Cardano.TxGenerator.ProtocolParameters (ProtocolParameters (..),
                    convertToLedgerProtocolParameters, fromLedgerPParams)
 import           Cardano.TxGenerator.ScriptVariants
-import           Cardano.TxGenerator.Setup.Plutus (preExecutePlutusScript, readPlutusScript)
+import           Cardano.TxGenerator.Setup.Plutus (mkPlutusSpendingWitness, preExecutePlutusScript,
+                   readPlutusScript, toAnyPlutusScript)
 import           Cardano.TxGenerator.Tx (estimateTxFee, genTx, txKeyWitnesses)
 import           Cardano.TxGenerator.Types (TxGenPlutusType (..), TxGenTxParams (..))
-import           Cardano.TxGenerator.Utils (inputsToOutputsWithFee, keyAddress, mkTxIn,
-                   plutusSpendingWitness)
+import           Cardano.TxGenerator.Utils (inputsToOutputsWithFee, keyAddress, mkTxIn)
 import           Cardano.TxGenerator.UTxO (Output (..), keyOutput, mkReferenceScriptTxOut,
                    mkTxOutToAddress, outputFund, scriptOutput)
 
@@ -85,15 +86,16 @@ referenceScriptTests = testGroup "reference scripts"
       key <- generateSigningKey AsPaymentKey
       variants <- loopV3Variants 3
       wallet <- initWallet
-      destination <- newCyclingDestination wallet 2
+      outputs <- either (assertFailure . show) pure $ sequence
         [ scriptOutput @ConwayEra network (variant, ScriptDataNumber 0) Exp.AnyKeyWitnessPlaceholder
         | variant <- variants ]
+      destination <- newCyclingDestination wallet 2 outputs
       txOutputHashes <- fmap concat $ forM [0 .. 2 :: Int] $ \i -> do
         let inFunds = keyFunds key (10 * i) 1
         -- Planning outputs again, as a preview does, pays nothing yet.
         _ <- payTo destination $ inputsToOutputsWithFee fee 4 $ map getFundCoin inFunds
         txOutputs <- payTo destination $ inputsToOutputsWithFee fee 4 $ map getFundCoin inFunds
-        tx <- runExceptT (buildAndStore (genTx emptyConwayPParams ([], []) fee mempty) inFunds txOutputs)
+        tx <- runExceptT (buildAndStore (genTx emptyConwayPParams ([], []) fee TxMetadataNone) inFunds txOutputs)
                 >>= either (assertFailure . show) pure
         return $ map outputScriptHash $ toList $ ledgerTxOf tx ^. LA.bodyTxL . LA.outputsTxBodyL
       let variantIndex = Map.fromList $ zip (map (Just . toShelleyScriptHash . scriptHashOf) variants) [VariantIx 0 ..]
@@ -193,7 +195,7 @@ type Spending :: Type -> Type
 type role Spending nominal
 data Spending era = Spending
   { spendingPParams     :: L.PParams (ShelleyLedgerEra era)
-  , spendingTx          :: Tx era
+  , spendingTx          :: Exp.SignedTx era
   , spendingUTxO        :: L.UTxO (ShelleyLedgerEra era)
   , spendingReference   :: TxIn
   , spendingScriptHash  :: ScriptHash
@@ -213,9 +215,10 @@ spending pparamsFile adjust byReference = do
   variant <- (!! 1) <$> loopV3Variants 3
   (datum, redeemer, units) <- budget generatorPParams variant
   refOut <- either (assertFailure . show) pure $ mkReferenceScriptTxOut pparams (keyAddress @era network key) variant
-  witness <- either (assertFailure . show) pure $
-    plutusSpendingWitness @era variant (if byReference then Just refTxIn else Nothing) datum redeemer units
-  let locked = scriptOutput @era network (variant, getScriptData datum) witness 20_000_000
+  anyPlutusScript <- either (assertFailure . show) pure $ toAnyPlutusScript (shelleyBasedEra @era) variant
+  let witness = mkPlutusSpendingWitness anyPlutusScript (if byReference then Just refTxIn else Nothing) datum redeemer units
+  lockedOutput <- either (assertFailure . show) pure $ scriptOutput @era network (variant, getScriptData datum) witness
+  let locked = lockedOutput 20_000_000
       lockedOut = outputTxOut locked
       lockedFund = outputFund lockTxId (TxIx 0) locked
       collateral = keyOutput @era network key 10_000_000
@@ -226,7 +229,7 @@ spending pparamsFile adjust byReference = do
         , (toShelleyTxIn $ getFundTxIn lockedFund, unTxOut lockedOut)
         , (toShelleyTxIn $ getFundTxIn collateralFund, unTxOut collateralOut) ]
   (tx, _) <- either (assertFailure . show) pure $
-    genTx pparams ([getFundTxIn collateralFund], [collateralFund]) spendingFee mempty [lockedFund]
+    genTx pparams ([getFundTxIn collateralFund], [collateralFund]) spendingFee TxMetadataNone [lockedFund]
       [mkTxOutToAddress (keyAddress @era network key) (20_000_000 - spendingFee)]
   return Spending
     { spendingPParams = pparams
@@ -304,8 +307,8 @@ loopV3Variants count = do
 scriptHashOf :: ScriptInAnyLang -> ScriptHash
 scriptHashOf (ScriptInAnyLang _ script) = hashScript script
 
-ledgerTxOf :: Tx era -> L.Tx L.TopTx (ShelleyLedgerEra era)
-ledgerTxOf (ShelleyTx _ ledgerTx) = ledgerTx
+ledgerTxOf :: Exp.SignedTx era -> L.Tx L.TopTx (ShelleyLedgerEra era)
+ledgerTxOf (Exp.SignedTx ledgerTx) = ledgerTx
 
 network :: NetworkId
 network = Testnet (NetworkMagic 42)
