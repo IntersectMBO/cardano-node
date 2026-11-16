@@ -29,7 +29,7 @@ import           Paths_tx_generator
 
 
 demo :: IO ()
-demo = getDataFileName "data/protocol-parameters.json" >>= demo'
+demo = getDataFileName "data/protocol-parameters-v10.json" >>= demo'
 
 demo' :: FilePath -> IO ()
 demo' parametersFile = do
@@ -40,7 +40,7 @@ demo' parametersFile = do
           txEnvNetworkId = Mainnet
         , txEnvProtocolParams = protocolParameters
         , txEnvFee = 100000
-        , txEnvMetadata = mempty
+        , txEnvMetadata = TxMetadataNone
         }
 
   run1 <- foldM (worker $ generateTx demoEnv) (emptyFundQueue `insertFund` genesisFund) [1..10]
@@ -48,7 +48,7 @@ demo' parametersFile = do
   putStrLn $ "Are run results identical? " ++ show (toList run1 == toList run2)
   where
     worker ::
-         Generator (Either TxGenError (Tx ConwayEra))
+         Generator (Either TxGenError (Exp.SignedTx ConwayEra))
       -> FundQueue
       -> Int
       -> IO FundQueue
@@ -91,7 +91,7 @@ type Generator = State FundQueue
 
 generateTx ::
      TxEnvironment ConwayEra
-  -> Generator (Either TxGenError (Tx ConwayEra))
+  -> Generator (Either TxGenError (Exp.SignedTx ConwayEra))
 generateTx TxEnvironment{..}
   = do
       inputs <- consumeInputFunds
@@ -132,7 +132,7 @@ generateTx TxEnvironment{..}
 
 generateTxM ::
       TxEnvironment ConwayEra
-  ->  Generator (Either TxGenError (Tx ConwayEra))
+  ->  Generator (Either TxGenError (Exp.SignedTx ConwayEra))
 generateTxM txEnv
   = do
       inFunds <- get
@@ -143,7 +143,7 @@ generateTxM txEnv
 generateTxPure ::
      TxEnvironment ConwayEra
   -> FundQueue
-  -> Either TxGenError (Tx ConwayEra, FundQueue)
+  -> Either TxGenError (Exp.SignedTx ConwayEra, FundQueue)
 generateTxPure TxEnvironment{..} inQueue
   = do
       (tx, txId) <- generator inputs (map outputTxOut outputs)

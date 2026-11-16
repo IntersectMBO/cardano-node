@@ -2,11 +2,12 @@
 
 ## 3.0 -- Nov 2026
 
-* **Transactions are built with the experimental cardano-api**
-  (`Cardano.Api.Experimental`) instead of `createTransactionBody` and
-  `signShelleyTransaction`.
-  * **Only the Conway and Dijkstra eras are supported**, as by the
-    experimental API; other eras are rejected.
+* **Transactions are built with cardano-api's compatible API**
+  (`Cardano.Api.Compatible`) instead of the deprecated `createTransactionBody`
+  and `signShelleyTransaction`, in every Shelley-based era; Byron is rejected.
+  * Plutus scripts need Alonzo onwards, reference scripts Babbage onwards.
+  * Transactions with sub-transactions are built with the experimental API
+    (`Cardano.Api.Experimental`), until the compatible API supports them.
 
 * **Sub-transactions (Dijkstra onwards).** A new `NestedNtoM` generator: an
   `NtoM` transaction that also carries sub-transactions, each spending its own
@@ -47,8 +48,9 @@
     `calibrate-script`.
   * New `LoopV4` script (`scripts-fallback/LoopV4.plutus`,
     `data/LoopV4.redeemer.json`), LoopV3's loop as a Plutus V4 script.
-  * `calibrate-script` builds its transaction in Dijkstra for protocol version
-    12 or later; `data/protocol-parameters-v12.json` is a v12 preview.
+  * `calibrate-script` builds its transaction in the era of the protocol
+    version, Dijkstra for 12; `data/protocol-parameters-v12.json` is a v12
+    preview.
 
 * **Exact fee estimates.** They count the key witnesses a signed transaction
   carries, so the estimate equals the ledger's minimum fee.
@@ -62,10 +64,22 @@
   configured fee, and `NestedNtoM` when one exceeds `maxTxSize`: the nodes
   will reject those transactions.
 
+* **Fix:** `TxGenError`'s `Error` instance prints `PlutusError` and
+  `TxGenError` messages instead of an empty string.
+
+* The selftest and the pure example run in Conway, with
+  `data/protocol-parameters-v10.json`.
+
 * API changes:
+  * Transactions are `Exp.SignedTx` instead of `Tx`: in `TxStream`, from a
+    `TxGenerator` or a `NestedTxGenerator`, and as submitted
+    (`mkTxInModeCardano`, the Ogmios endpoint). New `txIdFromSignedTx`.
   * Outputs are ledger outputs (`Exp.TxOut`), fund witnesses are
-    `Exp.AnyWitness`, a fund's value is a `Coin`, and `TxEnvironment`'s fee and
-    metadata are a `Coin` and a `TxMetadata`.
+    `Exp.AnyWitness`, a fund's value is a `Coin`, and `TxEnvironment`'s fee is
+    a `Coin`.
+  * New `toAnyPlutusScript` and `mkPlutusSpendingWitness` in
+    `Cardano.TxGenerator.Setup.Plutus`, for the witness spending a Plutus
+    script, in the transaction or by reference.
   * Outputs are planned as data before a transaction is built: new `Output`,
     `outputFund` and `outputFunds` in `Cardano.TxGenerator.UTxO`, and
     `Destination`, `payTo`, `storeOutputs` and `buildAndStore` in
@@ -73,9 +87,7 @@
     `mangle`, `createAndStore`, `sourceToStoreTransaction` and friends.
   * New `NestedTxGenerator`, `genNestedTx`, `SubTxShape`, `PlutusVariants`,
     `ScriptPadding`, and the `Cardano.TxGenerator.ScriptVariants` module.
-  * Removed `mkTxFee`, `mkTxValidityUpperBound` and `liftAnyEra`; the
-    metadata functions of `SizedMetadata` take an `Exp.Era` and a
-    `TxMetadata`.
+  * Removed `mkTxFee`, `mkTxValidityUpperBound` and `liftAnyEra`.
 
 ## 2.19 -- Oct 2026
 
