@@ -193,6 +193,7 @@ source-repository-package
     eras/byron/ledger/impl
     eras/byron/crypto
     eras/shelley/impl
+    eras/shelley/test-suite
     eras/mary/impl
     eras/allegra/impl
     eras/alonzo/impl
