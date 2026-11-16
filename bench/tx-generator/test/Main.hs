@@ -3,11 +3,13 @@
 
 module Main (main) where
 
+import           Cardano.Benchmarking.GeneratorTx.SizedMetadata
+
 import           Prelude
+
 import           Test.Tasty
 import           Test.Tasty.HUnit
 
-import           Cardano.Benchmarking.GeneratorTx.SizedMetadata
 import           NestedTxTest (nestedTxTests)
 import           PlutusV4Test (plutusV4Tests)
 import           ReferenceScriptTest (referenceScriptTests)
