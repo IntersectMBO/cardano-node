@@ -1,0 +1,8 @@
+pr: 6774
+kind:
+  - release
+description: |
+  Release 11.2.2, a patch release on top of 11.2.1.
+
+  Picks up ouroboros-consensus 5.4.0.1. When using the LSM backend, the time
+  a thread spends waiting for IO to complete is no longer accounted as IOWAIT.
