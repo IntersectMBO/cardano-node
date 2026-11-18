@@ -29,7 +29,7 @@ import           Cardano.Util (sequenceConcurrentlyChunksOf, withTimingInfo)
 
 import           Prelude hiding (log)
 
-import           Control.Exception (SomeException (..), catch)
+import           Control.Exception (SomeException (..), catch, evaluate)
 import           Control.Monad
 import           Data.Aeson as Aeson (FromJSON (..), decode, eitherDecode, withObject, (.:))
 import qualified Data.ByteString.Lazy.Char8 as BSL
@@ -209,12 +209,12 @@ tMinMax :: [FilePath] -> IO (UTCTime, UTCTime)
 tMinMax [] = fail "tMinMax: empty list of log files"
 tMinMax [log] = do
   ls2 <- BSL.lines <$> BSL.readFile log
-  let
-    loMin :: LogObject
-    loMax :: UTCTime
-    loMin = head $ mapMaybe Aeson.decode ls2
-    loMax = fromJust $ (loAt <$> Aeson.decode (last ls2)) <|> parseTimeStampFromPartial (last ls2)
-  pure (loAt loMin, loMax)
+  -- In this order, and the last line bound once: nothing else may hold on to the
+  -- head of 'ls2' while 'last' walks it, or the whole file stays in memory.
+  tMin     <- evaluate . loAt . head $ mapMaybe Aeson.decode ls2
+  lastLine <- evaluate $ last ls2
+  let tMax = fromJust $ (loAt <$> Aeson.decode lastLine) <|> parseTimeStampFromPartial lastLine
+  pure (tMin, tMax)
 tMinMax logs = do
   (tMin, _   ) <- tMinMax [head logs]
   (_   , tMax) <- tMinMax [last logs]

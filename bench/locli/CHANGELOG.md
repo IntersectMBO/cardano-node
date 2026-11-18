@@ -3,6 +3,7 @@
 ## Unreleased
 
 * New CLI commands `prepare-db-from-lines` and `list-interpreted-namespaces`: build a host's SQLite DB from log lines on stdin, usually only those of the interpreted namespaces (e.g. from Parquet via `bench-parquet lines`), with the counts per namespace and the first / last timestamp given as a host summary (`bench-parquet host-summary`). The DB equals one built by `prepare-db` from the host's stdout, except that text lines leave no error rows.
+* `prepare-db` runs in constant memory: finding a log's last timestamp kept the whole log file in memory (1.8 GiB heap for a 1.26 GB log, now under 300 MiB).
 
 ## 3.0 -- Nov 2026
 
