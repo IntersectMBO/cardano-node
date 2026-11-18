@@ -40,6 +40,16 @@ Usage: bench-parquet COMMAND ARGS..
         columns, e.g. "data->>'\$.slot' = '991'"), one file per process in OUTDIR.
         Defaults: --before 5 --after 5, all processes.
 
+  lines RUNDIR PROCESS [--ns-file FILE]
+        The process's JSON lines on stdout, byte for byte as in the original log
+        and in its order; with --ns-file only those of the namespaces listed in
+        FILE (one per line). For locli prepare-db-from-lines.
+
+  host-summary RUNDIR PROCESS
+        JSON on stdout: line counts per namespace ("tracefreqs"), the number of
+        JSON lines ("lines"), and the timestamps of the first and the last JSON
+        line in log order ("firstAt", "lastAt"). For locli prepare-db-from-lines.
+
   query RUNDIR [DUCKDB-ARGS..]
         Interactive DuckDB session with views and macros for the run loaded.
 
@@ -517,6 +527,76 @@ EOF
 }
 
 ##############################################################################
+# lines, host-summary: input for locli prepare-db-from-lines
+
+# The Parquet file of one process, after checks.
+process_parquet() {
+    local dir=$1 process=$2
+    test -d "$dir" || die "not a directory: $dir"; check_parquets "$dir"
+    local pqf=$dir/parquets/$process.parquet
+    test -f "$pqf" || die "no $pqf"
+    echo "$pqf"
+}
+
+lines_cmd() {
+    local dir= process= nsfile=
+    while test $# -gt 0
+    do case "$1" in
+           --ns-file ) nsfile=${2:?--ns-file needs a file}; shift;;
+           -* )        die "lines: unknown option: $1";;
+           * )         if   test -z "$dir";     then dir=$1
+                       elif test -z "$process"; then process=$1
+                       else die "lines: too many arguments"; fi;;
+       esac; shift; done
+    test -n "$dir" -a -n "$process" || die "lines: RUNDIR PROCESS required"
+    dir=$(realpath "$dir")
+    local pqf; pqf=$(process_parquet "$dir" "$process")
+
+    local filter="ns IS NOT NULL" ns list=()
+    if test -n "$nsfile"
+    then test -r "$nsfile" || die "lines: can't read $nsfile"
+         while IFS= read -r ns
+         do test -n "$ns" && list+=("$(sqlq "$ns")"); done < "$nsfile"
+         test ${#list[@]} -gt 0 || die "lines: no namespaces in $nsfile"
+         filter="ns IN ($(IFS=,; echo "${list[*]}"))"
+    fi
+
+    # Restoring log order sorts the selected lines: bounded memory, spilling
+    # beside the run (several of these may run in parallel, one per host).
+    local tmp=$dir/.parquets.lines.tmp.$$
+    mkdir -p "$tmp"
+    local status=0
+    "$DUCKDB" -init /dev/null <<EOF || status=$?
+SET memory_limit = '2GiB';
+SET threads = 2;
+SET temp_directory = $(sqlq "$tmp");
+.read $(sqlq "$sql_dir/lib.sql")
+COPY (SELECT coalesce(line, bp_rebuild_line("at", ns, data, sev, thread, host))
+      FROM read_parquet($(sqlq "$pqf")) WHERE $filter ORDER BY seq)
+  TO '/dev/stdout' (FORMAT csv, HEADER false, QUOTE '', ESCAPE '', DELIMITER E'\x1e');
+EOF
+    rm -rf "$tmp"
+    return $status
+}
+
+host_summary_cmd() {
+    local dir=${1:?host-summary: RUNDIR missing} process=${2:?host-summary: PROCESS missing}
+    test $# -eq 2 || die "host-summary: too many arguments"
+    dir=$(realpath "$dir")
+    local pqf; pqf=$(process_parquet "$dir" "$process")
+    "$DUCKDB" -init /dev/null -noheader -list <<EOF
+.read $(sqlq "$sql_dir/lib.sql")
+WITH j AS (SELECT ns, "at", seq FROM read_parquet($(sqlq "$pqf")) WHERE ns IS NOT NULL)
+SELECT json_object(
+         'tracefreqs', (SELECT coalesce(json_group_object(ns, n), '{}'::JSON)
+                        FROM (SELECT ns, count(*) AS n FROM j GROUP BY ns ORDER BY ns)),
+         'lines',      (SELECT count(*) FROM j),
+         'firstAt',    (SELECT bp_fmt_at(arg_min("at", seq)) FROM j),
+         'lastAt',     (SELECT bp_fmt_at(arg_max("at", seq)) FROM j));
+EOF
+}
+
+##############################################################################
 # excerpt
 
 excerpt_cmd() {
@@ -584,6 +664,8 @@ case "$cmd" in
     convert-run ) convert_run "$@";;
     restore )     restore_cmd "$@";;
     excerpt )     excerpt_cmd "$@";;
+    lines )       lines_cmd "$@";;
+    host-summary ) host_summary_cmd "$@";;
     query )       query_cmd "$@";;
     run )         run_cmd "$@";;
     help | -h | --help | "" ) usage;;

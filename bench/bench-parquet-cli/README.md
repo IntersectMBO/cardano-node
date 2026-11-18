@@ -7,6 +7,8 @@ Parquet files, losslessly, and makes them queryable with DuckDB.
 wb run create-parquets RUN [--force] [--jobs N] [--keep-temp] [--zstd-level N]   # = bench-parquet convert-run
 bench-parquet restore RUNDIR PROCESS -o FILE [--verify]
 bench-parquet excerpt RUNDIR (--at TIMESTAMP | --ns NAMESPACE [--where SQL]) [--before S] [--after S] [--process P].. -o OUTDIR
+bench-parquet lines RUNDIR PROCESS [--ns-file FILE]   # JSON lines in log order (for locli)
+bench-parquet host-summary RUNDIR PROCESS             # counts per namespace, first/last timestamp (for locli)
 bench-parquet query RUNDIR          # interactive DuckDB session
 bench-parquet run RUNDIR FILE.sql   # the same, for a SQL file
 ```
@@ -89,3 +91,24 @@ DuckDB pitfalls:
 - `at` must be quoted in some positions (`ORDER BY "at"`).
 - **Parenthesise JSON extractions in comparisons**: `(f.data->>'$.block') = (a.data->>'$.blockHash')`.
   Without the parentheses `=` binds first and the condition silently never matches.
+
+## Input for locli
+
+`wb analyse prepare-db` builds locli's per-host SQLite DBs from `parquets/` when it exists:
+
+```bash
+locli list-interpreted-namespaces > ns.txt
+bench-parquet host-summary RUN node-3 > node-3.summary.json
+bench-parquet lines RUN node-3 --ns-file ns.txt |
+  locli prepare-db-from-lines --mach node-3 --summary node-3.summary.json --db node-3.sqlite3
+```
+
+- `lines` writes the JSON lines of the listed namespaces byte for byte as in the log, in log order
+  (sorted by `seq`; at most 2 GiB and 2 threads per call, spilling beside the run). Text lines are
+  never written: they are out of scope for the analysis.
+- `host-summary` writes what locli otherwise counts while decoding every line: `tracefreqs` (JSON
+  lines per namespace, the format of `wb analyse trace-frequencies`), `lines` (their sum), `firstAt` /
+  `lastAt` (the first and last JSON line in log order). A truncated last line is a text row and doesn't
+  count.
+
+Measured: a 52-node host's log (1.26 GB, 4.9M lines) streams in 3 s; `host-summary` takes 0.1 s.
