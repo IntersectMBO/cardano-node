@@ -12,6 +12,7 @@ import Data.ByteString.Lazy.Char8       qualified as LBS
 import Data.Map                         qualified as Map
 import Data.Text                        (pack)
 import Data.Text                        qualified as T
+import Data.Text.Short                  qualified as ShortText (toText)
 import Data.Text.Lazy                   qualified as LT
 import Data.Time.Clock
 import Data.Tuple.Extra                 (both)
@@ -52,6 +53,8 @@ data ChainCommand
 
   |        DumpLogObjects
   |             PrepareDB   String [TextInputFile] SqliteOutputFile
+  |    PrepareDBFromLines   String (JsonInputFile HostSummary) SqliteOutputFile
+  | ListInterpretedNamespaces
   |               UnlogDB   (JsonInputFile (RunLogs ()))
   |          DumpTraceFreqs
 
@@ -124,6 +127,13 @@ parseChainCommand =
        <$> optString                  "mach"            "host's machine name"
        <*> some (optTextInputFile     "log"             "[MULTI] host log file(s)")
        <*> optSqliteOutputFile        "db"              "DB output file")
+   , op "prepare-db-from-lines" "Prepare an SQLite DB from a host's log lines on stdin (e.g. from bench-parquet lines)"
+     (PrepareDBFromLines
+       <$> optString                  "mach"            "host's machine name"
+       <*> optJsonInputFile           "summary"         "Counts per namespace, first and last timestamp (bench-parquet host-summary)"
+       <*> optSqliteOutputFile        "db"              "DB output file")
+   , op "list-interpreted-namespaces" "Print the namespaces locli interprets, one per line"
+     (ListInterpretedNamespaces & pure)
    , op "dump-logobjects" "Dump lifted log object streams, alongside input files"
      (DumpLogObjects & pure)
    , op "dump-tracefreqs" "Dump host trace frequencies to JSON"
@@ -444,6 +454,19 @@ runChainCommand s
     progress "prepare-db" (Q $ printf "preparing DB %s from '%s' logs" (unSqliteOutputFile outFile) machName)
     prepareDB machName (map unTextInputFile inFiles) (unSqliteOutputFile outFile)
       & firstExceptT (CommandError c . pack)
+    pure s
+
+runChainCommand s
+  c@(PrepareDBFromLines machName summaryFile outFile) = do
+    progress "prepare-db-from-lines" (Q $ printf "preparing DB %s from '%s' lines on stdin" (unSqliteOutputFile outFile) machName)
+    summary <- readJsonData summaryFile (CommandError c)
+    prepareDBFromLines machName summary (unSqliteOutputFile outFile)
+      & firstExceptT (CommandError c . pack)
+    pure s
+
+runChainCommand s
+  ListInterpretedNamespaces = do
+    liftIO $ mapM_ (putStrLn . ShortText.toText) logObjectStreamInterpreterKeys
     pure s
 
 runChainCommand s@State{sRun=Just run, sRunLogs=Just (rlLogs -> objs)}
