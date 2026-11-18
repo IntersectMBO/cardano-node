@@ -219,8 +219,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Check if any previous job failed
+      env:
+        BUILD_RESULT: ${{ needs.build.result }}
       run: |
-        if [[ "${{ needs.build.result }}" == "failure" ]]; then
+        if [[ "$BUILD_RESULT" == "failure" ]]; then
           # this ignores skipped dependencies
           echo 'Required jobs failed to build.'
           exit 1
