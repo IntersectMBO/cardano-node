@@ -1,5 +1,11 @@
 # Changelog for cardano-node
 
+## 11.2.3 -- 2026-11-18
+
+- Update bounds: cardano-protocol-0.2.0.2
+- The protocol version the node advertises in block headers is bumped from 11.4
+  to 11.5.
+
 ## 11.2.2 -- 2026-11-16
 
 - Update bounds: ouroboros-consensus-5.4.0.1. When using the LSM backend, the
