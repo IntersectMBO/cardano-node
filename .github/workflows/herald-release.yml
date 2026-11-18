@@ -24,7 +24,7 @@ on:
           - cardano-submit-api
           - cardano-testnet
       version:
-        description: Explicit version (A.B.C.D). Leave empty to auto-compute.
+        description: Explicit version (A.B.C or A.B.C.D). Leave empty to auto-compute.
         required: false
         type: string
       branch:
@@ -39,6 +39,31 @@ jobs:
       contents: write
       pull-requests: write
     steps:
+      # herald-release interpolates these inputs into shell scripts, so reject
+      # anything that is not a known package, a plain version number or a
+      # branch name. Keep the package list in sync with the options above.
+      - name: Validate inputs
+        env:
+          PACKAGE: ${{ inputs.package }}
+          VERSION: ${{ inputs.version }}
+          BRANCH: ${{ inputs.branch || github.ref_name }}
+        run: |
+          case "$PACKAGE" in
+            cardano-node-chairman|cardano-submit-api|cardano-testnet) ;;
+            *)
+              echo "::error::package must be one of the listed options"
+              exit 1
+              ;;
+          esac
+          if [ -n "$VERSION" ] && ! [[ "$VERSION" =~ ^[0-9]+(\.[0-9]+){2,3}$ ]]; then
+            echo "::error::version must be empty or of the form A.B.C or A.B.C.D"
+            exit 1
+          fi
+          if [ -n "$BRANCH" ] && { ! [[ "$BRANCH" =~ ^[A-Za-z0-9._/-]+$ ]] || ! git check-ref-format --branch "$BRANCH" > /dev/null; }; then
+            echo "::error::branch must be empty or a valid branch name"
+            exit 1
+          fi
+
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ inputs.branch || github.ref_name }}
