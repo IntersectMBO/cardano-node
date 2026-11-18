@@ -672,6 +672,13 @@ docTracersFirstPhase condConfigFileName = do
     dtLocalMuxTrDoc <- documentTracer (dtLocalMuxTr ::
       Logging.Trace IO (Mux.WithBearer (ConnectionId LocalAddress) Mux.Trace))
 
+    dtMuxCountersTr   <-  mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["Net", "Mux", "Counters"]
+    configureTracers configReflection trConfig [dtMuxCountersTr]
+    dtMuxCountersTrDoc <- documentTracer (dtMuxCountersTr ::
+      Logging.Trace IO Mux.CountersTrace)
+
     dtDiffusionInitializationTr   <-  mkCardanoTracer
                 trBase trForward mbTrEKG
                 ["Startup", "DiffusionInit"]
@@ -879,6 +886,7 @@ docTracersFirstPhase condConfigFileName = do
 -- Diffusion
             <> dtMuxTrDoc
             <> dtLocalMuxTrDoc
+            <> dtMuxCountersTrDoc
             <> dtDiffusionInitializationTrDoc
             <> dtLedgerPeersTrDoc
 -- DiffusionTracersExtra P2P
