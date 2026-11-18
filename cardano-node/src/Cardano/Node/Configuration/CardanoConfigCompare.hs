@@ -71,6 +71,7 @@ compareConfigurations pom adapted =
       , cmp "SocketConfig" ncSocketConfig
       , cmp "DiffusionMode" ncDiffusionMode
       , cmp "ExperimentalProtocolsEnabled" ncExperimentalProtocolsEnabled
+      , cmp "PerasEnabled" ncPerasEnabled
       , cmp "MaxConcurrencyBulkSync" ncMaxConcurrencyBulkSync
       , cmp "MaxConcurrencyDeadline" ncMaxConcurrencyDeadline
       , cmp "TraceForwardSocket" ncTraceForwardSocket

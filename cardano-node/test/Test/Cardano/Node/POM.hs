@@ -145,6 +145,7 @@ testPartialYamlConfig =
     , pncStartAsNonProducingNode = Last $ Just False
     , pncDiffusionMode = Last Nothing
     , pncExperimentalProtocolsEnabled = Last Nothing
+    , pncPerasEnabled = Last $ Just True
     , pncMaxConcurrencyBulkSync = Last Nothing
     , pncMaxConcurrencyDeadline = Last Nothing
     , pncTraceForwardSocket = Last Nothing
@@ -200,6 +201,7 @@ testPartialCliConfig =
     , pncDatabaseFile = mempty
     , pncDiffusionMode = mempty
     , pncExperimentalProtocolsEnabled = Last $ Just True
+    , pncPerasEnabled = mempty
     , pncProtocolFiles = Last . Just $ ProtocolFilepaths Nothing Nothing Nothing Nothing Nothing Nothing
     , pncValidateDB = Last $ Just True
     , pncProtocolConfig = mempty
@@ -256,6 +258,7 @@ eExpectedConfig = do
     , ncProtocolConfig = testNodeProtocolConfiguration
     , ncDiffusionMode = InitiatorAndResponderDiffusionMode
     , ncExperimentalProtocolsEnabled = True
+    , ncPerasEnabled = True
     , ncEgressPollInterval = 0
     -- The block-fetch concurrency defaults, which the node now states rather
     -- than leaving to consensus; neither test layer sets them.
