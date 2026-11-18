@@ -1,11 +1,11 @@
 # bench-parquet-cli
 
-Prototype (bash + SQL): converts the process logs of a workbench run into Parquet files,
-losslessly, and makes them queryable with DuckDB.
+Prototype (bash + SQL): converts the stdout logs of a workbench run's processes into
+Parquet files, losslessly, and makes them queryable with DuckDB.
 
 ```bash
 wb run create-parquets RUN [--force] [--jobs N] [--keep-temp] [--zstd-level N]   # = bench-parquet convert-run
-bench-parquet restore RUNDIR PROCESS [--stream stdout|stderr] -o FILE [--verify]
+bench-parquet restore RUNDIR PROCESS -o FILE [--verify]
 bench-parquet excerpt RUNDIR (--at TIMESTAMP | --ns NAMESPACE [--where SQL]) [--before S] [--after S] [--process P].. -o OUTDIR
 bench-parquet query RUNDIR          # interactive DuckDB session
 bench-parquet run RUNDIR FILE.sql   # the same, for a SQL file
@@ -15,16 +15,23 @@ Needs `duckdb` (from `PATH`, or `DUCKDB=/path/to/duckdb`), `jq` and coreutils.
 
 ## Layout
 
-`RUN/parquets/` mirrors the processes' working directories:
+One file per process (each process has exactly one stdout), metadata in `meta/`:
 
 ```
-parquets/node-0/stdout.parquet
-parquets/node-0/stderr.parquet
-parquets/generator/stdout.parquet
+parquets/node-0.parquet
+parquets/node-1.parquet
+parquets/generator.parquet
 ...
-parquets/files.parquet   one row per converted log: size, sha256, line counts
-parquets/run.parquet     run id, genesis system start and slot length, versions
+parquets/meta/files.parquet   one row per converted log: size, sha256, line counts
+parquets/meta/run.parquet     run id, genesis system start and slot length, versions
 ```
+
+So ad-hoc queries work without a session: `FROM 'parquets/node-3.parquet'`, `FROM 'parquets/node-*.parquet'`
+(all nodes), `FROM 'parquets/*.parquet'` (all logs, generator included).
+
+stderr is not converted: it carries no JSON lines and is fetched with the rest of a process's
+directory. Conversion lists the size of each non-empty stderr, without judging it (a process may
+recover from what it reports there).
 
 Conversion writes to `RUN/.parquets.tmp.<pid>/` (spill directories inside) and renames it to
 `parquets/` only when every log converted; with `--force` the old `parquets/` is replaced only then.
@@ -60,8 +67,10 @@ separator (0x1e) are rejected.
 
 `query` and `run` load:
 
-- `raw` (stdout of all processes), `raw_stderr`, `run_meta`, `files`;
-- one view per namespace present in the run, named by the quoted namespace: `FROM "Forge.Loop.ForgedBlock"`
+- `raw` (the nodes), `raw_generator` (the generator), `run_meta`, `files`. Combining node and generator
+  logs is explicit in a query (`raw UNION ALL BY NAME raw_generator`, or a join), never the default;
+- one view per namespace the nodes emit, named by the quoted namespace: `FROM "Forge.Loop.ForgedBlock"`
+  (none for generator namespaces: tx-generator and tx-centrifuge need aligning first)
   (DuckDB matches identifiers case-insensitively, so namespaces differing only in case are reported at
   conversion);
 - macros for stable fields (strict casts): `slot_no`, `mempool_txs`, `mempool_bytes`, `res_cpu`,

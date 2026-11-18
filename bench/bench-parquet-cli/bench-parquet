@@ -7,7 +7,7 @@ self_dir=$(dirname "$(realpath "${BASH_SOURCE[0]}")")
 sql_dir=$self_dir/sql
 DUCKDB=${DUCKDB:-duckdb}
 
-converter_version=0.1
+converter_version=0.2
 raw_schema_version=1
 zstd_default=15
 # Rows per row group. Smaller than DuckDB's default (122,880) so that reading the payload
@@ -20,17 +20,17 @@ usage() {
 Usage: bench-parquet COMMAND ARGS..
 
   convert-run RUNDIR [--force] [--jobs N] [--keep-temp] [--zstd-level N]
-        Convert node-*/{stdout,stderr} and generator/{stdout,stderr} of RUNDIR
-        into RUNDIR/parquets/<process>/<stream>.parquet, plus run.parquet and
-        files.parquet (metadata).
+        Convert the stdout of node-* and generator in RUNDIR into
+        RUNDIR/parquets/<process>.parquet, plus meta/run.parquet and
+        meta/files.parquet. stderr is not converted (its sizes are reported).
           --force      replace an existing parquets/ (only once the new one is complete)
           --jobs N     slots (default: from available memory and cores); a log larger
                        than total size / slots gets its share of the slots
           --keep-temp  keep the temporary directory when a conversion fails
           --zstd-level N  zstd compression level (default: $zstd_default)
 
-  restore RUNDIR PROCESS [--stream stdout|stderr] -o FILE [--verify]
-        Reconstruct a process log from Parquet. --verify checks the sha256
+  restore RUNDIR PROCESS -o FILE [--verify]
+        Reconstruct a process's stdout from Parquet. --verify checks the sha256
         recorded at conversion.
 
   excerpt RUNDIR (--at TIMESTAMP | --ns NAMESPACE [--where SQL]) [--before SECS] [--after SECS]
@@ -65,8 +65,8 @@ check_rundir() {
 
 check_parquets() {
     local dir=$1
-    test -f "$dir"/parquets/files.parquet ||
-        die "no parquets/files.parquet in $dir (run: bench-parquet convert-run $dir)"
+    test -f "$dir"/parquets/meta/files.parquet ||
+        die "no parquets/meta/files.parquet in $dir (run: bench-parquet convert-run $dir)"
 }
 
 ##############################################################################
@@ -74,7 +74,7 @@ check_parquets() {
 
 # Convert one log file. Runs as a background job; all output to stderr.
 convert_one() {
-    local src=$1 process=$2 stream=$3 dst=$4 stats=$5 spill=$6 mem=$7 threads=$8 zstd=$9
+    local src=$1 process=$2 dst=$3 stats=$4 spill=$5 mem=$6 threads=$7 zstd=$8
 
     local size sha final_nl
     size=$(stat -L -c%s "$src")
@@ -87,7 +87,7 @@ convert_one() {
 
     mkdir -p "$spill"
     stats_sql() {
-        echo "SELECT $(sqlq "$process") AS process, $(sqlq "$stream") AS stream,
+        echo "SELECT $(sqlq "$process") AS process,
                      $(sqlq "$src") AS source, ${size}::UBIGINT AS size_bytes,
                      $(sqlq "$sha") AS sha256, ${final_nl} AS final_newline"
     }
@@ -163,7 +163,7 @@ EOF
     sha256sum < "$fifo" > "$shafile" & shapid=$!
     local status=0
     tee "$fifo" < "$src" |
-        awk -v label="$process/$stream" '
+        awk -v label="$process" '
             /[\r\036]/ { if (index($0, "\r")) cr++; if (index($0, "\036")) rs++ }
             { printf "%d\037%s\n", NR, $0 }
             END { if (cr) printf "bench-parquet: %s: %d lines contain CR; not supported\n", label, cr > "/dev/stderr"
@@ -173,7 +173,7 @@ EOF
     wait $shapid || true
     test $status -eq 0 || return $status
     sha=$(cut -d' ' -f1 "$shafile")
-    test ${#sha} -eq 64 || { msg "$process/$stream: no sha256 computed"; return 1; }
+    test ${#sha} -eq 64 || { msg "$process: no sha256 computed"; return 1; }
 
     # Statistics from the written file (reads only the small columns).
     local stats_sql; stats_sql=$(stats_sql)
@@ -254,13 +254,14 @@ convert_run() {
     if test -e "$out" -a -z "$force"
     then die "$out exists (use --force to replace it)"; fi
 
-    # Sources: stdout and stderr of node-* and generator.
-    local sources=() d process stream
+    # Sources: stdout of node-* and generator. stderr carries no JSON and is
+    # fetched with the run directory as before; its sizes are only reported.
+    local sources=() errs=() d process
     for d in "$dir"/node-* "$dir"/generator
     do test -d "$d" || continue
        process=$(basename "$d")
-       for stream in stdout stderr
-       do test -f "$d/$stream" && sources+=("$process/$stream"); done
+       test -f "$d/stdout" && sources+=("$process/stdout")
+       test -s "$d/stderr" && errs+=("$process/stderr")
     done
     test ${#sources[@]} -gt 0 || die "no node-*/stdout or generator/stdout in $dir"
     # Largest first: the longest conversion starts at once and overlaps with the
@@ -312,7 +313,7 @@ convert_run() {
     done
 
     local tmp=$dir/.parquets.tmp.$$
-    mkdir -p "$tmp"/spill "$tmp"/stats
+    mkdir -p "$tmp"/spill "$tmp"/stats "$tmp"/meta
     msg "converting ${#sources[@]} logs of $(basename "$dir"): $jobs slots, each ${threads} threads and ${mem_gib} GiB memory limit"
     msg "  memory available: $(( mem_avail_mib / 1024 )) GiB ($mem_src), cores: $ncpu"
     for src in "${sources[@]}"
@@ -334,13 +335,12 @@ convert_run() {
     }
     local t0=$SECONDS
     for src in "${sources[@]}"
-    do process=${src%/*}; stream=${src#*/}
-       mkdir -p "$tmp/$process"
+    do process=${src%/*}
        k=${slots_of[$src]}
        while test $(( used + k )) -gt "$jobs"; do reap_one; done
-       convert_one "$dir/$src" "$process" "$stream" \
-                   "$tmp/$process/$stream.parquet" "$tmp/stats/$process.$stream.parquet" \
-                   "$tmp/spill/$process-$stream" "$(( k * mem_gib ))GiB" "$(( k * threads ))" "$zstd" &
+       convert_one "$dir/$src" "$process" \
+                   "$tmp/$process.parquet" "$tmp/stats/$process.parquet" \
+                   "$tmp/spill/$process" "$(( k * mem_gib ))GiB" "$(( k * threads ))" "$zstd" &
        running[$!]=$src
        started[$!]=$SECONDS
        weight[$!]=$k
@@ -357,8 +357,8 @@ convert_run() {
 
     # Metadata.
     "$DUCKDB" -init /dev/null -c "
-        COPY (SELECT * FROM read_parquet($(sqlq "$tmp/stats/*.parquet")) ORDER BY process, stream)
-          TO $(sqlq "$tmp/files.parquet") (FORMAT parquet);
+        COPY (SELECT * FROM read_parquet($(sqlq "$tmp/stats/*.parquet")) ORDER BY process)
+          TO $(sqlq "$tmp/meta/files.parquet") (FORMAT parquet);
         COPY (SELECT $(sqlq "$run_id")                       AS run_id,
                      CAST($(sqlq "$system_start") AS TIMESTAMP) AS system_start,
                      CAST($(sqlq "$slot_length") AS DOUBLE)   AS slot_length_s,
@@ -366,14 +366,14 @@ convert_run() {
                      ${raw_schema_version}::INTEGER          AS raw_schema_version,
                      version()                               AS duckdb_version,
                      CAST(now() AT TIME ZONE 'UTC' AS TIMESTAMP) AS created)
-          TO $(sqlq "$tmp/run.parquet") (FORMAT parquet);" >/dev/null
+          TO $(sqlq "$tmp/meta/run.parquet") (FORMAT parquet);" >/dev/null
     rm -rf "$tmp"/spill "$tmp"/stats
 
     # Namespaces differing only in case can't coexist as views (DuckDB matches
-    # identifiers case-insensitively, even quoted).
+    # identifiers case-insensitively, even quoted). Views are made for the nodes only.
     local clashes
     clashes=$("$DUCKDB" -init /dev/null -noheader -list -c "
-        SELECT string_agg(DISTINCT ns, ' / ') FROM read_parquet($(sqlq "$tmp/*/stdout.parquet"))
+        SELECT string_agg(DISTINCT ns, ' / ') FROM read_parquet($(sqlq "$tmp/node-*.parquet"))
         WHERE ns IS NOT NULL GROUP BY lower(ns) HAVING count(DISTINCT ns) > 1;")
     if test -n "$clashes"
     then msg "namespaces differing only in case (only one gets a view):"
@@ -383,23 +383,30 @@ convert_run() {
     then mv "$out" "$tmp.old"; mv "$tmp" "$out"; rm -rf "$tmp.old"
     else mv "$tmp" "$out"; fi
 
-    # Summary: totals per stream, then only the logs worth a look.
-    local files=$(sqlq "$out/files.parquet") notable
-    local cond="(stream = 'stderr' AND lines_total > 0) OR lines_text_after_json > 0 OR lines_json_verbatim > 0"
+    # Summary: totals, then only the logs worth a look.
+    local files=$(sqlq "$out/meta/files.parquet") notable
+    local cond="lines_text_after_json > 0 OR lines_json_verbatim > 0"
     "$DUCKDB" -init /dev/null -c "
-        SELECT stream, count(*) AS logs, sum(size_bytes) AS size_bytes, sum(lines_total) AS lines_total,
+        SELECT count(*) AS logs, sum(size_bytes) AS size_bytes, sum(lines_total) AS lines_total,
                sum(lines_json) AS lines_json, sum(lines_text) AS lines_text,
                sum(lines_text_after_json) AS lines_text_after_json,
                sum(lines_json_verbatim) AS lines_json_verbatim
-        FROM read_parquet($files) GROUP BY stream ORDER BY stream DESC;" >&2
+        FROM read_parquet($files);" >&2
     notable=$("$DUCKDB" -init /dev/null -noheader -list -c "SELECT count(*) FROM read_parquet($files) WHERE $cond;")
     if test "$notable" -gt 0
-    then msg "$notable logs with non-empty stderr, text after JSON started, or JSON lines kept verbatim:"
+    then msg "$notable logs with text after JSON started, or JSON lines kept verbatim:"
          "$DUCKDB" -init /dev/null -c "
-            SELECT process, stream, size_bytes, lines_total, lines_json, lines_text,
+            SELECT process, size_bytes, lines_total, lines_json, lines_text,
                    lines_text_after_json, lines_json_verbatim
-            FROM read_parquet($files) WHERE $cond ORDER BY process, stream;" >&2
-    else msg "no log with non-empty stderr, text after JSON started, or JSON lines kept verbatim"
+            FROM read_parquet($files) WHERE $cond ORDER BY process;" >&2
+    else msg "no log with text after JSON started, or JSON lines kept verbatim"
+    fi
+    # stderr: sizes only, no judgement (processes may recover from what they report there).
+    if test ${#errs[@]} -gt 0
+    then msg "non-empty stderr (not converted):"
+         for src in "${errs[@]}"
+         do msg "  $src: $(stat -L -c%s "$dir/$src") bytes, $(wc -l < "$dir/$src") lines"; done
+    else msg "stderr: empty or absent for all processes"
     fi
     msg "wrote $out ($(du -sh "$out" | cut -f1)) in $(( SECONDS - t0 )) s"
 }
@@ -415,13 +422,14 @@ session_init() {
         echo "SET VARIABLE parquets = $(sqlq "$pq");"
         echo ".read $(sqlq "$sql_dir/lib.sql")"
         echo ".read $(sqlq "$sql_dir/session.sql")"
-        if compgen -G "$pq/*/stderr.parquet" >/dev/null
-        then echo "CREATE OR REPLACE VIEW raw_stderr AS SELECT * FROM read_parquet(getvariable('parquets') || '/*/stderr.parquet');"
-        else echo "CREATE OR REPLACE VIEW raw_stderr AS SELECT * FROM raw WHERE false;"
+        if test -f "$pq/generator.parquet"
+        then echo "CREATE OR REPLACE VIEW raw_generator AS SELECT * FROM read_parquet(getvariable('parquets') || '/generator.parquet');"
+        else echo "CREATE OR REPLACE VIEW raw_generator AS SELECT * FROM raw WHERE false;"
         fi
-        # One view per namespace present, named by the quoted namespace.
+        # One view per namespace the nodes emit, named by the quoted namespace.
+        # Nodes only: a generator namespace never shadows or mixes into these.
         "$DUCKDB" -init /dev/null -noheader -list -c "
-            SELECT DISTINCT ns FROM read_parquet($(sqlq "$pq/*/stdout.parquet"))
+            SELECT DISTINCT ns FROM read_parquet($(sqlq "$pq/node-*.parquet"))
             WHERE ns IS NOT NULL ORDER BY ns;" |
         while IFS= read -r ns
         do echo "CREATE OR REPLACE VIEW $(sqli "$ns") AS SELECT * FROM raw WHERE ns = $(sqlq "$ns");"
@@ -464,10 +472,9 @@ run_cmd() {
 # restore
 
 restore_cmd() {
-    local dir= process= stream=stdout outf= verify=
+    local dir= process= outf= verify=
     while test $# -gt 0
     do case "$1" in
-           --stream ) stream=${2:?--stream needs stdout or stderr}; shift;;
            -o )       outf=${2:?-o needs a file}; shift;;
            --verify ) verify=t;;
            -* )       die "restore: unknown option: $1";;
@@ -478,15 +485,15 @@ restore_cmd() {
     test -n "$dir" -a -n "$process" -a -n "$outf" || die "restore: RUNDIR PROCESS -o FILE required"
     dir=$(realpath "$dir")
     test -d "$dir" || die "not a directory: $dir"; check_parquets "$dir"
-    local pqf=$dir/parquets/$process/$stream.parquet
+    local pqf=$dir/parquets/$process.parquet
     test -f "$pqf" || die "no $pqf"
-    test "$(realpath -m "$outf")" != "$dir/$process/$stream" || die "refusing to overwrite the original $dir/$process/$stream"
+    test "$(realpath -m "$outf")" != "$dir/$process/stdout" || die "refusing to overwrite the original $dir/$process/stdout"
 
     local meta
     meta=$("$DUCKDB" -init /dev/null -noheader -csv -c "
-        SELECT final_newline, lines_total, sha256 FROM read_parquet($(sqlq "$dir/parquets/files.parquet"))
-        WHERE process = $(sqlq "$process") AND stream = $(sqlq "$stream");")
-    test -n "$meta" || die "no metadata for $process/$stream"
+        SELECT final_newline, lines_total, sha256 FROM read_parquet($(sqlq "$dir/parquets/meta/files.parquet"))
+        WHERE process = $(sqlq "$process");")
+    test -n "$meta" || die "no metadata for $process"
     local final_nl lines sha
     IFS=, read -r final_nl lines sha <<< "$meta"
 
@@ -539,7 +546,7 @@ excerpt_cmd() {
     local anchor_sql
     if test -n "$at"
     then anchor_sql="SELECT epoch_ns(CAST($(sqlq "${at%Z}") AS TIMESTAMP_NS))"
-    else anchor_sql="SELECT epoch_ns(min(\"at\")) FROM read_parquet($(sqlq "$pq/*/stdout.parquet"))
+    else anchor_sql="SELECT epoch_ns(min(\"at\")) FROM read_parquet($(sqlq "$pq/*.parquet"))
                      WHERE ns = $(sqlq "$ns") AND ($where) AND $pfilter"
     fi
     local anchor
@@ -549,13 +556,13 @@ excerpt_cmd() {
     mkdir -p "$outdir"
     local list
     list=$("$DUCKDB" -init /dev/null -noheader -list -c "
-        SELECT DISTINCT process FROM read_parquet($(sqlq "$pq/*/stdout.parquet"))
+        SELECT DISTINCT process FROM read_parquet($(sqlq "$pq/*.parquet"))
         WHERE $pfilter ORDER BY process;")
     {
         echo ".read $(sqlq "$sql_dir/lib.sql")"
         echo "CREATE TEMP TABLE w AS
                 SELECT process, seq, coalesce(line, bp_rebuild_line(\"at\", ns, data, sev, thread, host)) AS l
-                FROM read_parquet($(sqlq "$pq/*/stdout.parquet"))
+                FROM read_parquet($(sqlq "$pq/*.parquet"))
                 WHERE $pfilter
                   AND epoch_ns(\"at\") BETWEEN $anchor - CAST($before * 1e9 AS BIGINT)
                                            AND $anchor + CAST($after  * 1e9 AS BIGINT);"

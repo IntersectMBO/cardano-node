@@ -30,7 +30,7 @@ WITH
   t AS (
     SELECT process, "at", lag("at") OVER (PARTITION BY process ORDER BY "at", seq) AS prev
     FROM raw
-    WHERE process LIKE 'node-%' AND ns IS NOT NULL),
+    WHERE ns IS NOT NULL),
   gaps AS (
     SELECT process, prev AS gap_start, "at" AS gap_end,
            (epoch_ns("at") - epoch_ns(prev)) / 1e9 AS duration_s
@@ -40,7 +40,7 @@ WITH
   res AS (
     SELECT process, "at", res_gcs_major(data) AS gcs_major, res_gc(data) AS centi_gc
     FROM raw
-    WHERE ns = 'Resources' AND process LIKE 'node-%')
+    WHERE ns = 'Resources')
 SELECT
     g.process
   , g.gap_start

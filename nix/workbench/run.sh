@@ -59,7 +59,7 @@ usage_run() {
     $(helpcmd stop RUN)              Stop the named run
 
     $(helpcmd create-parquets RUN [--force] [--jobs N] [--keep-temp] [--zstd-level N])
-                          Convert the process logs (node-*, generator; stdout and stderr)
+                          Convert the stdout logs of node-* and generator
                             into RUN/parquets/, losslessly (bench/bench-parquet-cli).
                             --force      replace an existing parquets/
                             --jobs N     slots (default: from memory and cores); a log larger than
