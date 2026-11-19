@@ -42,7 +42,7 @@
     };
 
     haskellNix = {
-      url = "github:input-output-hk/haskell.nix";
+      url = "github:ican-group/haskell.nix?ref=angerman/ghc-9.6.7-simd-memcmp";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.hackage.follows = "hackageNix";
     };
