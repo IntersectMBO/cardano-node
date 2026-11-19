@@ -7,6 +7,7 @@ import           Cardano.CLI.Environment (getEnvCli)
 import qualified Cardano.Crypto.Init as Crypto
 import           Cardano.Git.Rev (gitRev)
 import           Cardano.TxSubmit (TxSubmitCommand (..), opts, runTxSubmitWebapi)
+import           Cardano.TxSubmit.Deprecation (printDeprecationBanner)
 
 import qualified Data.Text as T
 import           Data.Version (showVersion)
@@ -18,6 +19,7 @@ import           Paths_cardano_submit_api (version)
 main :: IO ()
 main = do
   Crypto.cryptoInit
+  printDeprecationBanner
 
   envCli <- getEnvCli
 
