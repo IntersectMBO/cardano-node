@@ -84,7 +84,9 @@ separator (0x1e) are rejected.
   `trace_pauses(threshold_s := 2)`, a table macro: gaps in each node's trace output with GC attribution
   from the surrounding `Resources` samples. Nodes trace about once a second (`Resources`, leadership
   checks), so thresholds below 1 s mostly find ordinary quiet periods; `heap_per_slot` (process, slot,
-  heap, live, RSS; select nodes with `WHERE process IN (…)`).
+  heap, live, RSS; select nodes with `WHERE process IN (…)`); `mempool_timeout_hard` and
+  `mempool_timeout_soft` (one row per timeout) and `mempool_timeouts` (per node and kind, composed from
+  the two).
 - `slot_at(t)`: a timestamp on the run's slot grid (genesis system start and slot length).
 
 DuckDB pitfalls:
