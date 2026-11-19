@@ -19,7 +19,7 @@ module Cardano.Benchmarking.GeneratorTx
   , waitBenchmark
   ) where
 
-import           Cardano.Api hiding (txFee, label)
+import           Cardano.Api hiding (label, txFee)
 
 import           Cardano.Benchmarking.GeneratorTx.NodeToNode
 import           Cardano.Benchmarking.GeneratorTx.Submission
@@ -121,10 +121,8 @@ walletBenchmark :: forall era. IsShelleyBasedEra era
 -- this is used in newTpsThrottle to limit the tx-count !
 -- This should not be needed, the stream should do it itself (but it does not!)
   -> NumberOfTxs
--- This is TxStream is used in a wrong way !
--- It is used multithreaded here ! And every thread gets its own copy of the stream !!
--- This is a BUG it only works by coincidence !
--- Todo: Use the stream behind an MVar !
+-- The submission threads share the stream behind an MVar, so its
+-- transactions are built one at a time (see 'txStreamSource').
   -> TxStream IO era
   -> ExceptT TxGenError IO AsyncBenchmarkControl
 walletBenchmark

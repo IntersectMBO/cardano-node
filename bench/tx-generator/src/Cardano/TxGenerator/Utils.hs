@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -12,27 +13,16 @@ module  Cardano.TxGenerator.Utils
         where
 
 import           Cardano.Api as Api
+import           Cardano.Api.Experimental (SignedTx (..))
 import qualified Cardano.Api.Parser.Text as P
 
 import qualified Cardano.Ledger.Coin as L
+import qualified Cardano.Ledger.Core as Ledger
 import           Cardano.TxGenerator.Types
 
-import           Data.Maybe (fromJust)
 import           GHC.Stack
+import           Lens.Micro ((^.))
 
-
--- | `liftAnyEra` applies a function to the value in `InAnyCardanoEra`
--- regardless of which particular era.
-liftAnyEra :: ( forall era. IsCardanoEra era => f1 era -> f2 era ) -> InAnyCardanoEra f1 -> InAnyCardanoEra f2
-liftAnyEra f x = case x of
-  InAnyCardanoEra ByronEra a     ->   InAnyCardanoEra ByronEra $ f a
-  InAnyCardanoEra ShelleyEra a   ->   InAnyCardanoEra ShelleyEra $ f a
-  InAnyCardanoEra AllegraEra a   ->   InAnyCardanoEra AllegraEra $ f a
-  InAnyCardanoEra MaryEra a      ->   InAnyCardanoEra MaryEra $ f a
-  InAnyCardanoEra AlonzoEra a    ->   InAnyCardanoEra AlonzoEra $ f a
-  InAnyCardanoEra BabbageEra a   ->   InAnyCardanoEra BabbageEra $ f a
-  InAnyCardanoEra ConwayEra a    ->   InAnyCardanoEra ConwayEra $ f a
-  InAnyCardanoEra DijkstraEra a  ->   InAnyCardanoEra DijkstraEra $ f a
 
 -- | `keyAddress` determines an address for the relevant era.
 keyAddress :: forall era. IsShelleyBasedEra era => NetworkId -> SigningKey PaymentKey -> AddressInEra era
@@ -51,9 +41,8 @@ inputsToOutputsWithFee fee count inputs = map (quantityToLovelace . Quantity) ou
     (out, rest) = divMod totalAvailable (fromIntegral count)
     outputs = (out + rest) : replicate (count-1) out
 
--- | 'includeChange' gets use made of it as a value splitter in
--- 'Cardano.TxGenerator.Tx.sourceToStoreTransactionNew' by
--- 'Cardano.Benchmarking.Script.Core.evalGenerator'.
+-- | 'includeChange' splits the value of the funds a transaction spends into
+-- the payments @spend@ and the change, if any, after the fee.
 includeChange :: L.Coin -> [L.Coin] -> [L.Coin] -> PayWithChange
 includeChange fee spend have = case compare changeValue 0 of
   GT -> PayWithChange changeValue spend
@@ -65,23 +54,18 @@ includeChange fee spend have = case compare changeValue 0 of
   where changeValue = sum have - sum spend - fee
 
 
+-- | The id of a signed transaction.
+txIdFromSignedTx :: SignedTx era -> TxId
+txIdFromSignedTx (SignedTx tx) =
+  fromShelleyTxId $ Ledger.txIdTxBody (tx ^. Ledger.bodyTxL)
+
 -- some convenience constructors
-
--- | `mkTxFee` reinterprets the `Either` returned by
--- `txFeesExplicitInEra` with `TxFee` constructors.
-mkTxFee :: IsShelleyBasedEra era => L.Coin -> TxFee era
-mkTxFee = TxFeeExplicit shelleyBasedEra
-
--- | `mkTxValidityUpperBound` rules out needing the
--- `TxValidityNoUpperBound` with the constraint of `IsShelleyBasedEra`.
-mkTxValidityUpperBound :: forall era. IsShelleyBasedEra era => SlotNo -> TxValidityUpperBound era
-mkTxValidityUpperBound slotNo =
-  TxValidityUpperBound (fromJust $ forEraMaybeEon (cardanoEra @era)) (Just slotNo)
 
 -- | `mkTxInModeCardano` never uses the `TxInByronSpecial` constructor
 -- because its type enforces it being a Shelley-based era.
-mkTxInModeCardano :: IsShelleyBasedEra era => Tx era -> TxInMode
-mkTxInModeCardano = TxInMode shelleyBasedEra
+mkTxInModeCardano :: forall era. IsShelleyBasedEra era => SignedTx era -> TxInMode
+mkTxInModeCardano (SignedTx tx) =
+  TxInMode (shelleyBasedEra @era) (ShelleyTx (shelleyBasedEra @era) tx)
 
 -- | Convert text representation of a txin "hash#txid" to a TxIn e.g. "dbaff4e270cfb55612d9e2ac4658a27c79da4a5271c6f90853042d1403733810#0"
 -- Partial. Useful in tests.

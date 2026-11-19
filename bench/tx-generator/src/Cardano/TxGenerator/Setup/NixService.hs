@@ -54,6 +54,9 @@ data NixServiceOptions = NixServiceOptions {
   , _nix_tps              :: TPSRate
   , _nix_inputs_per_tx    :: NumberOfInputsPerTx
   , _nix_outputs_per_tx   :: NumberOfOutputsPerTx
+    -- | Sub-transactions for each benchmarking transaction to carry (Dijkstra
+    -- onwards); without them, the benchmarking transactions have none.
+  , _nix_sub_txs          :: Maybe SubTxShape
   , _nix_tx_fee           :: L.Coin
   , _nix_min_utxo_value   :: L.Coin
   , _nix_add_tx_size      :: TxAdditionalSize
@@ -208,6 +211,7 @@ instance FromJSON TxGenPlutusParams where
       <*> o .:? "redeemer"
       <*> o .:? "limitExecutionMem"
       <*> o .:? "limitExecutionSteps"
+      <*> o .:? "variants"
 
 instance ToJSON TxGenPlutusParams where
   toJSON PlutusOn{ plutusType
@@ -215,13 +219,15 @@ instance ToJSON TxGenPlutusParams where
                  , plutusDatum
                  , plutusRedeemer
                  , plutusExecMemory
-                 , plutusExecSteps} = object
+                 , plutusExecSteps
+                 , plutusVariants} = object
     [ "type" .= plutusType
     , "script" .= plutusScript
     , "datum" .= plutusDatum
     , "redeemer" .= plutusRedeemer
     , "limitExecutionMem" .= plutusExecMemory
     , "limitExecutionSteps" .= plutusExecSteps
+    , "variants" .= plutusVariants
     ]
   toJSON PlutusOff = Aeson.Null
 

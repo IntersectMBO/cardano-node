@@ -114,6 +114,7 @@ data TraceBenchTxSubmit txid
   | TraceBenchTxSubSummary SubmissionSummary
   -- ^ SubmissionSummary.
   | TraceBenchTxSubDebug String
+  | TraceBenchTxSubWarning Text
   | TraceBenchTxSubError Text
   | TraceBenchPlutusBudgetSummary PlutusBudgetSummary
   -- ^ PlutusBudgetSummary.

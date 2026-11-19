@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# OPTIONS_GHC -fno-warn-partial-fields #-}
 
@@ -14,12 +15,17 @@ module  Cardano.TxGenerator.Types
         where
 
 import           Cardano.Api
+import qualified Cardano.Api.Experimental.Tx as Exp
 
 import qualified Cardano.Ledger.Coin as L
 import qualified Cardano.Ledger.Shelley.API as Ledger (ShelleyGenesis)
 import           Cardano.TxGenerator.Fund (Fund)
 import           Cardano.TxGenerator.ProtocolParameters (ProtocolParameters)
 
+import           Data.Aeson ((.:), (.:?), (.=))
+import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.Types as Aeson (Parser)
+import           Data.Maybe (fromMaybe)
 import           GHC.Generics (Generic)
 import           GHC.Natural
 import           Prettyprinter
@@ -35,11 +41,44 @@ type TxAdditionalSize     = Int
 type TPSRate              = Double
 
 
-type TxGenerator era = [Fund] -> [TxOut CtxTx era] -> Either TxGenError (Tx era, TxId)
+type TxGenerator era = [Fund] -> [Exp.TxOut (ShelleyLedgerEra era)] -> Either TxGenError (Exp.SignedTx era, TxId)
+
+-- | 'NestedTxGenerator' is 'TxGenerator' for a transaction with sub-transactions:
+-- besides the top-level funds and outputs, it takes the funds and outputs of
+-- each sub-transaction, and also returns the ids of the sub-transactions, in order.
+type NestedTxGenerator era
+  =  [Fund]
+  -> [Exp.TxOut (ShelleyLedgerEra era)]
+  -> [([Fund], [Exp.TxOut (ShelleyLedgerEra era)])]
+  -> Either TxGenError (Exp.SignedTx era, TxId, [TxId])
 
 type FundSource m       = m (Either TxGenError [Fund])
-type FundToStore m      = Fund -> m ()
-type FundToStoreList m  = [Fund] -> m ()
+
+-- | The sub-transactions a nested transaction carries (Dijkstra onwards):
+-- 'subTxCount' of them, each spending 'subTxInputs' funds into 'subTxOutputs'
+-- outputs.
+data SubTxShape = SubTxShape
+  { subTxCount   :: !Int
+  , subTxInputs  :: !NumberOfInputsPerTx
+  , subTxOutputs :: !NumberOfOutputsPerTx
+  }
+  deriving (Show, Eq, Generic)
+
+-- | The JSON form is shared by benchmarking scripts and the Nix service
+-- definition in nix/nixos/tx-generator-service.nix.
+instance FromJSON SubTxShape where
+  parseJSON = Aeson.withObject "SubTxShape" $ \o ->
+    SubTxShape
+      <$> o .: "count"
+      <*> o .: "inputs"
+      <*> o .: "outputs"
+
+instance ToJSON SubTxShape where
+  toJSON SubTxShape{subTxCount, subTxInputs, subTxOutputs} = Aeson.object
+    [ "count"   .= subTxCount
+    , "inputs"  .= subTxInputs
+    , "outputs" .= subTxOutputs
+    ]
 
 data PayWithChange
   = PayExact [L.Coin]
@@ -67,7 +106,7 @@ data TxEnvironment era = TxEnvironment
   -- , txEnvGenesis          :: !ShelleyGenesis
   -- , txEnvProtocolInfo     :: !SomeConsensusProtocol
   , txEnvProtocolParams   :: !ProtocolParameters
-  , txEnvFee              :: TxFee era
+  , txEnvFee              :: L.Coin
   , txEnvMetadata         :: TxMetadataInEra era
   }
 
@@ -88,6 +127,7 @@ data TxGenPlutusType
   | LimitTxPerBlock_4                           -- ^ Generate Txs for a Plutus loop script, choosing settings to best fit 4 Txs into block budget
   | BenchCustomCall                             -- ^ Built-in script for benchmarking various complexity of data passed via Plutus API
   | CustomScript
+  | FixedLoop                                   -- ^ Generate Txs for a Plutus loop script, with the loop count the redeemer gives, at the execution units of one run
   deriving (Show, Eq, Enum, Generic, FromJSON, ToJSON)
 
 data TxGenPlutusParams
@@ -98,9 +138,80 @@ data TxGenPlutusParams
       , plutusRedeemer    :: !(Maybe FilePath)  -- ^ Redeemer passed to the Plutus script (JSON file in ScriptData schema)
       , plutusExecMemory  :: !(Maybe Natural)   -- ^ Max. memory for ExecutionUnits (overriding corresponding protocol parameter)
       , plutusExecSteps   :: !(Maybe Natural)   -- ^ Max. steps for ExecutionUnits (overriding corresponding protocol parameter)
+      , plutusVariants    :: !(Maybe PlutusVariants) -- ^ Variants of the script for the benchmarking transactions to spend, instead of the script itself
       }
   | PlutusOff                                   -- ^ Do not generate Plutus Txs
   deriving (Show, Eq)
+
+-- | Variants of a Plutus script, with distinct hashes, for the benchmarking
+-- transactions to spend in turn (see "Cardano.TxGenerator.ScriptVariants"):
+-- 'variantsCount' of them, each 'variantsSize' bytes, or as small as they can
+-- be, padded with 'variantsPadding'. A setup phase publishes them as
+-- reference scripts. With 'variantsByReference', the benchmarking
+-- transactions refer to them rather than carry them in their witnesses;
+-- without, the setup is the same, so that the two compare.
+data PlutusVariants = PlutusVariants
+  { variantsCount       :: !Int
+  , variantsSize        :: !(Maybe Int)
+  , variantsByReference :: !Bool
+  , variantsGroup       :: !(Maybe Int)
+    -- ^ The number of consecutive benchmarking inputs locked at one variant;
+    -- without it, as many as a transaction spends, for every transaction to
+    -- spend one variant. With 1, each input of a transaction has a variant
+    -- of its own.
+  , variantsPadding     :: !ScriptPadding
+  }
+  deriving (Show, Eq)
+
+-- | What variants of a script are padded with to their size. The padding is
+-- decoded with the script but never run, so it changes only what decoding
+-- the script costs.
+data ScriptPadding
+  = PaddingMixed
+    -- ^ Pieces of program mixing the kinds of terms compiled scripts are made
+    -- of, with small constants.
+  | PaddingErrorSpine
+    -- ^ A spine of applications over error terms, 4 bits each: two terms to
+    -- decode per byte, about 3.3 times the decoding time per byte of
+    -- 'PaddingMixed'.
+  deriving (Show, Eq, Generic)
+
+instance FromJSON ScriptPadding where
+  parseJSON = Aeson.withText "ScriptPadding" $ \case
+    "mixed"       -> pure PaddingMixed
+    "error-spine" -> pure PaddingErrorSpine
+    other         -> fail $ "ScriptPadding: \"mixed\" or \"error-spine\", not " ++ show other
+
+instance ToJSON ScriptPadding where
+  toJSON PaddingMixed      = Aeson.String "mixed"
+  toJSON PaddingErrorSpine = Aeson.String "error-spine"
+
+-- | The JSON form is shared by the Nix service definition in
+-- nix/nixos/tx-generator-service.nix and the profiles: @source@ is
+-- @"reference"@ or @"witness"@.
+instance FromJSON PlutusVariants where
+  parseJSON = Aeson.withObject "PlutusVariants" $ \o ->
+    PlutusVariants
+      <$> o .: "count"
+      <*> o .:? "size"
+      <*> (o .: "source" >>= source)
+      <*> o .:? "group"
+      <*> (fromMaybe PaddingMixed <$> o .:? "padding")
+   where
+    source :: Text -> Aeson.Parser Bool
+    source = \case
+      "reference" -> pure True
+      "witness"   -> pure False
+      other       -> fail $ "PlutusVariants: source is \"reference\" or \"witness\", not " ++ show other
+
+instance ToJSON PlutusVariants where
+  toJSON PlutusVariants{variantsCount, variantsSize, variantsByReference, variantsGroup, variantsPadding} = Aeson.object
+    [ "count"   .= variantsCount
+    , "size"    .= variantsSize
+    , "source"  .= (if variantsByReference then "reference" else "witness" :: Text)
+    , "group"   .= variantsGroup
+    , "padding" .= variantsPadding
+    ]
 
 -- | Documents how the `plutusScript` parameter above was eventually resolved
 data TxGenPlutusResolvedTo
@@ -160,7 +271,8 @@ instance Error TxGenError where
   prettyError = \case
     ApiError e        -> prettyError e
     ProtocolError e   -> prettyError e
-    _                 -> ""
+    PlutusError e     -> pshow e
+    TxGenError e      -> pretty e
 
 {-
 Note [Tx additional size]

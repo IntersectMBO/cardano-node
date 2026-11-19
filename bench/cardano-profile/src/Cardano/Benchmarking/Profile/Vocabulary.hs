@@ -22,7 +22,7 @@ module Cardano.Benchmarking.Profile.Vocabulary (
 , plutusBase, plutusLoop, plutusLoopV3
 , plutusSaturation, plutusDoubleSaturation, plutusDoublePlusSaturation
 
-, plutusTypeLoop, plutusTypeLoopV3, plutusTypeLoop2024, plutusTypeECDSA, plutusTypeSchnorr
+, plutusTypeLoop, plutusTypeLoopV3, plutusTypeLoopV4, plutusTypeLoop2024, plutusTypeECDSA, plutusTypeSchnorr
 , plutusTypeBLST, plutusTypeRIPEMD, plutusTypeRIPEMD_4tx, plutusTypeMultScalarMultG1
 , plutusTypeSchnorrV3
 , plutusTypeExpMod
@@ -218,6 +218,13 @@ plutusTypeLoop =
 plutusTypeLoopV3 :: Types.Profile -> Types.Profile
 plutusTypeLoopV3 =
     P.plutusType "LimitSaturationLoop" . P.plutusScript "LoopV3"
+  . P.redeemerInt 1000000
+  . P.txFee 1452000
+
+-- | LoopV3 as a Plutus V4 script; it needs the v12 preview (Dijkstra).
+plutusTypeLoopV4 :: Types.Profile -> Types.Profile
+plutusTypeLoopV4 =
+    P.plutusType "LimitSaturationLoop" . P.plutusScript "LoopV4"
   . P.redeemerInt 1000000
   . P.txFee 1452000
 

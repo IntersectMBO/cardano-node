@@ -1,5 +1,94 @@
 # ChangeLog
 
+## 3.0 -- Nov 2026
+
+* **Transactions are built with cardano-api's compatible API**
+  (`Cardano.Api.Compatible`) instead of the deprecated `createTransactionBody`
+  and `signShelleyTransaction`, in every Shelley-based era; Byron is rejected.
+  * Plutus scripts need Alonzo onwards, reference scripts Babbage onwards.
+  * Transactions with sub-transactions are built with the experimental API
+    (`Cardano.Api.Experimental`), until the compatible API supports them.
+
+* **Sub-transactions (Dijkstra onwards).** A new `NestedNtoM` generator: an
+  `NtoM` transaction that also carries sub-transactions, each spending its own
+  inputs into its own outputs, balanced on its own. The top-level transaction
+  pays the fee for the whole transaction and carries the metadata.
+  * Turn it on with the optional `sub_txs` key,
+    `{ "count": K, "inputs": n, "outputs": m }`, also registered with the NixOS
+    service; the compiler then splits enough funds for the sub-transactions.
+  * It requires the Dijkstra era, and is not combined with Plutus yet.
+
+* **Script variants and reference scripts.** A Plutus workload can spend
+  variants of its script instead of the script itself: scripts with distinct
+  hashes that behave and cost the same, so that the ledger's per-block cache
+  of decoded scripts doesn't hide the cost of decoding them.
+  * Turn it on with the optional `plutus.variants` key,
+    `{ "count", "size", "source", "group", "padding" }`, also registered with
+    the NixOS service:
+    * `size`: bytes per variant, or `null` for as small as can be.
+    * `source`: `"reference"` to spend them by reference, `"witness"` to carry
+      them in the witnesses. The setup publishes them as reference scripts
+      either way, at the address of a new `ReferenceScripts` key, so that the
+      two differ in nothing else.
+    * `group`: the number of consecutive benchmarking inputs locked at one
+      variant; by default as many as a transaction spends.
+    * `padding`: what variants are padded with to their size, `"mixed"`
+      (default) or `"error-spine"`, two terms to decode per byte, about 3.3
+      times the decoding time per byte of `"mixed"`.
+      The padding is never run.
+  * New in benchmarking scripts: the `DefineScriptSet` action, the
+    `PublishScripts` generator and the `PayToScriptSet` pay mode.
+
+* **New Plutus type `FixedLoop`**: a loop script run with the loop count its
+  redeemer gives, at the execution units of one run (new `MeasuredScript`
+  budget), for benchmarks that vary something other than execution.
+
+* **Plutus V4.**
+  * Execution units of Plutus V4 scripts, for automatic budgeting and
+    `calibrate-script`.
+  * New `LoopV4` script (`scripts-fallback/LoopV4.plutus`,
+    `data/LoopV4.redeemer.json`), LoopV3's loop as a Plutus V4 script.
+  * `calibrate-script` builds its transaction in the era of the protocol
+    version, Dijkstra for 12; `data/protocol-parameters-v12.json` is a v12
+    preview.
+
+* **Exact fee estimates.** They count the key witnesses a signed transaction
+  carries, so the estimate equals the ledger's minimum fee.
+  * **Fix:** `minFeeRefScriptCostPerByte`, and for Dijkstra the reference
+    script cost stride and multiplier, were lost on the way through
+    `ProtocolParameters`, which made reference scripts free in every fee
+    estimate.
+
+* **New `TraceBenchTxSubWarning` trace** (severity Warning). `NtoM` and
+  `NestedNtoM` warn rather than stop when a transaction needs more than the
+  configured fee, and `NestedNtoM` when one exceeds `maxTxSize`: the nodes
+  will reject those transactions.
+
+* **Fix:** `TxGenError`'s `Error` instance prints `PlutusError` and
+  `TxGenError` messages instead of an empty string.
+
+* The selftest and the pure example run in Conway, with
+  `data/protocol-parameters-v10.json`.
+
+* API changes:
+  * Transactions are `Exp.SignedTx` instead of `Tx`: in `TxStream`, from a
+    `TxGenerator` or a `NestedTxGenerator`, and as submitted
+    (`mkTxInModeCardano`, the Ogmios endpoint). New `txIdFromSignedTx`.
+  * Outputs are ledger outputs (`Exp.TxOut`), fund witnesses are
+    `Exp.AnyWitness`, a fund's value is a `Coin`, and `TxEnvironment`'s fee is
+    a `Coin`.
+  * New `toAnyPlutusScript` and `mkPlutusSpendingWitness` in
+    `Cardano.TxGenerator.Setup.Plutus`, for the witness spending a Plutus
+    script, in the transaction or by reference.
+  * Outputs are planned as data before a transaction is built: new `Output`,
+    `outputFund` and `outputFunds` in `Cardano.TxGenerator.UTxO`, and
+    `Destination`, `payTo`, `storeOutputs` and `buildAndStore` in
+    `Cardano.Benchmarking.Wallet`. They replace `CreateAndStore`, `ToUTxO`,
+    `mangle`, `createAndStore`, `sourceToStoreTransaction` and friends.
+  * New `NestedTxGenerator`, `genNestedTx`, `SubTxShape`, `PlutusVariants`,
+    `ScriptPadding`, and the `Cardano.TxGenerator.ScriptVariants` module.
+  * Removed `mkTxFee`, `mkTxValidityUpperBound` and `liftAnyEra`.
+
 ## 2.19 -- Oct 2026
 
 * **Support for `extraConfig.initialFunds.file` genesis injections**, where a

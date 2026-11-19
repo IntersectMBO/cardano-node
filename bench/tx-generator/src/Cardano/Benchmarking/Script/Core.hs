@@ -1,10 +1,10 @@
-{-# OPTIONS_GHC -Wno-deprecations #-}
 {- HLINT ignore "Reduce duplication" -}
 {- HLINT ignore "Use uncurry" -}
 
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
@@ -20,6 +20,8 @@ module Cardano.Benchmarking.Script.Core
 where
 
 import           Cardano.Api
+import qualified Cardano.Api.Experimental as Exp
+import qualified Cardano.Api.Experimental.Tx as Exp
 
 import           Cardano.Benchmarking.GeneratorTx as GeneratorTx (AsyncBenchmarkControl)
 import qualified Cardano.Benchmarking.GeneratorTx as GeneratorTx (waitBenchmark, walletBenchmark)
@@ -40,6 +42,7 @@ import           Cardano.Benchmarking.Types as Core (SubmissionErrorPolicy (..))
 import           Cardano.Benchmarking.Version as Version
 import           Cardano.Benchmarking.Wallet as Wallet
 import qualified Cardano.Ledger.Coin as L
+import qualified Cardano.Ledger.Api as LedgerApi (referenceInputsTxBodyL)
 import qualified Cardano.Ledger.Core as Ledger
 import           Cardano.Logging hiding (LocalSocket)
 import           Cardano.TxGenerator.Fund as Fund
@@ -47,6 +50,7 @@ import qualified Cardano.TxGenerator.FundQueue as FundQueue
 import qualified Cardano.TxGenerator.Genesis as Genesis
 import           Cardano.TxGenerator.PlutusContext
 import           Cardano.TxGenerator.ProtocolParameters
+import           Cardano.TxGenerator.ScriptVariants (VariantIx (..), plutusScriptSize, scriptVariants)
 import           Cardano.TxGenerator.Setup.Plutus as Plutus
 import           Cardano.TxGenerator.Setup.SigningKey
 import           Cardano.TxGenerator.Tx
@@ -57,12 +61,20 @@ import           Cardano.TxGenerator.UTxO
 import           Prelude
 
 import           Control.Concurrent (threadDelay)
+import           Control.Concurrent.MVar (modifyMVar_, newMVar, readMVar)
 import           Control.Monad
 import           Control.Monad.Trans.RWS.Strict (ask)
 import qualified Data.ByteString as BS (hPut)
 import           Data.ByteString.Lazy.Char8 as BSL (writeFile)
+import qualified Data.List.Extra as List (chunksOf)
+import           Data.List.Extra (nubOrd)
+import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
+import           Data.Maybe (fromMaybe, listToMaybe, mapMaybe)
 import           Data.Ratio ((%))
 import qualified Data.Text as Text (unpack)
+import           Data.Type.Equality (TestEquality (..), (:~:) (..))
+import           Lens.Micro ((^.))
 import           System.IO (IOMode(..), withFile)
 
 import           Streaming
@@ -71,17 +83,14 @@ import qualified Streaming.Prelude as Streaming
 liftCoreWithEra :: AnyCardanoEra -> (forall era. IsShelleyBasedEra era => AsType era -> ExceptT TxGenError IO x) -> ActionM (Either TxGenError x)
 liftCoreWithEra era coreCall = withEra era ( liftIO . runExceptT . coreCall)
 
-withEra :: AnyCardanoEra -> (forall era. IsShelleyBasedEra era => AsType era -> ActionM x) -> ActionM x
-withEra era action = do
-  case era of
-    AnyCardanoEra ConwayEra   -> action AsConwayEra
-    AnyCardanoEra BabbageEra  -> action AsBabbageEra
-    AnyCardanoEra AlonzoEra   -> action AsAlonzoEra
-    AnyCardanoEra MaryEra     -> action AsMaryEra
-    AnyCardanoEra AllegraEra  -> action AsAllegraEra
-    AnyCardanoEra ShelleyEra  -> action AsShelleyEra
-    AnyCardanoEra ByronEra    -> error "byron not supported"
-    AnyCardanoEra DijkstraEra -> action AsDijkstraEra
+-- | Dispatches on the requested era, providing an 'IsShelleyBasedEra'
+-- witness for every Shelley-based era. Byron is not supported.
+withEra :: forall x. AnyCardanoEra -> (forall era. IsShelleyBasedEra era => AsType era -> ActionM x) -> ActionM x
+withEra (AnyCardanoEra era) action =
+  forEraInEon era (throwE $ UserError "tx-generator: the Byron era is not supported") action'
+  where
+    action' :: forall era. ShelleyBasedEra era -> ActionM x
+    action' sbe = shelleyBasedEraConstraints sbe $ action (asType @era)
 
 setProtocolParameters :: ProtocolParametersSource -> ActionM ()
 setProtocolParameters s = case s of
@@ -102,24 +111,18 @@ defineSigningKey = setEnvKeys
 
 addFund :: AnyCardanoEra -> String -> TxIn -> L.Coin -> String -> ActionM ()
 addFund era wallet txIn lovelace keyName = do
-  fundKey  <- getEnvKeys keyName
-  let
-    mkOutValue :: forall era. IsShelleyBasedEra era => AsType era -> ActionM (InAnyCardanoEra TxOutValue)
-    mkOutValue _ = return $ InAnyCardanoEra (cardanoEra @era) (lovelaceToTxOutValue (shelleyBasedEra @era) lovelace)
-  outValue <- withEra era mkOutValue
-  addFundToWallet wallet txIn outValue fundKey
-
-addFundToWallet :: String -> TxIn -> InAnyCardanoEra TxOutValue -> SigningKey PaymentKey -> ActionM ()
-addFundToWallet wallet txIn outVal skey = do
+  fundKey   <- getEnvKeys keyName
   walletRef <- getEnvWallets wallet
-  liftIO (walletRefInsertFund walletRef (FundQueue.Fund $ mkFund outVal))
-  where
-    mkFund = Utils.liftAnyEra $ \value -> FundInEra {
+  let
+    mkFund :: forall era. IsShelleyBasedEra era => AsType era -> ActionM FundQueue.Fund
+    mkFund _ = return $ FundQueue.Fund $ InAnyCardanoEra (cardanoEra @era) FundInEra {
            _fundTxIn = txIn
-         , _fundWitness = KeyWitness KeyWitnessForSpending
-         , _fundVal = value
-         , _fundSigningKey = Just skey
+         , _fundWitness = Exp.AnyKeyWitnessPlaceholder
+         , _fundVal = lovelace
+         , _fundSigningKey = Just fundKey
          }
+  fund <- withEra era mkFund
+  liftIO $ walletRefInsertFund walletRef fund
 
 getLocalSubmitTx :: ActionM LocalSubmitTx
 getLocalSubmitTx = submitTxToNodeLocal <$> getLocalConnectInfo
@@ -233,7 +236,7 @@ localSubmitTx tx = do
 -- Problem 1: When doing throwE $ ApiError msg logmessages get lost !
 -- Problem 2: Workbench restarts the tx-generator -> this may be the reason for loss of messages
 
-toMetadata :: forall era. IsShelleyBasedEra era => Maybe Int -> TxMetadataInEra era
+toMetadata :: IsShelleyBasedEra era => Maybe Int -> TxMetadataInEra era
 toMetadata Nothing = TxMetadataNone
 toMetadata (Just payloadSize) = case mkMetadata payloadSize of
   Right m -> m
@@ -260,14 +263,14 @@ submitInEra submitMode generator txParams era = do
         Streaming.toHandle hdl $ Streaming.map (either (error . show) show) txStream
     WriteCBORList filePath -> liftIO $
       withFile filePath AppendMode $ \hdl ->
-        Streaming.mapM_ (either (error . show) (BS.hPut hdl . serialiseToCBOR)) txStream
+        Streaming.mapM_ (either (error . show) (BS.hPut hdl . shelleyBasedEraConstraints (shelleyBasedEra @era) serialiseToRawBytes)) txStream
     DiscardTX -> liftIO $ Streaming.mapM_ forceTx txStream
  where
   forceTx (Right tx) = let !_ = tx in return ()
   forceTx (Left err) = error $ show err
 
    -- INVESTIGATE: Can Streaming.run be used here?
-  submitAll :: (Tx era -> ActionM ()) -> TxStream IO era -> ActionM ()
+  submitAll :: (Exp.SignedTx era -> ActionM ()) -> TxStream IO era -> ActionM ()
   submitAll callback stream = do
     step <- liftIO $ Streaming.inspect stream
     case step of
@@ -296,152 +299,375 @@ benchmarkTxStream txStream targetNodes tps txCount era = do
     Left err -> liftTxGenError err
     Right ctl -> setEnvThreads ctl
 
-evalGenerator :: IsShelleyBasedEra era => Generator -> TxGenTxParams -> AsType era -> ActionM (TxStream IO era)
+evalGenerator :: forall era. IsShelleyBasedEra era => Generator -> TxGenTxParams -> AsType era -> ActionM (TxStream IO era)
 evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
   networkId <- getEnvNetworkId
   protocolParameters <- getProtocolParameters
-  case convertToLedgerProtocolParameters shelleyBasedEra protocolParameters of
+  ledgerParameters <- case convertToLedgerProtocolParameters (shelleyBasedEra @era) protocolParameters of
     Left err -> throwE (Env.TxGenError (ApiError err))
-    Right ledgerParameters ->
-      case generator of
-        SecureGenesis wallet genesisKeyName destKeyName -> do
-          genesis  <- getEnvGenesis
-          genesisDir <- getEnvShelleyGenesisDir
-          destKey  <- getEnvKeys destKeyName
-          destWallet  <- getEnvWallets wallet
-          genesisKey  <- getEnvKeys genesisKeyName
-          eitherTxFund <- liftIO $ Genesis.genesisWithResolvedInitialFunds genesisDir genesis $ \resolved ->
-            Genesis.genesisSecureInitialFund networkId resolved genesisKey destKey txParams
-          (tx, fund) <- firstExceptT Env.TxGenError $ hoistEither eitherTxFund
-          let
-            gen = do
-              walletRefInsertFund destWallet fund
-              return $ Right tx
-          return $ Streaming.effect (Streaming.yield <$> gen)
+    Right (LedgerProtocolParameters ledgerParameters) -> return ledgerParameters
+  shelleyBasedEraConstraints (shelleyBasedEra @era) $ case generator of
+    SecureGenesis wallet genesisKeyName destKeyName -> do
+      genesis  <- getEnvGenesis
+      genesisDir <- getEnvShelleyGenesisDir
+      destKey  <- getEnvKeys destKeyName
+      destWallet  <- getEnvWallets wallet
+      genesisKey  <- getEnvKeys genesisKeyName
+      eitherTxFund <- liftIO $ Genesis.genesisWithResolvedInitialFunds genesisDir genesis $ \resolved ->
+        Genesis.genesisSecureInitialFund networkId resolved genesisKey destKey txParams
+      (tx, fund) <- firstExceptT Env.TxGenError $ hoistEither eitherTxFund
+      let
+        gen = do
+          walletRefInsertFund destWallet fund
+          return $ Right tx
+      return $ Streaming.effect (Streaming.yield <$> gen)
 
-        -- 'Split' combines regular payments and payments for change.
-        -- There are lists of payments buried in the 'PayWithChange'
-        -- type conditionally sent back by 'Utils.includeChange', to
-        -- then be used while partially applied as the @valueSplitter@
-        -- in 'sourceToStoreTransactionNew'.
-        Split walletName payMode payModeChange coins -> do
-          wallet <- getEnvWallets walletName
-          (toUTxO, addressOut) <- interpretPayMode payMode
-          traceDebug $ "split output address : " ++ addressOut
-          (toUTxOChange, addressChange) <- interpretPayMode payModeChange
-          traceDebug $ "split change address : " ++ addressChange
-          let
-            fundSource = walletSource wallet 1
-            inToOut = Utils.includeChange fee coins
-            txGenerator = genTx shelleyBasedEra ledgerParameters (TxInsCollateralNone, []) feeInEra TxMetadataNone
-            sourceToStore = sourceToStoreTransactionNew txGenerator fundSource inToOut $ mangleWithChange toUTxOChange toUTxO
-          return $ Streaming.effect (Streaming.yield <$> sourceToStore)
+    -- 'Split' pays @coins@ to the destination of @payMode@, and what is left
+    -- after the fee, if anything, as change to that of @payModeChange@, in
+    -- the transaction's first output.
+    Split walletName payMode payModeChange coins -> do
+      wallet <- getEnvWallets walletName
+      (destination, addressOut) <- interpretPayMode payMode
+      traceDebug $ "split output address : " ++ addressOut
+      (changeDestination, addressChange) <- interpretPayMode payModeChange
+      traceDebug $ "split change address : " ++ addressChange
+      let
+        txGenerator = genTx ledgerParameters ([], []) fee TxMetadataNone
+        generate = runExceptT $ do
+          inFunds <- ExceptT $ walletSource wallet 1
+          txOutputs <- liftIO $ case Utils.includeChange fee coins (map getFundCoin inFunds) of
+            PayExact payments -> payTo destination payments
+            PayWithChange change payments -> (++) <$> payTo changeDestination [change] <*> payTo destination payments
+          buildAndStore txGenerator inFunds txOutputs
+      return $ Streaming.effect (Streaming.yield <$> generate)
 
-        -- The 'SplitN' case's call chain is somewhat elaborate.
-        -- The division is done in 'Utils.inputsToOutputsWithFee'
-        -- but things are threaded through
-        -- 'Cardano.Benchmarking.Wallet.mangle' and packed into
-        -- the transaction assembled by 'sourceToStoreTransactionNew'.
-        SplitN walletName payMode count -> do
-          wallet <- getEnvWallets walletName
-          (toUTxO, addressOut) <- interpretPayMode payMode
-          traceDebug $ "SplitN output address : " ++ addressOut
-          let
-            fundSource = walletSource wallet 1
-            inToOut = Utils.inputsToOutputsWithFee fee count
-            txGenerator = genTx shelleyBasedEra ledgerParameters (TxInsCollateralNone, []) feeInEra TxMetadataNone
-            sourceToStore = sourceToStoreTransactionNew txGenerator fundSource inToOut (mangle $ repeat toUTxO)
-          return $ Streaming.effect (Streaming.yield <$> sourceToStore)
+    -- 'SplitN' spends one fund into @count@ outputs of equal value, after the fee.
+    SplitN walletName payMode count -> do
+      wallet <- getEnvWallets walletName
+      (destination, addressOut) <- interpretPayMode payMode
+      traceDebug $ "SplitN output address : " ++ addressOut
+      let
+        txGenerator = genTx ledgerParameters ([], []) fee TxMetadataNone
+        generate = runExceptT $ do
+          inFunds <- ExceptT $ walletSource wallet 1
+          txOutputs <- liftIO $ payTo destination $ Utils.inputsToOutputsWithFee fee count $ map getFundCoin inFunds
+          buildAndStore txGenerator inFunds txOutputs
+      return $ Streaming.effect (Streaming.yield <$> generate)
 
-        NtoM walletName payMode inputs outputs metadataSize collateralWallet -> do
+    NtoM walletName payMode inputs outputs metadataSize collateralWallet -> do
+      wallet <- getEnvWallets walletName
+      collaterals <- selectCollateralFunds collateralWallet
+      (destination, addressOut) <- interpretPayMode payMode
+      traceDebug $ "NtoM output address : " ++ addressOut
+      let
+        txGenerator = genTx ledgerParameters collaterals fee (toMetadata metadataSize)
+        outputsFor funds = payTo destination $ Utils.inputsToOutputsWithFee fee outputs $ map getFundCoin funds
+      tracers <- getBenchTracers
+      let
+        -- Which reference scripts each transaction uses, for checking that the
+        -- transactions in a block use different ones.
+        traceReferences = \case
+          Right tx@(Exp.SignedTx ledgerTx) | references@(_ : _) <- txReferenceInputs tx ->
+            traceWith (btTxSubmit_ tracers) $ TraceBenchTxSubDebug $
+              "NtoM: transaction " ++ Text.unpack (serialiseToRawBytesHexText $ fromShelleyTxId $ Ledger.txIdTx ledgerTx)
+                ++ " references " ++ unwords (map (Text.unpack . renderTxIn) references)
+          _ -> return ()
+        generate = do
+          result <- runExceptT $ do
+            inFunds <- ExceptT $ walletSource wallet inputs
+            txOutputs <- liftIO $ outputsFor inFunds
+            buildAndStore txGenerator inFunds txOutputs
+          traceReferences result
+          return result
+
+      fundPreview <- liftIO $ walletPreview wallet inputs
+      previewOutputs <- liftIO $ outputsFor fundPreview
+      refScriptsSize <- referenceScriptsSize $ nubOrd $ mapMaybe getFundReferenceInput fundPreview
+      case txGenerator fundPreview (map txOutputTxOut previewOutputs) of
+        Left err -> traceDebug $ "Error creating Tx preview: " ++ show err
+        Right (tx, _) -> do
+          let
+            txSize = txSizeInBytes tx
+            txFeeEstimate = Just $
+                estimateTxFee ledgerParameters tx (txKeyWitnesses tx) refScriptsSize
+          traceDebug $ "Projected Tx size in bytes: " ++ show txSize
+          traceDebug $ "Projected Tx fee in Coin: " ++ show txFeeEstimate
+            ++ (if refScriptsSize > 0 then ", with " ++ show refScriptsSize ++ " bytes of reference scripts" else "")
+          -- A fee below the estimate would get every transaction rejected.
+          when (txFeeEstimate > Just fee) $ traceWarning $
+            "NtoM: a transaction needs a fee of at least " ++ show txFeeEstimate
+              ++ ", above the configured " ++ show fee ++ "; the nodes will reject the transactions"
+          -- TODO: possibly emit a warning when (Just txFeeEstimate) is lower than specified by config in TxGenTxParams.txFee
+          summary_ <- getEnvSummary
+          forM_ summary_ $ \summary -> do
+            let summary' = summary { projectedTxSize = Just txSize, projectedTxFee = txFeeEstimate }
+            setEnvSummary summary'
+            traceBenchTxSubmit TraceBenchPlutusBudgetSummary summary'
+          dumpBudgetSummaryIfExisting
+
+      return $ Streaming.effect (Streaming.yield <$> generate)
+
+    NestedNtoM walletName payMode inputs outputs metadataSize collateralWallet subTxShape@SubTxShape{..} ->
+      case testEquality (shelleyBasedEra @era) ShelleyBasedEraDijkstra of
+        Nothing -> throwE $ UserError $
+          "NestedNtoM: sub-transactions need the Dijkstra era, not " ++ show (cardanoEra @era)
+        Just Refl -> do
           wallet <- getEnvWallets walletName
           collaterals <- selectCollateralFunds collateralWallet
-          (toUTxO, addressOut) <- interpretPayMode payMode
-          traceDebug $ "NtoM output address : " ++ addressOut
+          (destination, addressOut) <- interpretPayMode payMode
+          traceDebug $ "NestedNtoM output address : " ++ addressOut ++ ", " ++ show subTxShape
           let
-            fundSource = walletSource wallet inputs
-            inToOut = Utils.inputsToOutputsWithFee fee outputs
-            txGenerator = genTx shelleyBasedEra ledgerParameters collaterals feeInEra (toMetadata metadataSize)
-            sourceToStore = sourceToStoreTransactionNew txGenerator fundSource inToOut (mangle $ repeat toUTxO)
-
-          fundPreview <- liftIO $ walletPreview wallet inputs
-          case sourceTransactionPreview txGenerator fundPreview inToOut (mangle $ repeat toUTxO) of
-            Left err -> traceDebug $ "Error creating Tx preview: " ++ show err
-            Right tx -> do
+            fundCount = inputs + subTxCount * subTxInputs
+            txGenerator = genNestedTx ledgerParameters collaterals fee (fromTxMetadataInEra $ toMetadata @era metadataSize)
+            -- The top-level transaction spends the first @inputs@ funds into
+            -- @outputs@ outputs, after the fee, and each sub-transaction the
+            -- next @subTxInputs@ into @subTxOutputs@, with no fee. The outputs
+            -- are paid to the destination in that order.
+            build funds = do
               let
-                txSize = txSizeInBytes tx
-                txFeeEstimate = case toLedgerPParams shelleyBasedEra protocolParameters of
-                  Left{}              -> Nothing
-                  Right ledgerPParams -> Just $
-                    evaluateTransactionFee shelleyBasedEra ledgerPParams (getTxBody tx) (fromIntegral $ inputs + 1) 0 0    -- 1 key witness per tx input + 1 collateral
-              traceDebug $ "Projected Tx size in bytes: " ++ show txSize
-              traceDebug $ "Projected Tx fee in Coin: " ++ show txFeeEstimate
-              -- TODO: possibly emit a warning when (Just txFeeEstimate) is lower than specified by config in TxGenTxParams.txFee
-              summary_ <- getEnvSummary
-              forM_ summary_ $ \summary -> do
-                let summary' = summary { projectedTxSize = Just txSize, projectedTxFee = txFeeEstimate }
-                setEnvSummary summary'
-                traceBenchTxSubmit TraceBenchPlutusBudgetSummary summary'
-              dumpBudgetSummaryIfExisting
+                (topFunds, subTxFunds) = second (List.chunksOf subTxInputs) $ splitAt inputs funds
+                topValues = Utils.inputsToOutputsWithFee fee outputs $ map getFundCoin topFunds
+                subTxValues = map (Utils.inputsToOutputsWithFee 0 subTxOutputs . map getFundCoin) subTxFunds
+              txOutputs <- payTo destination $ topValues ++ concat subTxValues
+              let (topOutputs, subTxOutputLists) = second (List.chunksOf subTxOutputs) $ splitAt outputs txOutputs
+              return $ nestedTx txOutputTxOut txGenerator (topFunds, topOutputs) (zip subTxFunds subTxOutputLists)
+            generate = runExceptT $ do
+              inFunds <- ExceptT $ walletSource wallet fundCount
+              (tx, created) <- ExceptT $ build inFunds
+              liftIO $ mapM_ (uncurry storeOutputs) created
+              return tx
 
-          return $ Streaming.effect (Streaming.yield <$> sourceToStore)
+          -- A transaction with many sub-transactions easily outgrows maxTxSize or the
+          -- configured fee; check a preview and warn, as the nodes would reject every transaction.
+          fundPreview <- liftIO $ walletPreview wallet fundCount
+          if length fundPreview < fundCount
+            then traceDebug $ "NestedNtoM: not enough funds for a Tx preview: " ++ show (length fundPreview)
+            else liftIO (build fundPreview) >>= \case
+              Left err -> liftTxGenError err
+              Right (tx, _) -> do
+                let
+                  txSize = txSizeInBytes tx
+                  maxTxSize = fromIntegral $ ledgerParameters ^. Ledger.ppMaxTxSizeL
+                  txFeeEstimate = estimateTxFee ledgerParameters tx (txKeyWitnesses tx) 0
+                traceDebug $ "Projected Tx size in bytes: " ++ show txSize
+                traceDebug $ "Projected Tx fee in Coin: " ++ show txFeeEstimate
+                when (txSize > maxTxSize) $ traceWarning $
+                  "NestedNtoM: a transaction would be " ++ show txSize ++ " bytes, above maxTxSize "
+                    ++ show maxTxSize ++ "; the nodes will reject the transactions (use fewer or smaller sub-transactions)"
+                when (txFeeEstimate > fee) $ traceWarning $
+                  "NestedNtoM: a transaction needs a fee of at least " ++ show txFeeEstimate
+                    ++ ", above the configured " ++ show fee ++ "; the nodes will reject the transactions"
+                summary_ <- getEnvSummary
+                forM_ summary_ $ \summary -> do
+                  let summary' = summary { projectedTxSize = Just txSize, projectedTxFee = Just txFeeEstimate }
+                  setEnvSummary summary'
+                  traceBenchTxSubmit TraceBenchPlutusBudgetSummary summary'
+                dumpBudgetSummaryIfExisting
 
-        Sequence l -> do
-          gList <- forM l $ \g -> evalGenerator g txParams era
-          return $ Streaming.for (Streaming.each gList) id
+          return $ Streaming.effect (Streaming.yield <$> generate)
 
-        Cycle g -> Streaming.cycle <$> evalGenerator g txParams era
+    PublishScripts walletName setName keyName changePayMode -> do
+      wallet <- getEnvWallets walletName
+      ScriptSet{..} <- getEnvScriptSet setName
+      refKey <- getEnvKeys keyName
+      (changeDestination, addressChange) <- interpretPayMode changePayMode
+      let
+        refAddress = Utils.keyAddress @era networkId refKey
+        maxTxSize = fromIntegral $ ledgerParameters ^. Ledger.ppMaxTxSizeL
+      traceDebug $ "PublishScripts " ++ setName ++ ": reference scripts at "
+        ++ Text.unpack (serialiseAddress refAddress) ++ ", change to " ++ addressChange
+      refOutputs <- forM (zip [VariantIx 0 ..] scriptSetVariants) $ \(k, variant) ->
+        case mkReferenceScriptTxOut ledgerParameters refAddress variant of
+          Left err  -> liftTxGenError err
+          Right out -> return (k, out, fromMaybe 0 (plutusScriptSize variant))
+      let
+        -- As many outputs per transaction as fit, leaving room for an input,
+        -- the change, the fee and a key witness.
+        batches = packScripts (maxTxSize - 1_000) refOutputs
+        publish batch = runExceptT $ do
+          inFunds <- ExceptT $ walletSource wallet 1
+          (tx, publishedId, txOutputs) <-
+            publishScriptsTx ledgerParameters fee inFunds [ out | (_, out, _) <- batch ] changeDestination
+          liftIO $ do
+            storeOutputs publishedId txOutputs
+            modifyMVar_ scriptSetReferences $ \refs -> return $ Map.union refs $
+              Map.fromList [ (k, TxIn publishedId (TxIx ix)) | ((k, _, _), ix) <- zip batch [0 ..] ]
+          return tx
+      traceDebug $ "PublishScripts " ++ setName ++ ": " ++ show (length scriptSetVariants)
+        ++ " scripts in " ++ show (length batches) ++ " transactions"
+      return $ Streaming.for (Streaming.each batches) $ \batch ->
+        Streaming.effect (Streaming.yield <$> publish batch)
 
-        Take count g -> Streaming.take count <$> evalGenerator g txParams era
+    Sequence l -> do
+      gList <- forM l $ \g -> evalGenerator g txParams era
+      return $ Streaming.for (Streaming.each gList) id
 
-        RoundRobin l -> do
-          _gList <- forM l $ \g -> evalGenerator g txParams era
-          error "return $ foldr1 Streaming.interleaves gList"
+    Cycle g -> Streaming.cycle <$> evalGenerator g txParams era
 
-        OneOf _l -> error "todo: implement Quickcheck style oneOf generator"
+    Take count g -> Streaming.take count <$> evalGenerator g txParams era
 
-  where
-    feeInEra = Utils.mkTxFee fee
+    RoundRobin l -> do
+      _gList <- forM l $ \g -> evalGenerator g txParams era
+      error "return $ foldr1 Streaming.interleaves gList"
 
-selectCollateralFunds :: forall era. IsShelleyBasedEra era
-  => Maybe String
-  -> ActionM (TxInsCollateral era, [FundQueue.Fund])
-selectCollateralFunds Nothing = return (TxInsCollateralNone, [])
+    OneOf _l -> error "todo: implement Quickcheck style oneOf generator"
+
+selectCollateralFunds ::
+     Maybe String
+  -> ActionM ([TxIn], [FundQueue.Fund])
+selectCollateralFunds Nothing = return ([], [])
 selectCollateralFunds (Just walletName) = do
   cw <- getEnvWallets walletName
   collateralFunds <- liftIO ( askWalletRef cw FundQueue.toList ) >>= \case
     [] -> throwE $ WalletError "selectCollateralFunds: emptylist"
     l -> return l
-  case forEraMaybeEon (cardanoEra @era) of
-      Nothing -> throwE $ WalletError $ "selectCollateralFunds: collateral: era not supported :" ++ show (cardanoEra @era)
-      Just p -> return (TxInsCollateral p $  map getFundTxIn collateralFunds, collateralFunds)
+  return (map getFundTxIn collateralFunds, collateralFunds)
 
 initWallet :: String -> ActionM ()
 initWallet name = liftIO Wallet.initWallet >>= setEnvWallets name
 
-interpretPayMode :: forall era. IsShelleyBasedEra era => PayMode -> ActionM (CreateAndStore IO era, String)
+-- | 'interpretPayMode' sets up the destination that a 'PayMode' pays outputs
+-- to, once for all the transactions of a generator, and describes its address.
+interpretPayMode :: forall era. IsShelleyBasedEra era => PayMode -> ActionM (Destination era, String)
 interpretPayMode payMode = do
   networkId <- getEnvNetworkId
   case payMode of
     PayToAddr keyName destWallet -> do
       fundKey <- getEnvKeys keyName
       walletRef <- getEnvWallets destWallet
-      return ( createAndStore (mkUTxOVariant networkId fundKey) (mkWalletFundStore walletRef)
+      destination <- liftIO $ newDestination walletRef (keyOutput networkId fundKey)
+      return ( destination
              , Text.unpack $ serialiseAddress $ Utils.keyAddress @era networkId fundKey)
     PayToScript scriptSpec destWallet -> do
       walletRef <- getEnvWallets destWallet
       (witness, script, scriptData, _scriptFee) <- makePlutusContext scriptSpec
-      case script of
-        ScriptInAnyLang _ script' ->
-          return ( createAndStore (mkUTxOScript networkId (script, scriptData) witness) (mkWalletFundStore walletRef)
-                 , Text.unpack $ serialiseAddress $ makeShelleyAddress networkId (PaymentCredentialByScript $ hashScript script') NoStakeAddress )
+      output <- either liftTxGenError return $ scriptOutput networkId (script, scriptData) witness
+      destination <- liftIO $ newDestination walletRef output
+      return (destination, scriptAddress networkId script)
+    PayToScriptSet ScriptSetPayment{..} destWallet -> do
+      walletRef <- getEnvWallets destWallet
+      ScriptSet{..} <- getEnvScriptSet scriptSetName
+      base <- maybe (throwE $ UserError $ "PayToScriptSet: script set " ++ scriptSetName ++ " is empty") return $
+        listToMaybe scriptSetVariants
+      when (scriptSetGroupSize < 1) $
+        throwE $ UserError $ "PayToScriptSet: the group size must be at least 1, not " ++ show scriptSetGroupSize
+      -- All variants cost the same; see "Cardano.TxGenerator.ScriptVariants".
+      (scriptData, scriptRedeemer, executionUnits, _scriptFee) <-
+        resolvePlutusBudget ("script set " ++ scriptSetName) base scriptSetBudget scriptSetPlutusType
+      references <- liftIO $ readMVar scriptSetReferences
+      variants <- forM (zip [VariantIx 0 ..] scriptSetVariants) $ \(k, variant) -> do
+        source <- case scriptSetSource of
+          ScriptInWitness -> return Nothing
+          ScriptByReference -> case Map.lookup k references of
+            Just txIn -> return $ Just txIn
+            Nothing -> throwE $ UserError $
+              "PayToScriptSet: variant " ++ show k ++ " of " ++ scriptSetName ++ " has not been published"
+        forM_ source $ \txIn ->
+          traceDebug $ "PayToScriptSet " ++ scriptSetName ++ ": variant " ++ show k ++ " by reference to "
+            ++ Text.unpack (renderTxIn txIn)
+        witness <- plutusSpendingWitness @era variant source scriptData scriptRedeemer executionUnits
+        either liftTxGenError return $ scriptOutput networkId (variant, getScriptData scriptData) witness
+      destination <- liftIO $ newCyclingDestination walletRef scriptSetGroupSize variants
+      return ( destination
+             , scriptAddress networkId base ++ " and the addresses of " ++ show (length variants - 1)
+                 ++ " more variants of " ++ scriptSetName )
+ where
+  scriptAddress networkId (ScriptInAnyLang _ script) =
+    Text.unpack $ serialiseAddress $ makeShelleyAddress networkId (PaymentCredentialByScript $ hashScript script) NoStakeAddress
+
+-- | 'defineScriptSet' builds the variants of a script and keeps them in the
+-- 'Env' under a name.
+defineScriptSet :: String -> ScriptSetSpec -> ActionM ()
+defineScriptSet name ScriptSetSpec{..} = do
+  (base, resolvedTo) <- liftIOSafe $ Plutus.readPlutusScript scriptSetBase
+  variants <- either liftTxGenError return $ scriptVariants scriptSetSize scriptSetCount base
+  references <- liftIO $ newMVar Map.empty
+  setEnvScriptSet name $ ScriptSet variants references
+  traceDebug $ concat
+    [ "DefineScriptSet ", name, ": ", show scriptSetCount, " variants of ", show resolvedTo, ", "
+    , maybe "?" show (listToMaybe variants >>= plutusScriptSize), " bytes each" ]
+
+-- | The reference inputs of a transaction.
+txReferenceInputs :: forall era. IsShelleyBasedEra era => Exp.SignedTx era -> [TxIn]
+txReferenceInputs (Exp.SignedTx ledgerTx) =
+  case forEraMaybeEon @BabbageEraOnwards (cardanoEra @era) of
+    Nothing -> []
+    Just babbageOnwards -> babbageEraOnwardsConstraints babbageOnwards $
+      map fromShelleyTxIn $ Set.toList $ ledgerTx ^. Ledger.bodyTxL . LedgerApi.referenceInputsTxBodyL
+
+-- | The total size of the reference scripts in these reference outputs, as
+-- far as script sets know them.
+referenceScriptsSize :: [TxIn] -> ActionM Int
+referenceScriptsSize referenced = do
+  sets <- getEnvScriptSets
+  sizes <- fmap Map.unions $ forM (Map.elems sets) $ \ScriptSet{..} -> do
+    references <- liftIO $ readMVar scriptSetReferences
+    return $ Map.fromList
+      [ (txIn, size)
+      | (VariantIx k, txIn) <- Map.toList references
+      , Just size <- [plutusScriptSize =<< listToMaybe (drop k scriptSetVariants)] ]
+  return $ sum $ mapMaybe (`Map.lookup` sizes) referenced
+
+-- | Packs reference script outputs into transactions, in order, each up to
+-- @budget@ bytes of scripts, and at least one per transaction.
+packScripts :: Int -> [(VariantIx, out, Int)] -> [[(VariantIx, out, Int)]]
+packScripts budget = go
+ where
+  go [] = []
+  go outs = let (batch, rest) = takeBatch 0 outs in batch : go rest
+  takeBatch _ [] = ([], [])
+  takeBatch used (o@(_, _, size) : os)
+    | used > 0 && used + size + 100 > budget = ([], o : os)
+    | otherwise = let (batch, rest) = takeBatch (used + size + 100) os in (o : batch, rest)
+
+-- | A transaction that spends @inFunds@ into the reference script outputs
+-- @refOutputs@ and, after them, change paid to @changeDestination@, with the
+-- fee it needs, which is estimated on a first build. Returns the transaction,
+-- its id and its outputs, for storing.
+publishScriptsTx :: forall era. IsShelleyBasedEra era
+  => Ledger.PParams (ShelleyLedgerEra era)
+  -> L.Coin
+  -> [Fund]
+  -> [Exp.TxOut (ShelleyLedgerEra era)]
+  -> Destination era
+  -> ExceptT TxGenError IO (Exp.SignedTx era, TxId, [TxOutput era])
+publishScriptsTx ledgerParameters feeGuess inFunds refOutputs changeDestination = do
+  (draft, _, _) <- build feeGuess
+  -- The final change differs from the draft's by a few bytes at most.
+  build $ estimateTxFee ledgerParameters draft (txKeyWitnesses draft) 0 <> L.Coin 1_000
+ where
+  deposits = shelleyBasedEraConstraints (shelleyBasedEra @era) $ mconcat [ out ^. Ledger.coinTxOutL | Exp.TxOut out <- refOutputs ]
+  available = mconcat $ map getFundCoin inFunds
+  build fee' = do
+    let change = L.Coin $ L.unCoin available - L.unCoin deposits - L.unCoin fee'
+    when (change < L.Coin 0) $ throwE $ TxGenError $
+      "PublishScripts: a fund of " ++ show available ++ " does not cover deposits of "
+        ++ show deposits ++ " and a fee of " ++ show fee'
+    txOutputs <- (map Untracked refOutputs ++) <$> liftIO (payTo changeDestination [change])
+    (tx, publishedId) <- hoistEither $ genTx ledgerParameters ([], []) fee' TxMetadataNone inFunds (map txOutputTxOut txOutputs)
+    return (tx, publishedId, txOutputs)
 
 makePlutusContext :: forall era. IsShelleyBasedEra era
   => ScriptSpec
-  -> ActionM (Witness WitCtxTxIn era, ScriptInAnyLang, ScriptData, L.Coin)
+  -> ActionM (Exp.AnyWitness (ShelleyLedgerEra era), ScriptInAnyLang, ScriptData, L.Coin)
 makePlutusContext ScriptSpec{..} = do
+  (script, _resolvedTo) <- liftIOSafe $ Plutus.readPlutusScript scriptSpecFile
+  (scriptData, scriptRedeemer, executionUnits, scriptFee) <-
+    resolvePlutusBudget (show scriptSpecFile) script scriptSpecBudget scriptSpecPlutusType
+  witness <- plutusSpendingWitness @era script Nothing scriptData scriptRedeemer executionUnits
+  return (witness, script, getScriptData scriptData, scriptFee)
+
+-- | 'resolvePlutusBudget' finds the datum, redeemer and execution units for
+-- spending outputs locked by @script@, and the fee for those units, either as
+-- given or calibrated by pre-executing the script.
+resolvePlutusBudget ::
+     String
+  -> ScriptInAnyLang
+  -> ScriptBudget
+  -> TxGenPlutusType
+  -> ActionM (HashableScriptData, HashableScriptData, ExecutionUnits, L.Coin)
+resolvePlutusBudget scriptLabel script scriptBudget plutusType = do
   protocolParameters <- getProtocolParameters
-  (script, resolvedTo) <- liftIOSafe $ Plutus.readPlutusScript scriptSpecFile
 
   executionUnitPrices <- case protocolParamPrices protocolParameters of
     Just x -> return x
@@ -452,7 +678,7 @@ makePlutusContext ScriptSpec{..} = do
     Just b -> return b
   traceDebug $ "Plutus auto mode : Available budget per TX: " ++ show perTxBudget
 
-  (scriptData, scriptRedeemer, executionUnits) <- case scriptSpecBudget of
+  (scriptData, scriptRedeemer, executionUnits) <- case scriptBudget of
     StaticScriptBudget sDataFile redeemerFile units withCheck -> do
       sData <- liftIOSafe (readScriptData sDataFile)
       redeemer <- liftIOSafe (readScriptData redeemerFile)
@@ -466,10 +692,23 @@ makePlutusContext ScriptSpec{..} = do
             ]
       return (sData, redeemer, units)
 
+    MeasuredScript redeemerFile txInputs -> do
+      redeemer <- liftIOSafe $ readScriptData redeemerFile
+      let
+        -- As for 'AutoScript': the loop scripts do not use the datum.
+        sData = unsafeHashableScriptData $ ScriptDataNumber 0
+        within budget used = executionSteps used <= executionSteps budget && executionMemory used <= executionMemory budget
+      units <- preExecuteScriptAction protocolParameters script (getScriptData sData) (getScriptData redeemer)
+      let txUnits = ExecutionUnits (executionSteps units * fromIntegral txInputs) (executionMemory units * fromIntegral txInputs)
+      unless (within perTxBudget txUnits) $ liftTxGenError $ TxGenError $ concat
+        [ "MeasuredScript: ", show txInputs, " runs of ", scriptLabel, " take ", show txUnits
+        , ", above the budget per transaction ", show perTxBudget ]
+      return (sData, redeemer, units)
+
     AutoScript redeemerFile txInputs -> do
       redeemer <- liftIOSafe $ readScriptData redeemerFile
       let
-        strategy = case scriptSpecPlutusType of
+        strategy = case plutusType of
           LimitTxPerBlock_8 -> TargetTxsPerBlock 8
           LimitTxPerBlock_4 -> TargetTxsPerBlock 4
           _                 -> TargetTxExpenditure
@@ -484,7 +723,7 @@ makePlutusContext ScriptSpec{..} = do
           , autoBudgetRedeemer = unsafeHashableScriptData $ scriptDataModifyNumber (const 1_000_000) (getScriptData redeemer)
           , autoBudgetUpperBoundHint = Nothing
           }
-        scriptInfo = (show resolvedTo, show strategy)
+        scriptInfo = (scriptLabel, show strategy)
       traceDebug $ "Plutus auto mode : Available budget per Tx: " ++ show perTxBudget
                    ++ " -- split between inputs per Tx: " ++ show txInputs
 
@@ -496,7 +735,7 @@ makePlutusContext ScriptSpec{..} = do
           return (unsafeHashableScriptData autoBudgetDatum, autoBudgetRedeemer, preRun)
 
   let msg = mconcat [ "Plutus Benchmark :"
-                    , " Script: ", show scriptSpecFile
+                    , " Script: ", scriptLabel
                     , ", Datum: ", show scriptData
                     , ", Redeemer: ", show scriptRedeemer
                     , ", StatedBudget: ", show executionUnits
@@ -512,23 +751,21 @@ makePlutusContext ScriptSpec{..} = do
          e = executionUnits
          p = executionUnitPrices
          times w c = fromIntegral w % 1 * c
+  return (scriptData, scriptRedeemer, executionUnits, scriptFee)
 
-  case script of
-    ScriptInAnyLang lang (PlutusScript version script') ->
-      let
-        scriptWitness :: ScriptWitness WitCtxTxIn era
-        scriptWitness = case scriptLanguageSupportedInEra (shelleyBasedEra @era) lang of
-          Nothing -> error $ "runPlutusBenchmark: " ++ show version ++ " not supported in era: " ++ show (cardanoEra @era)
-          Just scriptLang -> PlutusScriptWitness
-                              scriptLang
-                              version
-                              (PScript script')               -- TODO: add capability for reference inputs from Babbage era onwards
-                              (ScriptDatumForTxIn $ Just scriptData)
-                              scriptRedeemer
-                              executionUnits
-      in return (ScriptWitness ScriptWitnessForSpending scriptWitness, script, getScriptData scriptData, scriptFee)
-    _ ->
-      liftTxGenError $ TxGenError "runPlutusBenchmark: only Plutus scripts supported"
+-- | The witness for spending an output locked by @script@: with the script
+-- included in the transaction, or, given the output that carries it as a
+-- reference script, by reference ('Plutus.mkPlutusSpendingWitness').
+plutusSpendingWitness :: forall era. IsShelleyBasedEra era
+  => ScriptInAnyLang
+  -> Maybe TxIn
+  -> HashableScriptData
+  -> HashableScriptData
+  -> ExecutionUnits
+  -> ActionM (Exp.AnyWitness (ShelleyLedgerEra era))
+plutusSpendingWitness script reference scriptData scriptRedeemer executionUnits = do
+  anyPlutusScript <- either liftTxGenError return $ Plutus.toAnyPlutusScript (shelleyBasedEra @era) script
+  return $ Plutus.mkPlutusSpendingWitness anyPlutusScript reference scriptData scriptRedeemer executionUnits
 
 preExecuteScriptAction ::
      ProtocolParameters

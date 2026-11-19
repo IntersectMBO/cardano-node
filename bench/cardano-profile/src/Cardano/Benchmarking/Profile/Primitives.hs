@@ -88,8 +88,10 @@ module Cardano.Benchmarking.Profile.Primitives (
 
   -- Generator params.
   , tps, txIn, txOut, txFee, txFeeOverwrite, initCooldown
+  , subTxs, txCount
   , plutusType, plutusScript
   , redeemerInt, redeemerFields
+  , plutusVariants, plutusVariantGroup, plutusVariantPadding
   , generatorEpochs
 
   -- Workload params.
@@ -200,10 +202,11 @@ empty = Types.Profile {
     , Types.outputs_per_tx = 0
     , Types.tx_fee = 0
     , Types.init_cooldown = 0
-    , Types.plutus = Types.Plutus Nothing Nothing Nothing
+    , Types.plutus = Types.Plutus Nothing Nothing Nothing Nothing
     , Types.epochs = 0
     , Types.tx_count = Nothing
     , Types.add_tx_size = 0
+    , Types.sub_txs = Nothing
   }
   , Types.workloads = []
   , Types.tracer = Types.Tracer {
@@ -743,6 +746,26 @@ txFee i = generator
     else g {Types.tx_fee = i}
   )
 
+-- | Sub-transactions each transaction carries (Dijkstra onwards): how many,
+-- and the inputs and outputs of each.
+subTxs :: HasCallStack => Integer -> Integer -> Integer -> Types.Profile -> Types.Profile
+subTxs count ins outs = generator
+  (\g ->
+    if isJust (Types.sub_txs g)
+    then error "subTxs: `sub_txs` already set."
+    else g {Types.sub_txs = Just $ Types.SubTxs count ins outs}
+  )
+
+-- | Total number of transactions to submit, instead of tps times the
+-- generator's duration.
+txCount :: HasCallStack => Integer -> Types.Profile -> Types.Profile
+txCount i = generator
+  (\g ->
+    if isJust (Types.tx_count g)
+    then error "txCount: `tx_count` already set."
+    else g {Types.tx_count = Just i}
+  )
+
 txFeeOverwrite :: HasCallStack => Integer -> Types.Profile -> Types.Profile
 txFeeOverwrite i = generator
   (\g ->
@@ -779,6 +802,38 @@ redeemerFields objs = plutus
   (\p -> p {Types.redeemer = Just (
     Types.RedeemerFields 0 objs
   )})
+
+-- | The benchmark spends @count@ variants of its Plutus script in turn, each
+-- of @size@ bytes (or as small as can be), finding the script in each
+-- transaction's witnesses or by reference.
+plutusVariants :: HasCallStack => Types.ScriptSource -> Integer -> Maybe Integer -> Types.Profile -> Types.Profile
+plutusVariants source count size = plutus
+  (\p ->
+    if isJust (Types.variants p)
+    then error "plutusVariants: `variants` already set."
+    else p {Types.variants = Just $ Types.Variants count size source Nothing Nothing}
+  )
+
+-- | Locks @n@ consecutive benchmarking inputs at one variant of the Plutus
+-- script, instead of as many as a transaction spends; with 1, each input of a
+-- transaction has a variant of its own.
+plutusVariantGroup :: HasCallStack => Integer -> Types.Profile -> Types.Profile
+plutusVariantGroup n = plutus
+  (\p -> case Types.variants p of
+    Nothing -> error "plutusVariantGroup: `variants` expected to be already set, but it isn't."
+    Just v@Types.Variants{Types.variants_group = Nothing} -> p {Types.variants = Just v {Types.variants_group = Just n}}
+    Just _ -> error "plutusVariantGroup: the variants' `group` already set."
+  )
+
+-- | Pads the variants of the Plutus script with this padding, instead of the
+-- tx-generator's default.
+plutusVariantPadding :: HasCallStack => Types.ScriptPadding -> Types.Profile -> Types.Profile
+plutusVariantPadding padding = plutus
+  (\p -> case Types.variants p of
+    Nothing -> error "plutusVariantPadding: `variants` expected to be already set, but it isn't."
+    Just v@Types.Variants{Types.variants_padding = Nothing} -> p {Types.variants = Just v {Types.variants_padding = Just padding}}
+    Just _ -> error "plutusVariantPadding: the variants' `padding` already set."
+  )
 
 generatorEpochs :: HasCallStack => Integer -> Types.Profile -> Types.Profile
 generatorEpochs i = generator
