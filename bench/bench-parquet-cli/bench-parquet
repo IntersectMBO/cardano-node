@@ -126,42 +126,8 @@ SET memory_limit = '$mem';
 SET threads = $threads;
 SET temp_directory = $(sqlq "$spill");
 .read $(sqlq "$sql_dir/lib.sql")
--- One pass: parse, sort and write, without materialising intermediate tables
--- (each would spill to disk for large logs).
-COPY (
-  WITH
-  -- Lines arrive numbered by awk: "<n>\x1f<line>".
-  l AS (SELECT l[1:i-1]::UBIGINT AS seq, l[i+1:] AS orig
-        FROM (SELECT l, instr(l, E'\x1f') AS i
-              FROM read_csv('/dev/stdin', columns={'l': 'VARCHAR'}, header=false, delim=E'\x1e',
-                            quote='', escape='', auto_detect=false, max_line_size=8388608))),
-  -- A JSON line: an object with a namespace and a parseable timestamp. Anything
-  -- else is a text line, kept verbatim.
-  c AS (SELECT seq, orig,
-               CASE WHEN left(orig, 1) = '{' AND json_valid(orig)
-                    THEN (orig->>'ns') IS NOT NULL AND TRY_CAST(orig->>'at' AS TIMESTAMP_NS) IS NOT NULL
-                    ELSE false
-               END AS j
-        FROM l),
-  r AS (SELECT seq, orig,
-               CASE WHEN j THEN CAST(orig->>'at' AS TIMESTAMP_NS) END AS "at",
-               CASE WHEN j THEN orig->>'ns'     END AS ns,
-               CASE WHEN j THEN orig->>'sev'    END AS sev,
-               CASE WHEN j THEN orig->>'thread' END AS thread,
-               CASE WHEN j THEN orig->>'host'   END AS host,
-               -- The payload verbatim; the regex assumes the canonical envelope order.
-               -- Otherwise the parsed form (not verbatim): the line then fails the
-               -- rebuild check below and is kept whole.
-               CASE WHEN j THEN coalesce(nullif(regexp_extract(orig, '"data":(.*),"sev":', 1), ''),
-                                         (orig->'data')::VARCHAR) END AS data
-        FROM c)
-  SELECT $(sqlq "$process") AS process, seq, "at", ns, sev, thread, host, data,
-         CASE WHEN ns IS NULL
-                OR bp_rebuild_line("at", ns, data, sev, thread, host) IS DISTINCT FROM orig
-              THEN orig
-         END AS line
-  FROM r
-  ORDER BY ns NULLS LAST, "at", seq)
+.read $(sqlq "$sql_dir/convert.sql")
+COPY (FROM bp_parse($(sqlq "$process"), '/dev/stdin') ORDER BY ns NULLS LAST, "at", seq)
 TO $(sqlq "$dst") (FORMAT parquet, COMPRESSION zstd, COMPRESSION_LEVEL $zstd, ROW_GROUP_SIZE $row_group_size);
 EOF
     # One read of the log feeds the sha256 (through a named pipe), the checks for
@@ -185,21 +151,10 @@ EOF
     sha=$(cut -d' ' -f1 "$shafile")
     test ${#sha} -eq 64 || { msg "$process: no sha256 computed"; return 1; }
 
-    # Statistics from the written file (reads only the small columns).
+    # Statistics from the written file.
     local stats_sql; stats_sql=$(stats_sql)
-    "$DUCKDB" -init /dev/null -c "
-        COPY (SELECT s.*,
-                     count(*)::UBIGINT                                        AS lines_total,
-                     count(o.ns)::UBIGINT                                     AS lines_json,
-                     (count(*) - count(o.ns))::UBIGINT                        AS lines_text,
-                     count(*) FILTER (WHERE o.ns IS NULL
-                                        AND o.seq > (SELECT min(seq) FROM read_parquet($(sqlq "$dst"))
-                                                     WHERE ns IS NOT NULL))::UBIGINT
-                                                                              AS lines_text_after_json,
-                     count(*) FILTER (WHERE o.ns IS NOT NULL AND o.line IS NOT NULL)::UBIGINT
-                                                                              AS lines_json_verbatim
-              FROM read_parquet($(sqlq "$dst")) o, ($stats_sql) s
-              GROUP BY ALL)
+    "$DUCKDB" -init /dev/null -c ".read $(sqlq "$sql_dir/lib.sql")" -c ".read $(sqlq "$sql_dir/convert.sql")" -c "
+        COPY (SELECT s.*, st.* FROM ($stats_sql) s, bp_file_stats($(sqlq "$dst")) st)
           TO $(sqlq "$stats") (FORMAT parquet);" >/dev/null
 }
 
@@ -512,8 +467,7 @@ restore_cmd() {
 
     "$DUCKDB" -init /dev/null >/dev/null <<EOF
 .read $(sqlq "$sql_dir/lib.sql")
-COPY (SELECT coalesce(line, bp_rebuild_line("at", ns, data, sev, thread, host))
-      FROM read_parquet($(sqlq "$pqf")) ORDER BY seq)
+COPY (SELECT bp_line(t) FROM read_parquet($(sqlq "$pqf")) t ORDER BY seq)
   TO $(sqlq "$outf") (FORMAT csv, HEADER false, QUOTE '', ESCAPE '', DELIMITER E'\x1e');
 EOF
     # COPY ends every line with a newline; the original may not have had a final one.
@@ -574,8 +528,7 @@ SET memory_limit = '2GiB';
 SET threads = 2;
 SET temp_directory = $(sqlq "$tmp");
 .read $(sqlq "$sql_dir/lib.sql")
-COPY (SELECT coalesce(line, bp_rebuild_line("at", ns, data, sev, thread, host))
-      FROM read_parquet($(sqlq "$pqf")) WHERE $filter ORDER BY seq)
+COPY (SELECT bp_line(t) FROM read_parquet($(sqlq "$pqf")) t WHERE $filter ORDER BY seq)
   TO '/dev/stdout' (FORMAT csv, HEADER false, QUOTE '', ESCAPE '', DELIMITER E'\x1e');
 EOF
     rm -rf "$tmp"
@@ -589,13 +542,8 @@ host_summary_cmd() {
     local pqf; pqf=$(process_parquet "$dir" "$process")
     "$DUCKDB" -init /dev/null -noheader -list <<EOF
 .read $(sqlq "$sql_dir/lib.sql")
-WITH j AS (SELECT ns, "at", seq FROM read_parquet($(sqlq "$pqf")) WHERE ns IS NOT NULL)
-SELECT json_object(
-         'tracefreqs', (SELECT coalesce(json_group_object(ns, n), '{}'::JSON)
-                        FROM (SELECT ns, count(*) AS n FROM j GROUP BY ns ORDER BY ns)),
-         'lines',      (SELECT count(*) FROM j),
-         'firstAt',    (SELECT bp_fmt_at(arg_min("at", seq)) FROM j),
-         'lastAt',     (SELECT bp_fmt_at(arg_max("at", seq)) FROM j));
+.read $(sqlq "$sql_dir/locli.sql")
+FROM bp_host_summary($(sqlq "$pqf"));
 EOF
 }
 
@@ -644,8 +592,8 @@ excerpt_cmd() {
     {
         echo ".read $(sqlq "$sql_dir/lib.sql")"
         echo "CREATE TEMP TABLE w AS
-                SELECT process, seq, coalesce(line, bp_rebuild_line(\"at\", ns, data, sev, thread, host)) AS l
-                FROM read_parquet($(sqlq "$pq/*.parquet"))
+                SELECT process, seq, bp_line(t) AS l
+                FROM read_parquet($(sqlq "$pq/*.parquet")) t
                 WHERE $pfilter
                   AND epoch_ns(\"at\") BETWEEN $anchor - CAST($before * 1e9 AS BIGINT)
                                            AND $anchor + CAST($after  * 1e9 AS BIGINT);"
