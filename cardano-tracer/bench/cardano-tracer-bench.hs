@@ -61,6 +61,7 @@ main = do
         , teStateDir              = Nothing
         , teMetricsHelp           = []
         , teTimeseriesHandle      = Nothing
+        , teAlarmRegistry         = Nothing
         }
 
   removePathForcibly root
@@ -118,6 +119,7 @@ main = do
     , hasEKG           = Nothing
     , hasPrometheus    = Nothing
     , hasTimeseries    = Nothing
+    , alarms           = Nothing
     , tlsCertificate   = Nothing
     , logging          = NE.fromList [LoggingParams root FileMode format]
     , rotation         = Nothing
