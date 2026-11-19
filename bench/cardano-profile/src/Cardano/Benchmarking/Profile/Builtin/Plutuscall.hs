@@ -27,12 +27,12 @@ compressedFor15Epochs =
   . P.generatorEpochs 15 . P.initCooldown 5
   . P.shutdownOnSlot 9000
 
--- | 40 minutes, the last 30 of them (from slot 600) measured.
-compressedFor4Epochs :: Types.Profile -> Types.Profile
-compressedFor4Epochs =
+-- | 50 minutes, the last 30 of them (from slot 1200, epoch3+) measured.
+compressedFor5Epochs :: Types.Profile -> Types.Profile
+compressedFor5Epochs =
     V.timescaleCompressed
-  . P.generatorEpochs 4 . P.initCooldown 5
-  . P.shutdownOnSlot 2400
+  . P.generatorEpochs 5 . P.initCooldown 5
+  . P.shutdownOnSlot 3000
 
 --------------------------------------------------------------------------------
 
@@ -85,12 +85,12 @@ profilesPlutuscall =
       -- transactions fill a block's 1 MiB. 128 variants keep the transactions
       -- of a block from sharing one, which the ledger would decode once. 4 tps
       -- keeps the blocks full, about 66 transactions every 20 seconds.
-      refScript1MiB   = plutusCallFor compressedFor4Epochs
+      refScript1MiB   = plutusCallFor compressedFor5Epochs
                       & P.plutusVariants Types.ScriptByReference 128 (Just 15_900)
                       . P.plutusType "FixedLoop" . P.plutusScript "LoopV3" . P.redeemerInt 1_000_000
                       . V.plutusBase . P.txFee 600_000 . P.tps 4
-                      . P.analysisEpoch2Plus
-                      . P.desc "Small dataset, 4 epochs, blocks full of reference scripts"
+                      . P.analysisEpoch3Plus
+                      . P.desc "Small dataset, 5 epochs, blocks full of reference scripts"
 
       -- The same, with the variants padded with a spine of applications over
       -- error terms: two terms to decode per byte, about 3.3 times the
