@@ -428,12 +428,15 @@ convert_run() {
 session_init() {
     local dir=$1 file=$2
     local pq=$dir/parquets
+    local pql session
+    pql=$(sqlq "$pq")
+    session=$(<"$sql_dir/session.sql")
     {
-        echo "SET VARIABLE parquets = $(sqlq "$pq");"
         echo ".read $(sqlq "$sql_dir/lib.sql")"
-        echo ".read $(sqlq "$sql_dir/session.sql")"
+        # Quoted replacement: no & expansion (bash 5.2 patsub_replacement).
+        printf '%s\n' "${session//@PARQUETS@/"$pql"}"
         if test -f "$pq/generator.parquet"
-        then echo "CREATE OR REPLACE VIEW raw_generator AS SELECT * FROM read_parquet(getvariable('parquets') || '/generator.parquet');"
+        then echo "CREATE OR REPLACE VIEW raw_generator AS SELECT * FROM read_parquet($(sqlq "$pq/generator.parquet"));"
         else echo "CREATE OR REPLACE VIEW raw_generator AS SELECT * FROM raw WHERE false;"
         fi
         # One view per namespace the nodes emit, named by the quoted namespace.
