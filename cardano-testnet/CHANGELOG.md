@@ -1,5 +1,11 @@
 # Changelog for cardano-testnet
 
+## 11.3.1 -- 2026-11-18
+
+- Bumped `cardano-protocol` to 0.2.0.2.
+  (compatible)
+  [PR 6777](https://github.com/IntersectMBO/cardano-node/pull/6777)
+
 ## 11.3.0 -- 2026-11-16
 
 - Bumped `ouroboros-consensus` to 5.4.0.1.

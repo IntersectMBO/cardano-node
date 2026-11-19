@@ -1,8 +1,0 @@
-pr: 6774
-kind:
-  - release
-description: |
-  Release 11.3.0, cut alongside cardano-node 11.2.2.
-
-  Picks up ouroboros-consensus 5.4.0.1. The major version bump follows from
-  the breaking changes merged since 11.2.1 (PRs 6637, 6716 and 6769).

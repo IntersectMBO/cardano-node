@@ -1,0 +1,7 @@
+pr: 6777
+kind:
+  - release
+description: |
+  Release 11.2.3, a patch release on top of 11.2.2.
+
+  Picks up cardano-protocol 0.2.0.2.

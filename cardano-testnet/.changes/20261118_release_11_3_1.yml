@@ -1,0 +1,7 @@
+pr: 6777
+kind:
+  - release
+description: |
+  Release 11.3.1, cut alongside cardano-node 11.2.3.
+
+  Picks up cardano-protocol 0.2.0.2.
