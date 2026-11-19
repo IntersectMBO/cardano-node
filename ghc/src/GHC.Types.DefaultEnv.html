@@ -1,0 +1,340 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span id="local-6989586621682609997"><span id="local-6989586621682609998"></span></span><span class="hs-pragma">{-# LANGUAGE DeriveDataTypeable #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="GHC.Types.DefaultEnv.html"><span class="hs-identifier">GHC.Types.DefaultEnv</span></a></span><span>
+</span><span id="line-4"></span><span>   </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="GHC.Types.DefaultEnv.html#ClassDefaults"><span class="hs-identifier">ClassDefaults</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-5"></span><span>   </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Types.DefaultEnv.html#DefaultEnv"><span class="hs-identifier">DefaultEnv</span></a></span><span>
+</span><span id="line-6"></span><span>   </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Types.DefaultEnv.html#emptyDefaultEnv"><span class="hs-identifier">emptyDefaultEnv</span></a></span><span>
+</span><span id="line-7"></span><span>   </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Types.DefaultEnv.html#isEmptyDefaultEnv"><span class="hs-identifier">isEmptyDefaultEnv</span></a></span><span>
+</span><span id="line-8"></span><span>   </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Types.DefaultEnv.html#defaultEnv"><span class="hs-identifier">defaultEnv</span></a></span><span>
+</span><span id="line-9"></span><span>   </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Types.DefaultEnv.html#unitDefaultEnv"><span class="hs-identifier">unitDefaultEnv</span></a></span><span>
+</span><span id="line-10"></span><span>   </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Types.DefaultEnv.html#lookupDefaultEnv"><span class="hs-identifier">lookupDefaultEnv</span></a></span><span>
+</span><span id="line-11"></span><span>   </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Types.DefaultEnv.html#filterDefaultEnv"><span class="hs-identifier">filterDefaultEnv</span></a></span><span>
+</span><span id="line-12"></span><span>   </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Types.DefaultEnv.html#defaultList"><span class="hs-identifier">defaultList</span></a></span><span>
+</span><span id="line-13"></span><span>   </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Types.DefaultEnv.html#plusDefaultEnv"><span class="hs-identifier">plusDefaultEnv</span></a></span><span>
+</span><span id="line-14"></span><span>   </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Types.DefaultEnv.html#mkDefaultEnv"><span class="hs-identifier">mkDefaultEnv</span></a></span><span>
+</span><span id="line-15"></span><span>   </span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Core.Class.html"><span class="hs-identifier">GHC.Core.Class</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Core.Class.html#Class"><span class="hs-identifier">Class</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Core.Class.html#className"><span class="hs-identifier">className</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Prelude.html"><span class="hs-identifier">GHC.Prelude</span></a></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Hs.Extension.html"><span class="hs-identifier">GHC.Hs.Extension</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Hs.Extension.html#GhcRn"><span class="hs-identifier">GhcRn</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Tc.Utils.TcType.html"><span class="hs-identifier">GHC.Tc.Utils.TcType</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Core.TyCo.Rep.html#Type"><span class="hs-identifier">Type</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Types.Name.html"><span class="hs-identifier">GHC.Types.Name</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Types.Name.html#Name"><span class="hs-identifier">Name</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Types.Name.html#nameUnique"><span class="hs-identifier">nameUnique</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Types.Name.html#stableNameCmp"><span class="hs-identifier">stableNameCmp</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Types.Name.Env.html"><span class="hs-identifier">GHC.Types.Name.Env</span></a></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Types.Unique.FM.html"><span class="hs-identifier">GHC.Types.Unique.FM</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Types.Unique.FM.html#lookupUFM_Directly"><span class="hs-identifier">lookupUFM_Directly</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Unit.Module.Warnings.html"><span class="hs-identifier">GHC.Unit.Module.Warnings</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Unit.Module.Warnings.html#WarningTxt"><span class="hs-identifier">WarningTxt</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Unit.Types.html"><span class="hs-identifier">GHC.Unit.Types</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Unit.Types.html#Module"><span class="hs-identifier">Module</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Utils.Outputable.html"><span class="hs-identifier">GHC.Utils.Outputable</span></a></span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.21.2.0-inplace/src/Data.Data.html"><span class="hs-identifier">Data.Data</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Data</span></span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.21.2.0-inplace/src/Data.List.html"><span class="hs-identifier">Data.List</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">sortBy</span></span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.21.2.0-inplace/src/Data.Function.html"><span class="hs-identifier">Data.Function</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">on</span></span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span class="hs-comment">-- See Note [Named default declarations] in GHC.Tc.Gen.Default</span><span>
+</span><span id="line-34"></span><span>
+</span><span id="line-35"></span><span class="hs-comment">-- | Default environment mapping class name @Name@ to their default type lists</span><span>
+</span><span id="line-36"></span><span class="hs-comment">--</span><span>
+</span><span id="line-37"></span><span class="hs-comment">-- NB: this includes Haskell98 default declarations, at the 'Num' key.</span><span>
+</span><span id="line-38"></span><span class="hs-keyword">type</span><span> </span><span id="DefaultEnv"><span class="annot"><a href="GHC.Types.DefaultEnv.html#DefaultEnv"><span class="hs-identifier hs-var">DefaultEnv</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="GHC.Types.Name.Env.html#NameEnv"><span class="hs-identifier hs-type">NameEnv</span></a></span><span> </span><span class="annot"><a href="GHC.Types.DefaultEnv.html#ClassDefaults"><span class="hs-identifier hs-type">ClassDefaults</span></a></span><span>
+</span><span id="line-39"></span><span>
+</span><span id="line-40"></span><span class="annot"><span class="hs-comment">-- | Defaulting type assignments for the given class.</span></span><span>
+</span><span id="line-41"></span><span class="hs-keyword">data</span><span> </span><span id="ClassDefaults"><span class="annot"><a href="GHC.Types.DefaultEnv.html#ClassDefaults"><span class="hs-identifier hs-var">ClassDefaults</span></a></span></span><span>
+</span><span id="line-42"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="ClassDefaults"><span class="annot"><a href="GHC.Types.DefaultEnv.html#ClassDefaults"><span class="hs-identifier hs-var">ClassDefaults</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="cd_class"><span class="annot"><span class="annottext">ClassDefaults -&gt; Class
+</span><a href="GHC.Types.DefaultEnv.html#cd_class"><span class="hs-identifier hs-var hs-var">cd_class</span></a></span></span><span>   </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Core.Class.html#Class"><span class="hs-identifier hs-type">Class</span></a></span><span> </span><span class="annot"><span class="hs-comment">-- ^ The class whose defaults are being defined</span></span><span>
+</span><span id="line-43"></span><span>                  </span><span class="hs-special">,</span><span> </span><span id="cd_types"><span class="annot"><span class="annottext">ClassDefaults -&gt; [Type]
+</span><a href="GHC.Types.DefaultEnv.html#cd_types"><span class="hs-identifier hs-var hs-var">cd_types</span></a></span></span><span>   </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="GHC.Core.TyCo.Rep.html#Type"><span class="hs-identifier hs-type">Type</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-44"></span><span>                  </span><span class="hs-special">,</span><span> </span><span id="cd_module"><span class="annot"><span class="annottext">ClassDefaults -&gt; Maybe Module
+</span><a href="GHC.Types.DefaultEnv.html#cd_module"><span class="hs-identifier hs-var hs-var">cd_module</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><a href="GHC.Unit.Types.html#Module"><span class="hs-identifier hs-type">Module</span></a></span><span>
+</span><span id="line-45"></span><span>                    </span><span class="hs-comment">-- ^ @Nothing@ for built-in,</span><span>
+</span><span id="line-46"></span><span>                    </span><span class="hs-comment">-- @Just@ the current module or the module whence the default was imported</span><span>
+</span><span id="line-47"></span><span>                    </span><span class="hs-comment">-- see Note [Default exports] in GHC.Tc.Gen.Export</span><span>
+</span><span id="line-48"></span><span>                  </span><span class="hs-special">,</span><span> </span><span id="cd_warn"><span class="annot"><span class="annottext">ClassDefaults -&gt; Maybe (WarningTxt GhcRn)
+</span><a href="GHC.Types.DefaultEnv.html#cd_warn"><span class="hs-identifier hs-var hs-var">cd_warn</span></a></span></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Unit.Module.Warnings.html#WarningTxt"><span class="hs-identifier hs-type">WarningTxt</span></a></span><span> </span><span class="annot"><a href="GHC.Hs.Extension.html#GhcRn"><span class="hs-identifier hs-type">GhcRn</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-49"></span><span>                    </span><span class="annot"><span class="hs-comment">-- ^ Warning emitted when the default is used</span></span><span>
+</span><span id="line-50"></span><span>                  </span><span class="hs-special">}</span><span>
+</span><span id="line-51"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span id="local-6989586621682610022"><span id="local-6989586621682610034"><span id="local-6989586621682610043"><span id="local-6989586621682610045"><span id="local-6989586621682610047"><span id="local-6989586621682610053"><span id="local-6989586621682610058"><span id="local-6989586621682610061"><span id="local-6989586621682610064"><span id="local-6989586621682610067"><span id="local-6989586621682610070"><span id="local-6989586621682610073"><span id="local-6989586621682610078"><span id="local-6989586621682610083"><span class="annot"><span class="annottext">Typeable ClassDefaults
+Typeable ClassDefaults =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; ClassDefaults -&gt; c ClassDefaults)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c ClassDefaults)
+-&gt; (ClassDefaults -&gt; Constr)
+-&gt; (ClassDefaults -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c ClassDefaults))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e))
+    -&gt; Maybe (c ClassDefaults))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; ClassDefaults -&gt; ClassDefaults)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; ClassDefaults -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; ClassDefaults -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; ClassDefaults -&gt; [u])
+-&gt; (forall u.
+    Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; ClassDefaults -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; ClassDefaults -&gt; m ClassDefaults)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; ClassDefaults -&gt; m ClassDefaults)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; ClassDefaults -&gt; m ClassDefaults)
+-&gt; Data ClassDefaults
+ClassDefaults -&gt; Constr
+ClassDefaults -&gt; DataType
+(forall b. Data b =&gt; b -&gt; b) -&gt; ClassDefaults -&gt; ClassDefaults
+forall a.
+Typeable a =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; a -&gt; c a)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c a)
+-&gt; (a -&gt; Constr)
+-&gt; (a -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c a))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c a))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; a -&gt; a)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; Data a
+forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; ClassDefaults -&gt; u
+forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; ClassDefaults -&gt; [u]
+forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; ClassDefaults -&gt; r
+forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; ClassDefaults -&gt; r
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; ClassDefaults -&gt; m ClassDefaults
+forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; ClassDefaults -&gt; m ClassDefaults
+forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c ClassDefaults
+forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; ClassDefaults -&gt; c ClassDefaults
+forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c ClassDefaults)
+forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c ClassDefaults)
+$cgfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; ClassDefaults -&gt; c ClassDefaults
+gfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; ClassDefaults -&gt; c ClassDefaults
+$cgunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c ClassDefaults
+gunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c ClassDefaults
+$ctoConstr :: ClassDefaults -&gt; Constr
+toConstr :: ClassDefaults -&gt; Constr
+$cdataTypeOf :: ClassDefaults -&gt; DataType
+dataTypeOf :: ClassDefaults -&gt; DataType
+$cdataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c ClassDefaults)
+dataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c ClassDefaults)
+$cdataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c ClassDefaults)
+dataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c ClassDefaults)
+$cgmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; ClassDefaults -&gt; ClassDefaults
+gmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; ClassDefaults -&gt; ClassDefaults
+$cgmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; ClassDefaults -&gt; r
+gmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; ClassDefaults -&gt; r
+$cgmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; ClassDefaults -&gt; r
+gmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; ClassDefaults -&gt; r
+$cgmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; ClassDefaults -&gt; [u]
+gmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; ClassDefaults -&gt; [u]
+$cgmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; ClassDefaults -&gt; u
+gmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; ClassDefaults -&gt; u
+$cgmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; ClassDefaults -&gt; m ClassDefaults
+gmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; ClassDefaults -&gt; m ClassDefaults
+$cgmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; ClassDefaults -&gt; m ClassDefaults
+gmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; ClassDefaults -&gt; m ClassDefaults
+$cgmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; ClassDefaults -&gt; m ClassDefaults
+gmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; ClassDefaults -&gt; m ClassDefaults
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Data</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span>
+</span><span id="line-52"></span><span>
+</span><span id="line-53"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="GHC.Utils.Outputable.html#Outputable"><span class="hs-identifier hs-type">Outputable</span></a></span><span> </span><span class="annot"><a href="GHC.Types.DefaultEnv.html#ClassDefaults"><span class="hs-identifier hs-type">ClassDefaults</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-54"></span><span>  </span><span id="local-6989586621682610120"><span class="annot"><span class="annottext">ppr :: ClassDefaults -&gt; SDoc
+</span><a href="#local-6989586621682610120"><span class="hs-identifier hs-var hs-var hs-var">ppr</span></a></span></span><span> </span><span class="annot"><a href="GHC.Types.DefaultEnv.html#ClassDefaults"><span class="hs-identifier hs-type">ClassDefaults</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><span class="annottext">cd_class :: ClassDefaults -&gt; Class
+</span><a href="GHC.Types.DefaultEnv.html#cd_class"><span class="hs-identifier hs-var">cd_class</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="local-6989586621682610122"><span class="annot"><span class="annottext">Class
+</span><a href="#local-6989586621682610122"><span class="hs-identifier hs-var">cls</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">cd_types :: ClassDefaults -&gt; [Type]
+</span><a href="GHC.Types.DefaultEnv.html#cd_types"><span class="hs-identifier hs-var">cd_types</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="local-6989586621682610123"><span class="annot"><span class="annottext">[Type]
+</span><a href="#local-6989586621682610123"><span class="hs-identifier hs-var">tys</span></a></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; SDoc
+forall doc. IsLine doc =&gt; String -&gt; doc
+</span><a href="GHC.Utils.Outputable.html#text"><span class="hs-identifier hs-var">text</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;default&quot;</span></span><span> </span><span class="annot"><span class="annottext">SDoc -&gt; SDoc -&gt; SDoc
+forall doc. IsLine doc =&gt; doc -&gt; doc -&gt; doc
+</span><a href="GHC.Utils.Outputable.html#%3C%2B%3E"><span class="hs-operator hs-var">&lt;+&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Class -&gt; SDoc
+forall a. Outputable a =&gt; a -&gt; SDoc
+</span><a href="GHC.Utils.Outputable.html#ppr"><span class="hs-identifier hs-var">ppr</span></a></span><span> </span><span class="annot"><span class="annottext">Class
+</span><a href="#local-6989586621682610122"><span class="hs-identifier hs-var">cls</span></a></span><span>
+</span><span id="line-55"></span><span>        </span><span class="annot"><span class="annottext">SDoc -&gt; SDoc -&gt; SDoc
+forall doc. IsLine doc =&gt; doc -&gt; doc -&gt; doc
+</span><a href="GHC.Utils.Outputable.html#%3C%2B%3E"><span class="hs-operator hs-var">&lt;+&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">SDoc -&gt; SDoc
+forall doc. IsLine doc =&gt; doc -&gt; doc
+</span><a href="GHC.Utils.Outputable.html#parens"><span class="hs-identifier hs-var">parens</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Type] -&gt; SDoc
+forall a. Outputable a =&gt; [a] -&gt; SDoc
+</span><a href="GHC.Utils.Outputable.html#interpp%27SP"><span class="hs-identifier hs-var">interpp'SP</span></a></span><span> </span><span class="annot"><span class="annottext">[Type]
+</span><a href="#local-6989586621682610123"><span class="hs-identifier hs-var">tys</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-56"></span><span>
+</span><span id="line-57"></span><span class="annot"><a href="GHC.Types.DefaultEnv.html#emptyDefaultEnv"><span class="hs-identifier hs-type">emptyDefaultEnv</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Types.DefaultEnv.html#DefaultEnv"><span class="hs-identifier hs-type">DefaultEnv</span></a></span><span>
+</span><span id="line-58"></span><span id="emptyDefaultEnv"><span class="annot"><span class="annottext">emptyDefaultEnv :: DefaultEnv
+</span><a href="GHC.Types.DefaultEnv.html#emptyDefaultEnv"><span class="hs-identifier hs-var hs-var">emptyDefaultEnv</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DefaultEnv
+forall a. NameEnv a
+</span><a href="GHC.Types.Name.Env.html#emptyNameEnv"><span class="hs-identifier hs-var">emptyNameEnv</span></a></span><span>
+</span><span id="line-59"></span><span>
+</span><span id="line-60"></span><span class="annot"><a href="GHC.Types.DefaultEnv.html#isEmptyDefaultEnv"><span class="hs-identifier hs-type">isEmptyDefaultEnv</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Types.DefaultEnv.html#DefaultEnv"><span class="hs-identifier hs-type">DefaultEnv</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span>
+</span><span id="line-61"></span><span id="isEmptyDefaultEnv"><span class="annot"><span class="annottext">isEmptyDefaultEnv :: DefaultEnv -&gt; Bool
+</span><a href="GHC.Types.DefaultEnv.html#isEmptyDefaultEnv"><span class="hs-identifier hs-var hs-var">isEmptyDefaultEnv</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DefaultEnv -&gt; Bool
+forall a. NameEnv a -&gt; Bool
+</span><a href="GHC.Types.Name.Env.html#isEmptyNameEnv"><span class="hs-identifier hs-var">isEmptyNameEnv</span></a></span><span>
+</span><span id="line-62"></span><span>
+</span><span id="line-63"></span><span class="annot"><a href="GHC.Types.DefaultEnv.html#unitDefaultEnv"><span class="hs-identifier hs-type">unitDefaultEnv</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Types.DefaultEnv.html#ClassDefaults"><span class="hs-identifier hs-type">ClassDefaults</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Types.DefaultEnv.html#DefaultEnv"><span class="hs-identifier hs-type">DefaultEnv</span></a></span><span>
+</span><span id="line-64"></span><span id="unitDefaultEnv"><span class="annot"><span class="annottext">unitDefaultEnv :: ClassDefaults -&gt; DefaultEnv
+</span><a href="GHC.Types.DefaultEnv.html#unitDefaultEnv"><span class="hs-identifier hs-var hs-var">unitDefaultEnv</span></a></span></span><span> </span><span id="local-6989586621682610130"><span class="annot"><span class="annottext">ClassDefaults
+</span><a href="#local-6989586621682610130"><span class="hs-identifier hs-var">d</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Name -&gt; ClassDefaults -&gt; DefaultEnv
+forall a. Name -&gt; a -&gt; NameEnv a
+</span><a href="GHC.Types.Name.Env.html#unitNameEnv"><span class="hs-identifier hs-var">unitNameEnv</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Class -&gt; Name
+</span><a href="GHC.Core.Class.html#className"><span class="hs-identifier hs-var">className</span></a></span><span> </span><span class="annot"><span class="annottext">(Class -&gt; Name) -&gt; Class -&gt; Name
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">ClassDefaults -&gt; Class
+</span><a href="GHC.Types.DefaultEnv.html#cd_class"><span class="hs-identifier hs-var">cd_class</span></a></span><span> </span><span class="annot"><span class="annottext">ClassDefaults
+</span><a href="#local-6989586621682610130"><span class="hs-identifier hs-var">d</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">ClassDefaults
+</span><a href="#local-6989586621682610130"><span class="hs-identifier hs-var">d</span></a></span><span>
+</span><span id="line-65"></span><span>
+</span><span id="line-66"></span><span class="annot"><a href="GHC.Types.DefaultEnv.html#defaultEnv"><span class="hs-identifier hs-type">defaultEnv</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="GHC.Types.DefaultEnv.html#ClassDefaults"><span class="hs-identifier hs-type">ClassDefaults</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Types.DefaultEnv.html#DefaultEnv"><span class="hs-identifier hs-type">DefaultEnv</span></a></span><span>
+</span><span id="line-67"></span><span id="defaultEnv"><span class="annot"><span class="annottext">defaultEnv :: [ClassDefaults] -&gt; DefaultEnv
+</span><a href="GHC.Types.DefaultEnv.html#defaultEnv"><span class="hs-identifier hs-var hs-var">defaultEnv</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(ClassDefaults -&gt; Name) -&gt; [ClassDefaults] -&gt; DefaultEnv
+forall a. (a -&gt; Name) -&gt; [a] -&gt; NameEnv a
+</span><a href="GHC.Types.Name.Env.html#mkNameEnvWith"><span class="hs-identifier hs-var">mkNameEnvWith</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Class -&gt; Name
+</span><a href="GHC.Core.Class.html#className"><span class="hs-identifier hs-var">className</span></a></span><span> </span><span class="annot"><span class="annottext">(Class -&gt; Name)
+-&gt; (ClassDefaults -&gt; Class) -&gt; ClassDefaults -&gt; Name
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">ClassDefaults -&gt; Class
+</span><a href="GHC.Types.DefaultEnv.html#cd_class"><span class="hs-identifier hs-var">cd_class</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-68"></span><span>
+</span><span id="line-69"></span><span class="annot"><a href="GHC.Types.DefaultEnv.html#defaultList"><span class="hs-identifier hs-type">defaultList</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Types.DefaultEnv.html#DefaultEnv"><span class="hs-identifier hs-type">DefaultEnv</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="GHC.Types.DefaultEnv.html#ClassDefaults"><span class="hs-identifier hs-type">ClassDefaults</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-70"></span><span id="defaultList"><span class="annot"><span class="annottext">defaultList :: DefaultEnv -&gt; [ClassDefaults]
+</span><a href="GHC.Types.DefaultEnv.html#defaultList"><span class="hs-identifier hs-var hs-var">defaultList</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(ClassDefaults -&gt; ClassDefaults -&gt; Ordering)
+-&gt; [ClassDefaults] -&gt; [ClassDefaults]
+forall a. (a -&gt; a -&gt; Ordering) -&gt; [a] -&gt; [a]
+</span><span class="hs-identifier hs-var">sortBy</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Name -&gt; Name -&gt; Ordering
+</span><a href="GHC.Types.Name.html#stableNameCmp"><span class="hs-identifier hs-var">stableNameCmp</span></a></span><span> </span><span class="annot"><span class="annottext">(Name -&gt; Name -&gt; Ordering)
+-&gt; (ClassDefaults -&gt; Name)
+-&gt; ClassDefaults
+-&gt; ClassDefaults
+-&gt; Ordering
+forall b c a. (b -&gt; b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">`on`</span></span><span> </span><span class="annot"><span class="annottext">Class -&gt; Name
+</span><a href="GHC.Core.Class.html#className"><span class="hs-identifier hs-var">className</span></a></span><span> </span><span class="annot"><span class="annottext">(Class -&gt; Name)
+-&gt; (ClassDefaults -&gt; Class) -&gt; ClassDefaults -&gt; Name
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">ClassDefaults -&gt; Class
+</span><a href="GHC.Types.DefaultEnv.html#cd_class"><span class="hs-identifier hs-var">cd_class</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">([ClassDefaults] -&gt; [ClassDefaults])
+-&gt; (DefaultEnv -&gt; [ClassDefaults]) -&gt; DefaultEnv -&gt; [ClassDefaults]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">DefaultEnv -&gt; [ClassDefaults]
+forall a. NameEnv a -&gt; [a]
+</span><a href="GHC.Types.Name.Env.html#nonDetNameEnvElts"><span class="hs-identifier hs-var">nonDetNameEnvElts</span></a></span><span>
+</span><span id="line-71"></span><span>              </span><span class="hs-comment">-- sortBy recovers determinism</span><span>
+</span><span id="line-72"></span><span>
+</span><span id="line-73"></span><span class="annot"><a href="GHC.Types.DefaultEnv.html#lookupDefaultEnv"><span class="hs-identifier hs-type">lookupDefaultEnv</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Types.DefaultEnv.html#DefaultEnv"><span class="hs-identifier hs-type">DefaultEnv</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Types.Name.html#Name"><span class="hs-identifier hs-type">Name</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><a href="GHC.Types.DefaultEnv.html#ClassDefaults"><span class="hs-identifier hs-type">ClassDefaults</span></a></span><span>
+</span><span id="line-74"></span><span id="lookupDefaultEnv"><span class="annot"><span class="annottext">lookupDefaultEnv :: DefaultEnv -&gt; Name -&gt; Maybe ClassDefaults
+</span><a href="GHC.Types.DefaultEnv.html#lookupDefaultEnv"><span class="hs-identifier hs-var hs-var">lookupDefaultEnv</span></a></span></span><span> </span><span id="local-6989586621682610135"><span class="annot"><span class="annottext">DefaultEnv
+</span><a href="#local-6989586621682610135"><span class="hs-identifier hs-var">env</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DefaultEnv -&gt; Unique -&gt; Maybe ClassDefaults
+forall {k} (key :: k) elt. UniqFM key elt -&gt; Unique -&gt; Maybe elt
+</span><a href="GHC.Types.Unique.FM.html#lookupUFM_Directly"><span class="hs-identifier hs-var">lookupUFM_Directly</span></a></span><span> </span><span class="annot"><span class="annottext">DefaultEnv
+</span><a href="#local-6989586621682610135"><span class="hs-identifier hs-var">env</span></a></span><span> </span><span class="annot"><span class="annottext">(Unique -&gt; Maybe ClassDefaults)
+-&gt; (Name -&gt; Unique) -&gt; Name -&gt; Maybe ClassDefaults
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Name -&gt; Unique
+</span><a href="GHC.Types.Name.html#nameUnique"><span class="hs-identifier hs-var">nameUnique</span></a></span><span>
+</span><span id="line-75"></span><span>
+</span><span id="line-76"></span><span class="annot"><a href="GHC.Types.DefaultEnv.html#filterDefaultEnv"><span class="hs-identifier hs-type">filterDefaultEnv</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Types.DefaultEnv.html#ClassDefaults"><span class="hs-identifier hs-type">ClassDefaults</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Types.DefaultEnv.html#DefaultEnv"><span class="hs-identifier hs-type">DefaultEnv</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Types.DefaultEnv.html#DefaultEnv"><span class="hs-identifier hs-type">DefaultEnv</span></a></span><span>
+</span><span id="line-77"></span><span id="filterDefaultEnv"><span class="annot"><span class="annottext">filterDefaultEnv :: (ClassDefaults -&gt; Bool) -&gt; DefaultEnv -&gt; DefaultEnv
+</span><a href="GHC.Types.DefaultEnv.html#filterDefaultEnv"><span class="hs-identifier hs-var hs-var">filterDefaultEnv</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(ClassDefaults -&gt; Bool) -&gt; DefaultEnv -&gt; DefaultEnv
+forall elt. (elt -&gt; Bool) -&gt; NameEnv elt -&gt; NameEnv elt
+</span><a href="GHC.Types.Name.Env.html#filterNameEnv"><span class="hs-identifier hs-var">filterNameEnv</span></a></span><span>
+</span><span id="line-78"></span><span>
+</span><span id="line-79"></span><span class="annot"><a href="GHC.Types.DefaultEnv.html#plusDefaultEnv"><span class="hs-identifier hs-type">plusDefaultEnv</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Types.DefaultEnv.html#DefaultEnv"><span class="hs-identifier hs-type">DefaultEnv</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Types.DefaultEnv.html#DefaultEnv"><span class="hs-identifier hs-type">DefaultEnv</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Types.DefaultEnv.html#DefaultEnv"><span class="hs-identifier hs-type">DefaultEnv</span></a></span><span>
+</span><span id="line-80"></span><span id="plusDefaultEnv"><span class="annot"><span class="annottext">plusDefaultEnv :: DefaultEnv -&gt; DefaultEnv -&gt; DefaultEnv
+</span><a href="GHC.Types.DefaultEnv.html#plusDefaultEnv"><span class="hs-identifier hs-var hs-var">plusDefaultEnv</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DefaultEnv -&gt; DefaultEnv -&gt; DefaultEnv
+forall a. NameEnv a -&gt; NameEnv a -&gt; NameEnv a
+</span><a href="GHC.Types.Name.Env.html#plusNameEnv"><span class="hs-identifier hs-var">plusNameEnv</span></a></span><span>
+</span><span id="line-81"></span><span>
+</span><span id="line-82"></span><span class="hs-comment">-- | Create a 'DefaultEnv' from a list of (Name, ClassDefaults) pairs</span><span>
+</span><span id="line-83"></span><span class="hs-comment">-- it is useful if we don't want to poke into the 'ClassDefaults' structure</span><span>
+</span><span id="line-84"></span><span class="hs-comment">-- to get the 'Name' of the class, it can be problematic, see #25858</span><span>
+</span><span id="line-85"></span><span class="annot"><a href="GHC.Types.DefaultEnv.html#mkDefaultEnv"><span class="hs-identifier hs-type">mkDefaultEnv</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="GHC.Types.Name.html#Name"><span class="hs-identifier hs-type">Name</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Types.DefaultEnv.html#ClassDefaults"><span class="hs-identifier hs-type">ClassDefaults</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Types.DefaultEnv.html#DefaultEnv"><span class="hs-identifier hs-type">DefaultEnv</span></a></span><span>
+</span><span id="line-86"></span><span id="mkDefaultEnv"><span class="annot"><span class="annottext">mkDefaultEnv :: [(Name, ClassDefaults)] -&gt; DefaultEnv
+</span><a href="GHC.Types.DefaultEnv.html#mkDefaultEnv"><span class="hs-identifier hs-var hs-var">mkDefaultEnv</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[(Name, ClassDefaults)] -&gt; DefaultEnv
+forall a. [(Name, a)] -&gt; NameEnv a
+</span><a href="GHC.Types.Name.Env.html#mkNameEnv"><span class="hs-identifier hs-var">mkNameEnv</span></a></span><span>
+</span><span id="line-87"></span></pre></body></html>
