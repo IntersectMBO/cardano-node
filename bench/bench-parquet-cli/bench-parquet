@@ -50,8 +50,11 @@ Usage: bench-parquet COMMAND ARGS..
         JSON lines ("lines"), and the timestamps of the first and the last JSON
         line in log order ("firstAt", "lastAt"). For locli prepare-db-from-lines.
 
-  query RUNDIR [DUCKDB-ARGS..]
+  query RUNDIR [--ui] [DUCKDB-ARGS..]
         Interactive DuckDB session with views and macros for the run loaded.
+          --ui  also start the DuckDB UI on the same session and open it in a new
+                browser tab (installs the ui extension on first use, which needs
+                network access)
 
   run RUNDIR FILE.sql
         Run a SQL file in such a session.
@@ -423,8 +426,13 @@ with_session() {
 
 query_cmd() {
     local dir=${1:?query: RUNDIR missing}; shift
-    local args=("$@")
-    run_query() { "$DUCKDB" -init "$1" "${args[@]}"; }
+    local ui= args=() a
+    for a in "$@"
+    do if test "$a" = --ui; then ui=t; else args+=("$a"); fi; done
+    run_query() {
+        test -z "$ui" || echo ".read $(sqlq "$sql_dir/ui.sql")" >> "$1"
+        "$DUCKDB" -init "$1" "${args[@]}"
+    }
     with_session "$dir" run_query
 }
 

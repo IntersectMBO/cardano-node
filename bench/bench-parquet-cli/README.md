@@ -11,6 +11,7 @@ bench-parquet lines RUNDIR PROCESS [--ns-file FILE]   # JSON lines in log order 
 bench-parquet host-summary RUNDIR PROCESS             # counts per namespace, first/last timestamp (for locli)
 bench-parquet query RUNDIR          # interactive DuckDB session
 bench-parquet run RUNDIR FILE.sql   # the same, for a SQL file
+bench-parquet query RUNDIR --ui     # query, plus the DuckDB UI on the same session in a new browser tab
 ```
 
 Needs `duckdb` (from `PATH`, or `DUCKDB=/path/to/duckdb`), `jq` and coreutils.
