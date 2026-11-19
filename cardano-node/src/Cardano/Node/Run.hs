@@ -1025,6 +1025,7 @@ mkDiffusionConfiguration
     , Diffusion.dcMuxForkPolicy
     , Diffusion.dcLocalMuxForkPolicy
     , Diffusion.dcEgressPollInterval       = ncEgressPollInterval nc
+    , Diffusion.dcMuxCountersInterval      = Configuration.defaultMuxCountersInterval
     }
   where
     dcPeerSelectionTargets = PeerSelectionTargets {

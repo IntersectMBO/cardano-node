@@ -345,6 +345,8 @@ getAllNamespaces =
         dtLocalMuxChannelNS = map (nsGetTuple . nsReplacePrefix ["Net", "Mux", "Local", "Channel"])
                              (allNamespaces :: [Namespace
                                  (Mux.WithBearer (ConnectionId RemoteAddress) Mux.ChannelTrace)])
+        dtMuxCountersNS = map (nsGetTuple . nsReplacePrefix ["Net", "Mux", "Counters"])
+                             (allNamespaces :: [Namespace Mux.CountersTrace])
         dtHandshakeNS = map (nsGetTuple . nsReplacePrefix
                                 ["Net", "Handshake", "Remote"])
                             (allNamespaces :: [Namespace
@@ -509,6 +511,7 @@ getAllNamespaces =
             <> dtLocalMuxNS
             <> dtLocalMuxBearerNS
             <> dtLocalMuxChannelNS
+            <> dtMuxCountersNS
             <> dtHandshakeNS
             <> dtLocalHandshakeNS
             <> dtDiffusionInitializationNS
