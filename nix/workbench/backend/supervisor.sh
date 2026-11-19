@@ -410,7 +410,7 @@ EOF
         while \
             ! test -f "${dir}"/flag/cluster-stopping \
             && \
-            supervisorctl status generator > /dev/null
+            supervisorctl -c "$dir"/supervisor/supervisord.conf status generator > /dev/null
         do
             echo -ne "\b\b\b\b\b\b"
             printf "%6d" "$(($(date +%s) - start_time))"
