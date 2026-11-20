@@ -64,13 +64,13 @@ of the work (total size / slots) gets round(size × slots / total) slots as one 
 the threads and memory, so it finishes about when the rest does. Each log is read once: the same read
 feeds its sha256, the check for CR / 0x1e characters and DuckDB.
 
-## Schema (raw schema version 1)
+## Schema (raw schema version 2)
 
 | column    | type           | content |
 |-----------|----------------|---------|
 | `process` | `VARCHAR`      | the process directory (`node-0`, `generator`) |
 | `seq`     | `UBIGINT`      | line number in the original log |
-| `at`      | `TIMESTAMP_NS` | envelope `at` |
+| `ts`      | `TIMESTAMP_NS` | envelope `at` (renamed: `at` is reserved in DuckDB, unquoted a syntax error) |
 | `ns`      | `VARCHAR`      | envelope `ns` |
 | `sev`     | `VARCHAR`      | envelope `sev` |
 | `thread`  | `VARCHAR`      | envelope `thread` |
@@ -78,8 +78,8 @@ feeds its sha256, the check for CR / 0x1e characters and DuckDB.
 | `data`    | `VARCHAR`      | the payload, verbatim; query it as JSON: `data->>'$.slot'` |
 | `line`    | `VARCHAR`      | the original line, only where it doesn't rebuild exactly from the columns above |
 
-Rows are sorted by `ns, at, seq`; lines without a namespace (text, malformed JSON) come last with
-`at`/`ns` NULL. Every JSON line is rebuilt during conversion and compared with the original; a line that
+Rows are sorted by `ns, ts, seq`; lines without a namespace (text, malformed JSON) come last with
+`ts`/`ns` NULL. Every JSON line is rebuilt during conversion and compared with the original; a line that
 differs keeps its original text in `line`, so `restore` reproduces every log byte for byte
 (`--verify` checks the sha256 recorded at conversion; it refuses to write over the converted log). Lines containing CR or the ASCII record
 separator (0x1e) are rejected.
@@ -111,7 +111,6 @@ separator (0x1e) are rejected.
 
 DuckDB pitfalls:
 
-- `at` must be quoted in some positions (`ORDER BY "at"`).
 - **Parenthesise JSON extractions in comparisons**: `(f.data->>'$.block') = (a.data->>'$.blockHash')`.
   Without the parentheses `=` binds first and the condition silently never matches.
 

@@ -7,8 +7,9 @@ self_dir=$(dirname "$(realpath "${BASH_SOURCE[0]}")")
 sql_dir=$self_dir/sql
 DUCKDB=${DUCKDB:-duckdb}
 
-converter_version=0.2
-raw_schema_version=1
+converter_version=0.3
+# 2: column at renamed to ts (at is reserved in DuckDB: unquoted, it's a syntax error).
+raw_schema_version=2
 zstd_default=15
 # Rows per row group. Smaller than DuckDB's default (122,880) so that reading the payload
 # of a small namespace decompresses less of its neighbours: on the Leios run, 32,768 made
@@ -89,6 +90,11 @@ check_pqdir() {
     test -d "$pq" || die "not a directory: $pq"
     test -f "$pq"/meta/files.parquet ||
         die "no meta/files.parquet in $pq (not written by bench-parquet convert)"
+    local v
+    v=$("$DUCKDB" -init /dev/null -noheader -list -c "
+        SELECT raw_schema_version FROM read_parquet($(sqlq "$pq/meta/run.parquet"));")
+    test "$v" = "$raw_schema_version" ||
+        die "$pq has raw schema version $v; this bench-parquet reads version $raw_schema_version (convert again)"
 }
 
 ##############################################################################
@@ -119,7 +125,7 @@ convert_one() {
         sha=$(sha256sum "$src" | cut -d' ' -f1)
         local stats_sql; stats_sql=$(stats_sql)
         "$DUCKDB" -init /dev/null -c "
-            COPY (SELECT NULL::VARCHAR AS process, NULL::UBIGINT AS seq, NULL::TIMESTAMP_NS AS \"at\",
+            COPY (SELECT NULL::VARCHAR AS process, NULL::UBIGINT AS seq, NULL::TIMESTAMP_NS AS ts,
                          NULL::VARCHAR AS ns, NULL::VARCHAR AS sev, NULL::VARCHAR AS thread,
                          NULL::VARCHAR AS host, NULL::VARCHAR AS data, NULL::VARCHAR AS line
                   WHERE false)
@@ -139,7 +145,7 @@ SET threads = $threads;
 SET temp_directory = $(sqlq "$spill");
 .read $(sqlq "$sql_dir/lib.sql")
 .read $(sqlq "$sql_dir/convert.sql")
-COPY (FROM bp_parse($(sqlq "$process"), '/dev/stdin') ORDER BY ns NULLS LAST, "at", seq)
+COPY (FROM bp_parse($(sqlq "$process"), '/dev/stdin') ORDER BY ns NULLS LAST, ts, seq)
 TO $(sqlq "$dst") (FORMAT parquet, COMPRESSION zstd, COMPRESSION_LEVEL $zstd, ROW_GROUP_SIZE $row_group_size);
 EOF
     # One read of the log feeds the sha256 (through a named pipe), the checks for
@@ -611,7 +617,7 @@ excerpt_cmd() {
     local anchor_sql
     if test -n "$at"
     then anchor_sql="SELECT epoch_ns(CAST($(sqlq "${at%Z}") AS TIMESTAMP_NS))"
-    else anchor_sql="SELECT epoch_ns(min(\"at\")) FROM read_parquet($(sqlq "$pq/*.parquet"))
+    else anchor_sql="SELECT epoch_ns(min(ts)) FROM read_parquet($(sqlq "$pq/*.parquet"))
                      WHERE ns = $(sqlq "$ns") AND ($where) AND $pfilter"
     fi
     local anchor
@@ -629,7 +635,7 @@ excerpt_cmd() {
                 SELECT process, seq, bp_line(t) AS l
                 FROM read_parquet($(sqlq "$pq/*.parquet")) t
                 WHERE $pfilter
-                  AND epoch_ns(\"at\") BETWEEN $anchor - CAST($before * 1e9 AS BIGINT)
+                  AND epoch_ns(ts) BETWEEN $anchor - CAST($before * 1e9 AS BIGINT)
                                            AND $anchor + CAST($after  * 1e9 AS BIGINT);"
         while IFS= read -r p
         do echo "COPY (SELECT l FROM w WHERE process = $(sqlq "$p") ORDER BY seq)

@@ -16,11 +16,11 @@
 CREATE OR REPLACE VIEW heap_per_slot AS
 SELECT
     process
-  , slot_at("at")                       AS slot
-  , arg_max(res_heap(data), "at")       AS heap_bytes
-  , arg_max(res_live(data), "at")       AS live_bytes
-  , arg_max(res_rss(data),  "at")       AS rss_bytes
+  , slot_at(ts)                         AS slot
+  , arg_max(res_heap(data), ts)         AS heap_bytes
+  , arg_max(res_live(data), ts)         AS live_bytes
+  , arg_max(res_rss(data),  ts)         AS rss_bytes
 FROM raw
 WHERE ns = 'Resources'
-  AND slot_at("at") >= 0
+  AND slot_at(ts) >= 0
 GROUP BY ALL;

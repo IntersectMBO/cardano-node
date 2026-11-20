@@ -12,7 +12,7 @@
 -- Reads the raw layer, not the per-namespace views, so absent namespaces are fine.
 CREATE OR REPLACE VIEW forge_steps AS
 WITH ev AS (
-  SELECT process, ns, "at", data
+  SELECT process, ns, ts, data
   FROM raw
   WHERE ns IN ( 'Forge.Loop.StartLeadershipCheck'
               , 'Forge.Loop.NodeIsLeader'
@@ -24,25 +24,25 @@ WITH ev AS (
 SELECT
     l.process
   , l.slot
-  , s."at"  AS started
-  , l."at"  AS leader
-  , t."at"  AS ticked
-  , m."at"  AS mempool_snapshot
-  , f."at"  AS forged
-  , a."at"  AS adopted
+  , s.ts    AS started
+  , l.ts    AS leader
+  , t.ts    AS ticked
+  , m.ts    AS mempool_snapshot
+  , f.ts    AS forged
+  , a.ts    AS adopted
   , f.data->>'$.block'                       AS block
   , CAST(f.data->>'$.blockNo'   AS UBIGINT)  AS block_no
   , CAST(a.data->>'$.blockSize' AS UBIGINT)  AS block_bytes
-FROM      (SELECT process, slot_no(data) AS slot, "at"
+FROM      (SELECT process, slot_no(data) AS slot, ts
                 , CASE WHEN count(*) OVER (PARTITION BY process, slot_no(data)) > 1
                        THEN error('forge_steps: ' || process || ' led slot ' || slot_no(data) || ' more than once')
                   END AS _unique
            FROM ev WHERE ns = 'Forge.Loop.NodeIsLeader') l
-LEFT JOIN (SELECT process, slot_no(data) AS slot, min("at") AS "at" FROM ev
+LEFT JOIN (SELECT process, slot_no(data) AS slot, min(ts) AS ts FROM ev
            WHERE ns = 'Forge.Loop.StartLeadershipCheck' GROUP BY ALL) s USING (process, slot)
-LEFT JOIN (SELECT process, slot_no(data) AS slot, "at" FROM ev
+LEFT JOIN (SELECT process, slot_no(data) AS slot, ts FROM ev
            WHERE ns IN ('Forge.Loop.TickedLedgerState', 'Forge.Loop.ForgeTickedLedgerState')) t USING (process, slot)
-LEFT JOIN (SELECT process, slot_no(data) AS slot, "at" FROM ev
+LEFT JOIN (SELECT process, slot_no(data) AS slot, ts FROM ev
            WHERE ns IN ('Forge.Loop.MempoolSnapshot', 'Forge.Loop.ForgingMempoolSnapshot')) m USING (process, slot)
-LEFT JOIN (SELECT process, slot_no(data) AS slot, "at", data FROM ev WHERE ns = 'Forge.Loop.ForgedBlock') f USING (process, slot)
-LEFT JOIN (SELECT process, slot_no(data) AS slot, "at", data FROM ev WHERE ns = 'Forge.Loop.AdoptedBlock') a USING (process, slot);
+LEFT JOIN (SELECT process, slot_no(data) AS slot, ts, data FROM ev WHERE ns = 'Forge.Loop.ForgedBlock') f USING (process, slot)
+LEFT JOIN (SELECT process, slot_no(data) AS slot, ts, data FROM ev WHERE ns = 'Forge.Loop.AdoptedBlock') a USING (process, slot);

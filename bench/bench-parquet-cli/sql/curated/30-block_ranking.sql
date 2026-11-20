@@ -12,14 +12,14 @@
 --     hash, only the slot of the block being forged, and fires on the forger's own
 --     node during that forge, so (process, slot) pins the forging.
 --
--- Columns: at (TIMESTAMP_NS), process, hash, prev_hash, block_no, slot_no,
+-- Columns: ts (TIMESTAMP_NS), process, hash, prev_hash, block_no, slot_no,
 --   slot_start (TIMESTAMP_NS, from "slot"), bytes (NULL when the forger didn't
 --   adopt it), announced_eb_hash, certified_eb_hash.
 -- Differences from the original: timestamps are TIMESTAMP_NS instead of integer
 -- nanoseconds; "process" (the log's directory) instead of a file index.
 CREATE OR REPLACE VIEW block_ranking AS
 SELECT
-    f."at"                                     AS "at"
+    f.ts                                       AS ts
   , f.process                                  AS process
   , f.data->>'$.block'                         AS hash
   , f.data->>'$.blockPrev'                     AS prev_hash

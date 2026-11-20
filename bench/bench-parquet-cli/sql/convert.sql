@@ -19,7 +19,7 @@ CREATE OR REPLACE MACRO bp_parse(process, src) AS TABLE
                END AS j
         FROM l),
   r AS (SELECT seq, orig,
-               CASE WHEN j THEN CAST(orig->>'at' AS TIMESTAMP_NS) END AS "at",
+               CASE WHEN j THEN CAST(orig->>'at' AS TIMESTAMP_NS) END AS ts,
                CASE WHEN j THEN orig->>'ns'     END AS ns,
                CASE WHEN j THEN orig->>'sev'    END AS sev,
                CASE WHEN j THEN orig->>'thread' END AS thread,
@@ -30,9 +30,9 @@ CREATE OR REPLACE MACRO bp_parse(process, src) AS TABLE
                CASE WHEN j THEN coalesce(nullif(regexp_extract(orig, '"data":(.*),"sev":', 1), ''),
                                          (orig->'data')::VARCHAR) END AS data
         FROM c)
-  SELECT process AS process, seq, "at", ns, sev, thread, host, data,
+  SELECT process AS process, seq, ts, ns, sev, thread, host, data,
          CASE WHEN ns IS NULL
-                OR bp_rebuild_line("at", ns, data, sev, thread, host) IS DISTINCT FROM orig
+                OR bp_rebuild_line(ts, ns, data, sev, thread, host) IS DISTINCT FROM orig
               THEN orig
          END AS line
   FROM r;

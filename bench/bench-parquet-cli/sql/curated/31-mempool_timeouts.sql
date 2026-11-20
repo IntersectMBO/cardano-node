@@ -18,8 +18,8 @@ SELECT
   , count(*)          AS timeouts
   , count(*) - count(duration_s) AS unknown_durations
   , max(duration_s)   AS max_duration_s
-  , min("at")         AS first_at
-  , max("at")         AS last_at
-FROM (     SELECT process, "at", duration_s, 'hard' AS kind FROM mempool_timeout_hard
- UNION ALL SELECT process, "at", duration_s, 'soft' AS kind FROM mempool_timeout_soft)
+  , min(ts)         AS first_at
+  , max(ts)         AS last_at
+FROM (     SELECT process, ts, duration_s, 'hard' AS kind FROM mempool_timeout_hard
+ UNION ALL SELECT process, ts, duration_s, 'soft' AS kind FROM mempool_timeout_soft)
 GROUP BY ALL;

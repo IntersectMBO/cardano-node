@@ -25,7 +25,7 @@ CREATE OR REPLACE MACRO bp_rebuild_line(t, ns, data, sev, thread, host) AS
 
 -- The original line of a stored row.
 CREATE OR REPLACE MACRO bp_line(r) AS
-  coalesce(r.line, bp_rebuild_line(r."at", r.ns, r.data, r.sev, r.thread, r.host));
+  coalesce(r.line, bp_rebuild_line(r.ts, r.ns, r.data, r.sev, r.thread, r.host));
 
 -- The first / last n lines of one process's log (one Parquet file, f), in log
 -- order, byte for byte as in the original (text lines included).

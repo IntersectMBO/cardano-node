@@ -25,14 +25,14 @@
 -- (mempool_timeouts counts those as unknown_durations). The soft duration is a
 -- JSON number and is cast strictly, as everywhere else.
 --
--- Columns, mempool_timeout_hard: process, at, peer (remote address:port),
+-- Columns, mempool_timeout_hard: process, ts, peer (remote address:port),
 --   duration_s (DOUBLE, NULL when not readable).
--- Columns, mempool_timeout_soft: process, at, txid, duration_s (DOUBLE),
+-- Columns, mempool_timeout_soft: process, ts, txid, duration_s (DOUBLE),
 --   mempool_txs, mempool_bytes (UBIGINT, the mempool when the tx was rejected).
 CREATE OR REPLACE VIEW mempool_timeout_hard AS
 SELECT
     process
-  , "at"
+  , ts
   , split_part(data->>'$.bearer.connectionId', ' ', 2)                       AS peer
   , TRY_CAST(nullif(regexp_extract(data->>'$.event.exception',
                                     '^ExnMempoolTimeout ([0-9.]+)s ', 1), '') AS DOUBLE)
@@ -44,7 +44,7 @@ WHERE ns = 'Net.Mux.Remote.ExceptionExit'
 CREATE OR REPLACE VIEW mempool_timeout_soft AS
 SELECT
     process
-  , "at"
+  , ts
   , data->>'$.tx.txid'                                                       AS txid
   , CAST(data->>'$.errdetails.MempoolRejectedByTimeoutSoft' AS DOUBLE)       AS duration_s
   , mempool_txs(data)                                                        AS mempool_txs
