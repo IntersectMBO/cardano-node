@@ -164,12 +164,12 @@ if impl(ghc >= 9.14)
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
 
 -- ouroboros-consensus leios-prototype with the egress scheduler and adaptive endorsements,
--- plus karknu/vote (Leios votes only for the newest blocks of our chain)
+-- plus karknu/vote2 (Leios votes only for the newest blocks of our chain, signatures unpacked only when validated)
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: e8e9bdd8cd8547b89c1f7cc6246bb15aebe836a8
-  --sha256: sha256-PxwG64GShofAryblxp2HLetB0+1nfkS++tC8tPICCYc=
+  tag: 3cdd9aced12ce134bf051a11060b53fbd33d18e8
+  --sha256: sha256-p4f4cLaqTtlSIjJ8jBwdLF4fsM+i81zT/Q50rL5vnQQ=
 
 -- ouroboros-network leios-prototype with the egress scheduler
 source-repository-package
