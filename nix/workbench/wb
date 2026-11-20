@@ -19,6 +19,7 @@ global_basedir=${global_basedir:-$(realpath "$(dirname "$0")")}
 . "$global_basedir"/chain-fragment.sh
 . "$global_basedir"/manifest.sh
 . "$global_basedir"/nomad.sh
+. "$global_basedir"/parquet.sh
 . "$global_basedir"/publish.sh
 . "$global_basedir"/run.sh
 . "$global_basedir"/scenario.sh
@@ -52,6 +53,7 @@ usage_main() {
 
     $(red chaindb)      ($(red c))      ChainDB
     $(red chain-fragment) ($(red cf))   Export a run as an ouroboros-consensus-tools chain fragment
+    $(red parquet)      ($(red pq))     Run logs as Parquet, queried with DuckDB
     $(red genesis)      ($(red g))      Genesis
     $(red nomad)        ($(red n))      Nomad and Vault
     $(red topology)     ($(red t))      Topology generation
@@ -395,6 +397,7 @@ main() {
         manifest     | m )        manifest            "$@";;
         nomad        | n )        wb_nomad            "$@";;
         topology     | topo | t ) topology            "$@";;
+        parquet      | pq )       parquet             "$@";;
 
         ## 'profile' aliases:
           profile-names                 | names           | lsp           \

@@ -513,7 +513,7 @@ case "$op" in
         local usage="USAGE: wb analyse $op [--force] [--from-logs] [[IDENT:]RUN-NAME=current].."
 
         ## DBs come from RUN/parquets/<host>.parquet where it exists (see
-        ## 'wb run create-parquets'), else from the hosts' stdout; --from-logs: always stdout.
+        ## 'wb parquet create'), else from the hosts' stdout; --from-logs: always stdout.
         local remanifest_reasons=() from_logs=
         while test $# -gt 0; do
           case "$1" in
@@ -555,23 +555,23 @@ case "$op" in
              echo '{}' > $run_logs
              # with useCabalRun we have to make sure the binary is built before launching off shell job spawns
              local dummy=($(locli 2>/dev/null))
-             local bench_parquet=${WB_CARDANO_NODE_REPO_ROOT:-$global_basedir/../..}/bench/bench-parquet-cli/bench-parquet
+             local pq=$dir/parquets
              local nsfile=$adir/interpreted-namespaces.txt
-             if test -z "$from_logs" -a -d "$dir"/parquets
+             if test -z "$from_logs" -a -d "$pq"
              then locli list-interpreted-namespaces > "$nsfile"; fi
              time {
                  for d in "${logdirs[@]}"
                  do throttle_shell_job_spawns
                     local mach=$(basename "$d")
                     local  out="$adir"/logs-$mach
-                    local  pqf=$dir/parquets/$mach.parquet
+                    local  pqf=$pq/$mach.parquet
                     if test -z "$from_logs" -a -f "$pqf"
                     then ## Only the lines of the namespaces locli interprets; what prepare-db
                          ## counts over all lines comes from the host summary.
                          local logfiles=("$pqf")
                          ( set -o pipefail
-                           "$bench_parquet" host-summary "$dir"/parquets "$mach" > "$out".host-summary.json &&
-                           "$bench_parquet" lines "$dir"/parquets "$mach" --ns-file "$nsfile" |
+                           bench_parquet host-summary "$pq" "$mach" > "$out".host-summary.json &&
+                           bench_parquet lines "$pq" "$mach" --ns-file "$nsfile" |
                              call_locli "silent" "serial" \
                                prepare-db-from-lines \
                                --mach "$mach" \

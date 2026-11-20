@@ -58,14 +58,6 @@ usage_run() {
 
     $(helpcmd stop RUN)              Stop the named run
 
-    $(helpcmd create-parquets RUN [--force] [--jobs N] [--keep-temp] [--zstd-level N])
-                          Convert the stdout logs of node-* and generator
-                            into RUN/parquets/, losslessly (bench/bench-parquet-cli).
-                            --force      replace an existing parquets/
-                            --jobs N     slots (default: from memory and cores); a log larger than
-                                         total size / slots gets its share of the slots
-                            --keep-temp  keep the temporary directory when a conversion fails
-
     $(helpcmd restart [--no-generator] BACKEND-START-ARGS..)
                           Stop and restart the current run (without a new allocation)
 
@@ -844,45 +836,6 @@ EOF
         fi
         ;;
 
-    create-parquets )
-        local usage="USAGE: wb run $op RUN [--force] [--jobs N] [--keep-temp] [--zstd-level N]"
-        local run=${1:?$usage}; shift
-        local dir=$(run get "$run")
-        local repo=${WB_CARDANO_NODE_REPO_ROOT:-$global_basedir/../..}
-
-        ## The run's knowledge goes in as arguments: which logs (the stdout of
-        ## node-* and generator), the run id, genesis timing.
-        local logs=() errs=() d p
-        for d in "$dir"/node-* "$dir"/generator
-        do test -d "$d" || continue
-           p=$(basename "$d")
-           test -f "$d"/stdout && logs+=("$p=$d/stdout")
-           test -s "$d"/stderr && errs+=("$p/stderr")
-        done
-        test ${#logs[@]} -gt 0 ||
-            fail "no node-*/stdout or generator/stdout in $dir"
-        local genesis=$dir/genesis/genesis.shelley.json
-        test -f "$genesis" || genesis=$dir/genesis-shelley.json
-        test -f "$genesis" ||
-            fail "no Shelley genesis in $dir (genesis/genesis.shelley.json)"
-        local run_id=$(jq -r '.meta.tag // empty' "$dir"/meta.json)
-        test -n "$run_id" || run_id=$(basename "$dir")
-
-        "$repo"/bench/bench-parquet-cli/bench-parquet convert "$dir"/parquets \
-            --run-id       "$run_id" \
-            --system-start "$(jq -r .systemStart "$genesis")" \
-            --slot-length  "$(jq -r .slotLength  "$genesis")" \
-            "$@" "${logs[@]}"
-
-        ## stderr is not converted (no JSON); sizes only, no judgement
-        ## (processes may recover from what they report there).
-        if test ${#errs[@]} -gt 0
-        then progress "run | create-parquets" "non-empty stderr (not converted):"
-             for p in "${errs[@]}"
-             do echo "  $p: $(stat -L -c%s "$dir/$p") bytes, $(wc -l < "$dir/$p") lines" >&2; done
-        else progress "run | create-parquets" "stderr: empty or absent for all processes"
-        fi
-        ;;
 
     restart )
         local run=$(run current-tag)

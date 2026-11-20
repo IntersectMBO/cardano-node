@@ -6,7 +6,8 @@ directory written by `convert` (PQDIR: one `<process>.parquet` per log, plus `me
 calls it for a run, with `RUN/parquets` as PQDIR.
 
 ```bash
-wb run create-parquets RUN [--force] [--jobs N] [--keep-temp] [--zstd-level N]   # convert a workbench run
+wb parquet create RUN [--force] [--jobs N] [--keep-temp] [--zstd-level N]   # convert a workbench run
+wb parquet query RUN, head RUN PROCESS, ...   # every command below, with a run instead of PQDIR
 bench-parquet convert PQDIR --run-id ID [--system-start T --slot-length S] [--force] [--jobs N] [--keep-temp] [--zstd-level N] PROCESS=FILE..
 bench-parquet restore PQDIR PROCESS -o FILE [--verify]
 bench-parquet head PQDIR PROCESS [-n N]   # first N lines (default 20) of the log
@@ -19,8 +20,8 @@ bench-parquet run PQDIR FILE.sql   # the same, for a SQL file
 bench-parquet query PQDIR --ui     # query, plus the DuckDB UI on the same session in a new browser tab
 ```
 
-Needs `duckdb` (from `PATH`, or `DUCKDB=/path/to/duckdb`) and coreutils; `wb run create-parquets`
-also `jq`.
+Needs `duckdb` (from `PATH`, or `DUCKDB=/path/to/duckdb`) and coreutils; `wb parquet create` also
+`jq`.
 
 ## Conversion
 
@@ -30,7 +31,7 @@ at least one node. `--run-id` is recorded in `meta/run.parquet`, as are genesis 
 length when given (`--system-start`, `--slot-length`, both or neither); without them they are NULL, and
 slot arithmetic in a session (`slot_at`, `slot.slot_start`) is an error, never a NULL slot.
 
-`wb run create-parquets RUN` passes the run's knowledge: the stdout of `node-*` and `generator`, the run
+`wb parquet create RUN` (`nix/workbench/parquet.sh`) passes the run's knowledge: the stdout of `node-*` and `generator`, the run
 id from `meta.json` (`.meta.tag`, else the directory name), system start and slot length from the
 Shelley genesis. stderr is not converted: it carries no JSON lines and is fetched with the rest of a
 process's directory; `wb` lists the size of each non-empty stderr, without judging it (a process may
