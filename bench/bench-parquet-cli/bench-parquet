@@ -283,6 +283,12 @@ convert_cmd() {
 
     local tmp; tmp=$(dirname "$out")/.$(basename "$out").tmp.$$
     mkdir -p "$tmp"/spill "$tmp"/stats "$tmp"/meta
+    # Roles come from process names (node-*, generator); anything else is
+    # converted but not part of a query session's raw or raw_generator.
+    for src in "${sources[@]}"
+    do case "$src" in node-* | generator ) ;;
+           * ) msg "$src: not named node-* or generator; not in a query session's raw or raw_generator";; esac
+    done
     msg "converting ${#sources[@]} logs of $run_id: $jobs slots, each ${threads} threads and ${mem_gib} GiB memory limit"
     msg "  memory available: $(( mem_avail_mib / 1024 )) GiB ($mem_src), cores: $ncpu"
     for src in "${sources[@]}"
