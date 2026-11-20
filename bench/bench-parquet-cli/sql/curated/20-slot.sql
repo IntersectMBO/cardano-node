@@ -17,6 +17,6 @@ WITH span AS (
 )
 SELECT
     CAST(r.range AS UBIGINT)                                           AS slot_no
-  , make_timestamp_ns(  epoch_ns(m.system_start)
-                      + r.range * CAST(m.slot_length_s * 1e9 AS BIGINT)) AS slot_start
-FROM span, range(CAST(span.lo AS BIGINT), CAST(span.hi AS BIGINT) + 1) r, run_meta m;
+  , make_timestamp_ns(  epoch_ns(run_system_start())
+                      + r.range * CAST(run_slot_length_s() * 1e9 AS BIGINT)) AS slot_start
+FROM span, range(CAST(span.lo AS BIGINT), CAST(span.hi AS BIGINT) + 1) r;

@@ -570,8 +570,8 @@ case "$op" in
                          ## counts over all lines comes from the host summary.
                          local logfiles=("$pqf")
                          ( set -o pipefail
-                           "$bench_parquet" host-summary "$dir" "$mach" > "$out".host-summary.json &&
-                           "$bench_parquet" lines "$dir" "$mach" --ns-file "$nsfile" |
+                           "$bench_parquet" host-summary "$dir"/parquets "$mach" > "$out".host-summary.json &&
+                           "$bench_parquet" lines "$dir"/parquets "$mach" --ns-file "$nsfile" |
                              call_locli "silent" "serial" \
                                prepare-db-from-lines \
                                --mach "$mach" \

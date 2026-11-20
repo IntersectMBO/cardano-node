@@ -1,4 +1,4 @@
--- Shared definitions: loaded by conversion, restore, excerpt and query sessions.
+-- Shared definitions: loaded by every command that reads or writes log lines, and by query sessions.
 -- Conversion and restore use the same bp_rebuild_line, so what conversion proves
 -- is exactly what restore produces.
 
@@ -26,3 +26,11 @@ CREATE OR REPLACE MACRO bp_rebuild_line(t, ns, data, sev, thread, host) AS
 -- The original line of a stored row.
 CREATE OR REPLACE MACRO bp_line(r) AS
   coalesce(r.line, bp_rebuild_line(r."at", r.ns, r.data, r.sev, r.thread, r.host));
+
+-- The first / last n lines of one process's log (one Parquet file, f), in log
+-- order, byte for byte as in the original (text lines included).
+CREATE OR REPLACE MACRO bp_head(f, n) AS TABLE
+  SELECT bp_line(t) AS line FROM read_parquet(f) t ORDER BY seq LIMIT n;
+CREATE OR REPLACE MACRO bp_tail(f, n) AS TABLE
+  SELECT line FROM (SELECT seq, bp_line(t) AS line FROM read_parquet(f) t
+                    ORDER BY seq DESC LIMIT n) ORDER BY seq;

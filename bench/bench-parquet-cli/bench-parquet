@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# bench-parquet: process logs of a workbench run <-> Parquet, and querying them.
+# bench-parquet: process logs <-> Parquet, and querying them.
 # Prototype (bash + SQL). See README.md.
 set -euo pipefail
 
@@ -19,44 +19,57 @@ usage() {
     cat <<EOF
 Usage: bench-parquet COMMAND ARGS..
 
-  convert-run RUNDIR [--force] [--jobs N] [--keep-temp] [--zstd-level N]
-        Convert the stdout of node-* and generator in RUNDIR into
-        RUNDIR/parquets/<process>.parquet, plus meta/run.parquet and
-        meta/files.parquet. stderr is not converted (its sizes are reported).
-          --force      replace an existing parquets/ (only once the new one is complete)
-          --jobs N     slots (default: from available memory and cores); a log larger
-                       than total size / slots gets its share of the slots
-          --keep-temp  keep the temporary directory when a conversion fails
+PQDIR is a directory written by convert: one <process>.parquet per log, plus
+meta/files.parquet and meta/run.parquet. Every command except convert needs only it.
+
+  convert PQDIR --run-id ID [--system-start TIMESTAMP --slot-length SECS]
+          [--force] [--jobs N] [--keep-temp] [--zstd-level N] PROCESS=FILE..
+        Convert each log FILE into PQDIR/PROCESS.parquet, losslessly, plus
+        meta/files.parquet and meta/run.parquet. A process named node-* is a
+        node, generator the generator (query sessions tell them apart by name).
+          --run-id ID     the run's identifier, recorded in meta/run.parquet
+          --system-start TIMESTAMP, --slot-length SECS
+                          genesis system start (UTC) and slot length; without
+                          them, slot arithmetic in query sessions is an error
+          --force         replace an existing PQDIR (only once the new one is complete)
+          --jobs N        slots (default: from available memory and cores); a log larger
+                          than total size / slots gets its share of the slots
+          --keep-temp     keep the temporary directory when a conversion fails
           --zstd-level N  zstd compression level (default: $zstd_default)
 
-  restore RUNDIR PROCESS -o FILE [--verify]
-        Reconstruct a process's stdout from Parquet. --verify checks the sha256
-        recorded at conversion.
+  restore PQDIR PROCESS -o FILE [--verify]
+        Reconstruct a process's log. --verify checks the sha256 recorded at
+        conversion. Refuses to write over the converted log itself.
 
-  excerpt RUNDIR (--at TIMESTAMP | --ns NAMESPACE [--where SQL]) [--before SECS] [--after SECS]
+  head PQDIR PROCESS [-n N]
+  tail PQDIR PROCESS [-n N]
+        The first / last N lines (default 20) of the process's log on stdout,
+        byte for byte as in the original, text lines included.
+
+  excerpt PQDIR (--at TIMESTAMP | --ns NAMESPACE [--where SQL]) [--before SECS] [--after SECS]
           [--process P].. -o OUTDIR
         Original log lines in a time window around a timestamp, or around the
         first event of NAMESPACE (optionally matching the SQL condition on its
         columns, e.g. "data->>'\$.slot' = '991'"), one file per process in OUTDIR.
         Defaults: --before 5 --after 5, all processes.
 
-  lines RUNDIR PROCESS [--ns-file FILE]
+  lines PQDIR PROCESS [--ns-file FILE]
         The process's JSON lines on stdout, byte for byte as in the original log
         and in its order; with --ns-file only those of the namespaces listed in
         FILE (one per line). For locli prepare-db-from-lines.
 
-  host-summary RUNDIR PROCESS
+  host-summary PQDIR PROCESS
         JSON on stdout: line counts per namespace ("tracefreqs"), the number of
         JSON lines ("lines"), and the timestamps of the first and the last JSON
         line in log order ("firstAt", "lastAt"). For locli prepare-db-from-lines.
 
-  query RUNDIR [--ui] [DUCKDB-ARGS..]
-        Interactive DuckDB session with views and macros for the run loaded.
+  query PQDIR [--ui] [DUCKDB-ARGS..]
+        Interactive DuckDB session with views and macros for the logs loaded.
           --ui  also start the DuckDB UI on the same session and open it in a new
                 browser tab (installs the ui extension on first use, which needs
                 network access)
 
-  run RUNDIR FILE.sql
+  run PQDIR FILE.sql
         Run a SQL file in such a session.
 
 Environment: DUCKDB (default: duckdb from PATH).
@@ -70,20 +83,16 @@ sqlq() { local s=${1//\'/\'\'}; printf "'%s'" "$s"; }
 # A SQL quoted identifier.
 sqli() { local s=${1//\"/\"\"}; printf '"%s"' "$s"; }
 
-check_rundir() {
-    local dir=$1
-    test -d "$dir"           || die "not a directory: $dir"
-    test -f "$dir"/meta.json || die "no meta.json in $dir"
-}
-
-check_parquets() {
-    local dir=$1
-    test -f "$dir"/parquets/meta/files.parquet ||
-        die "no parquets/meta/files.parquet in $dir (run: bench-parquet convert-run $dir)"
+# A converted directory (PQDIR): <process>.parquet files and meta/.
+check_pqdir() {
+    local pq=$1
+    test -d "$pq" || die "not a directory: $pq"
+    test -f "$pq"/meta/files.parquet ||
+        die "no meta/files.parquet in $pq (not written by bench-parquet convert)"
 }
 
 ##############################################################################
-# convert-run
+# convert
 
 # Convert one log file. Runs as a background job; all output to stderr.
 convert_one() {
@@ -202,55 +211,47 @@ mem_available() {
     echo "$avail $src"
 }
 
-convert_run() {
-    local dir= force= mem_gib=4 jobs= keep_temp= zstd=$zstd_default
+convert_cmd() {
+    local out= run_id= system_start= slot_length= force= mem_gib=4 jobs= keep_temp= zstd=$zstd_default
+    local -A file_of=()
+    local a process file
     while test $# -gt 0
     do case "$1" in
-           --force )     force=t;;
-           --jobs )      jobs=${2:?--jobs needs a number}; shift;;
-           --keep-temp ) keep_temp=t;;
-           --zstd-level ) zstd=${2:?--zstd-level needs a number}; shift;;
-           -* )          die "convert-run: unknown option: $1";;
-           * )           test -z "$dir" || die "convert-run: more than one RUNDIR"; dir=$1;;
+           --run-id )       run_id=${2:?--run-id needs an identifier}; shift;;
+           --system-start ) system_start=${2:?--system-start needs a timestamp}; shift;;
+           --slot-length )  slot_length=${2:?--slot-length needs seconds}; shift;;
+           --force )        force=t;;
+           --jobs )         jobs=${2:?--jobs needs a number}; shift;;
+           --keep-temp )    keep_temp=t;;
+           --zstd-level )   zstd=${2:?--zstd-level needs a number}; shift;;
+           -* )             die "convert: unknown option: $1";;
+           *=* )            a=$1; process=${a%%=*}; file=${a#*=}
+                            [[ $process =~ ^[A-Za-z0-9._-]+$ ]] && test "$process" != meta ||
+                                die "convert: not a process name (letters, digits, . _ -; not 'meta'): $process"
+                            test -z "${file_of[$process]:-}" || die "convert: process given twice: $process"
+                            test -f "$file" || die "convert: no such file: $file"
+                            file_of[$process]=$(realpath -s "$file");;
+           * )              test -z "$out" || die "convert: more than one PQDIR (logs are PROCESS=FILE)"; out=$1;;
        esac; shift; done
-    test -n "$dir" || die "convert-run: RUNDIR missing"
-    dir=$(realpath "$dir")
-    check_rundir "$dir"
+    test -n "$out" || die "convert: PQDIR missing"
+    test -n "$run_id" || die "convert: --run-id missing"
+    test ${#file_of[@]} -gt 0 || die "convert: no PROCESS=FILE given"
+    test -z "$system_start" -a -z "$slot_length" -o -n "$system_start" -a -n "$slot_length" ||
+        die "convert: --system-start and --slot-length go together"
     command -v "$DUCKDB" >/dev/null || die "duckdb not found (DUCKDB=$DUCKDB)"
-
-    local out=$dir/parquets
+    out=$(realpath -m "$out")
+    test -d "$(dirname "$out")" || die "convert: no such directory: $(dirname "$out")"
     if test -e "$out" -a -z "$force"
     then die "$out exists (use --force to replace it)"; fi
 
-    # Sources: stdout of node-* and generator. stderr carries no JSON and is
-    # fetched with the run directory as before; its sizes are only reported.
-    local sources=() errs=() d process
-    for d in "$dir"/node-* "$dir"/generator
-    do test -d "$d" || continue
-       process=$(basename "$d")
-       test -f "$d/stdout" && sources+=("$process/stdout")
-       test -s "$d/stderr" && errs+=("$process/stderr")
-    done
-    test ${#sources[@]} -gt 0 || die "no node-*/stdout or generator/stdout in $dir"
     # Largest first: the longest conversion starts at once and overlaps with the
     # rest instead of running alone at the end.
     local -A size_of=()
-    local sorted=() total=0
-    for src in "${sources[@]}"
-    do size_of[$src]=$(stat -L -c%s "$dir/$src"); total=$(( total + size_of[$src] )); done
-    mapfile -t sorted < <(for src in "${sources[@]}"; do printf '%s\t%s\n' "${size_of[$src]}" "$src"; done |
-                          sort -t$'\t' -k1,1nr | cut -f2)
-    sources=("${sorted[@]}")
-
-    # Genesis timing and run id.
-    local genesis=$dir/genesis/genesis.shelley.json
-    test -f "$genesis" || genesis=$dir/genesis-shelley.json
-    test -f "$genesis" || die "no Shelley genesis in $dir (genesis/genesis.shelley.json)"
-    local run_id system_start slot_length
-    run_id=$(jq -r '.meta.tag // empty' "$dir"/meta.json)
-    test -n "$run_id" || run_id=$(basename "$dir")
-    system_start=$(jq -r '.systemStart | sub("Z$"; "")' "$genesis")
-    slot_length=$(jq -r '.slotLength' "$genesis")
+    local sources=() total=0 src
+    for src in "${!file_of[@]}"
+    do size_of[$src]=$(stat -L -c%s "${file_of[$src]}"); total=$(( total + size_of[$src] )); done
+    mapfile -t sources < <(for src in "${!file_of[@]}"; do printf '%s\t%s\n' "${size_of[$src]}" "$src"; done |
+                           sort -t$'\t' -k1,1nr -k2,2 | cut -f2)
 
     # Parallelism: memory budget per slot = DuckDB's limit + 1.5 GiB for what it
     # uses beyond the limit (measured: 0.7 GiB over for a 4 GiB job, 2.7 GiB over
@@ -280,9 +281,9 @@ convert_run() {
        slots_of[$src]=$k
     done
 
-    local tmp=$dir/.parquets.tmp.$$
+    local tmp; tmp=$(dirname "$out")/.$(basename "$out").tmp.$$
     mkdir -p "$tmp"/spill "$tmp"/stats "$tmp"/meta
-    msg "converting ${#sources[@]} logs of $(basename "$dir"): $jobs slots, each ${threads} threads and ${mem_gib} GiB memory limit"
+    msg "converting ${#sources[@]} logs of $run_id: $jobs slots, each ${threads} threads and ${mem_gib} GiB memory limit"
     msg "  memory available: $(( mem_avail_mib / 1024 )) GiB ($mem_src), cores: $ncpu"
     for src in "${sources[@]}"
     do test "${slots_of[$src]}" -eq 1 ||
@@ -303,10 +304,10 @@ convert_run() {
     }
     local t0=$SECONDS
     for src in "${sources[@]}"
-    do process=${src%/*}
+    do process=$src
        k=${slots_of[$src]}
        while test $(( used + k )) -gt "$jobs"; do reap_one; done
-       convert_one "$dir/$src" "$process" \
+       convert_one "${file_of[$src]}" "$process" \
                    "$tmp/$process.parquet" "$tmp/stats/$process.parquet" \
                    "$tmp/spill/$process" "$(( k * mem_gib ))GiB" "$(( k * threads ))" "$zstd" &
        running[$!]=$src
@@ -323,13 +324,18 @@ convert_run() {
          die "${#failed[@]} of ${#sources[@]} conversions failed: ${failed[*]}"
     fi
 
-    # Metadata.
+    # Metadata. Genesis timing is NULL when not given (query sessions then refuse
+    # slot arithmetic instead of guessing).
+    local start_sql=NULL slot_sql=NULL
+    if test -n "$system_start"
+    then start_sql="CAST($(sqlq "${system_start%Z}") AS TIMESTAMP)"
+         slot_sql="CAST($(sqlq "$slot_length") AS DOUBLE)"; fi
     "$DUCKDB" -init /dev/null -c "
         COPY (SELECT * FROM read_parquet($(sqlq "$tmp/stats/*.parquet")) ORDER BY process)
           TO $(sqlq "$tmp/meta/files.parquet") (FORMAT parquet);
         COPY (SELECT $(sqlq "$run_id")                       AS run_id,
-                     CAST($(sqlq "$system_start") AS TIMESTAMP) AS system_start,
-                     CAST($(sqlq "$slot_length") AS DOUBLE)   AS slot_length_s,
+                     CAST($start_sql AS TIMESTAMP)           AS system_start,
+                     CAST($slot_sql AS DOUBLE)               AS slot_length_s,
                      $(sqlq "$converter_version")            AS converter_version,
                      ${raw_schema_version}::INTEGER          AS raw_schema_version,
                      version()                               AS duckdb_version,
@@ -339,7 +345,8 @@ convert_run() {
 
     # Namespaces differing only in case can't coexist as views (DuckDB matches
     # identifiers case-insensitively, even quoted). Views are made for the nodes only.
-    local clashes
+    local clashes=
+    compgen -G "$tmp/node-*.parquet" >/dev/null &&
     clashes=$("$DUCKDB" -init /dev/null -noheader -list -c "
         SELECT string_agg(DISTINCT ns, ' / ') FROM read_parquet($(sqlq "$tmp/node-*.parquet"))
         WHERE ns IS NOT NULL GROUP BY lower(ns) HAVING count(DISTINCT ns) > 1;")
@@ -369,13 +376,6 @@ convert_run() {
             FROM read_parquet($files) WHERE $cond ORDER BY process;" >&2
     else msg "no log with text after JSON started, or JSON lines kept verbatim"
     fi
-    # stderr: sizes only, no judgement (processes may recover from what they report there).
-    if test ${#errs[@]} -gt 0
-    then msg "non-empty stderr (not converted):"
-         for src in "${errs[@]}"
-         do msg "  $src: $(stat -L -c%s "$dir/$src") bytes, $(wc -l < "$dir/$src") lines"; done
-    else msg "stderr: empty or absent for all processes"
-    fi
     msg "wrote $out ($(du -sh "$out" | cut -f1)) in $(( SECONDS - t0 )) s"
 }
 
@@ -384,8 +384,9 @@ convert_run() {
 
 # Write the session init script for a run to FILE.
 session_init() {
-    local dir=$1 file=$2
-    local pq=$dir/parquets
+    local pq=$1 file=$2
+    compgen -G "$pq/node-*.parquet" >/dev/null ||
+        die "no node-*.parquet in $pq: query sessions need at least one node log (process named node-*)"
     local pql session
     pql=$(sqlq "$pq")
     session=$(<"$sql_dir/session.sql")
@@ -412,20 +413,19 @@ session_init() {
 }
 
 with_session() {
-    local dir=$1; shift
-    dir=$(realpath "$dir")
-    test -d "$dir" || die "not a directory: $dir"
-    check_parquets "$dir"
+    local pq=$1; shift
+    pq=$(realpath -m "$pq")
+    check_pqdir "$pq"
     local init status=0
     init=$(mktemp --suffix=.sql)
-    session_init "$dir" "$init"
+    session_init "$pq" "$init"
     "$@" "$init" || status=$?
     rm -f "$init"
     return $status
 }
 
 query_cmd() {
-    local dir=${1:?query: RUNDIR missing}; shift
+    local pq=${1:?query: PQDIR missing}; shift
     local ui= args=() a
     for a in "$@"
     do if test "$a" = --ui; then ui=t; else args+=("$a"); fi; done
@@ -433,45 +433,44 @@ query_cmd() {
         test -z "$ui" || echo ".read $(sqlq "$sql_dir/ui.sql")" >> "$1"
         "$DUCKDB" -init "$1" "${args[@]}"
     }
-    with_session "$dir" run_query
+    with_session "$pq" run_query
 }
 
 run_cmd() {
-    local dir=${1:?run: RUNDIR missing} file=${2:?run: FILE.sql missing}
+    local pq=${1:?run: PQDIR missing} file=${2:?run: FILE.sql missing}
     test -f "$file" || die "no such file: $file"
     file=$(realpath "$file")
     run_file() { "$DUCKDB" -init /dev/null -c ".read $(sqlq "$1")" -c ".read $(sqlq "$file")"; }
-    with_session "$dir" run_file
+    with_session "$pq" run_file
 }
 
 ##############################################################################
 # restore
 
 restore_cmd() {
-    local dir= process= outf= verify=
+    local pq= process= outf= verify=
     while test $# -gt 0
     do case "$1" in
            -o )       outf=${2:?-o needs a file}; shift;;
            --verify ) verify=t;;
            -* )       die "restore: unknown option: $1";;
-           * )        if   test -z "$dir";     then dir=$1
+           * )        if   test -z "$pq";      then pq=$1
                       elif test -z "$process"; then process=$1
                       else die "restore: too many arguments"; fi;;
        esac; shift; done
-    test -n "$dir" -a -n "$process" -a -n "$outf" || die "restore: RUNDIR PROCESS -o FILE required"
-    dir=$(realpath "$dir")
-    test -d "$dir" || die "not a directory: $dir"; check_parquets "$dir"
-    local pqf=$dir/parquets/$process.parquet
-    test -f "$pqf" || die "no $pqf"
-    test "$(realpath -m "$outf")" != "$dir/$process/stdout" || die "refusing to overwrite the original $dir/$process/stdout"
+    test -n "$pq" -a -n "$process" -a -n "$outf" || die "restore: PQDIR PROCESS -o FILE required"
+    pq=$(realpath -m "$pq")
+    local pqf; pqf=$(process_parquet "$pq" "$process")
 
     local meta
-    meta=$("$DUCKDB" -init /dev/null -noheader -csv -c "
-        SELECT final_newline, lines_total, sha256 FROM read_parquet($(sqlq "$dir/parquets/meta/files.parquet"))
+    meta=$("$DUCKDB" -init /dev/null -noheader -list -separator $'\t' -c "
+        SELECT final_newline, lines_total, sha256, source FROM read_parquet($(sqlq "$pq/meta/files.parquet"))
         WHERE process = $(sqlq "$process");")
     test -n "$meta" || die "no metadata for $process"
-    local final_nl lines sha
-    IFS=, read -r final_nl lines sha <<< "$meta"
+    local final_nl lines sha source
+    IFS=$'\t' read -r final_nl lines sha source <<< "$meta"
+    # Never over the log it was converted from (the path recorded at conversion).
+    test "$(realpath -m "$outf")" != "$(realpath -m "$source")" || die "refusing to overwrite the original $source"
 
     "$DUCKDB" -init /dev/null >/dev/null <<EOF
 .read $(sqlq "$sql_dir/lib.sql")
@@ -496,26 +495,26 @@ EOF
 
 # The Parquet file of one process, after checks.
 process_parquet() {
-    local dir=$1 process=$2
-    test -d "$dir" || die "not a directory: $dir"; check_parquets "$dir"
-    local pqf=$dir/parquets/$process.parquet
+    local pq=$1 process=$2
+    check_pqdir "$pq"
+    local pqf=$pq/$process.parquet
     test -f "$pqf" || die "no $pqf"
     echo "$pqf"
 }
 
 lines_cmd() {
-    local dir= process= nsfile=
+    local pq= process= nsfile=
     while test $# -gt 0
     do case "$1" in
            --ns-file ) nsfile=${2:?--ns-file needs a file}; shift;;
            -* )        die "lines: unknown option: $1";;
-           * )         if   test -z "$dir";     then dir=$1
+           * )         if   test -z "$pq";      then pq=$1
                        elif test -z "$process"; then process=$1
                        else die "lines: too many arguments"; fi;;
        esac; shift; done
-    test -n "$dir" -a -n "$process" || die "lines: RUNDIR PROCESS required"
-    dir=$(realpath "$dir")
-    local pqf; pqf=$(process_parquet "$dir" "$process")
+    test -n "$pq" -a -n "$process" || die "lines: PQDIR PROCESS required"
+    pq=$(realpath -m "$pq")
+    local pqf; pqf=$(process_parquet "$pq" "$process")
 
     local filter="ns IS NOT NULL" ns list=()
     if test -n "$nsfile"
@@ -527,8 +526,8 @@ lines_cmd() {
     fi
 
     # Restoring log order sorts the selected lines: bounded memory, spilling
-    # beside the run (several of these may run in parallel, one per host).
-    local tmp=$dir/.parquets.lines.tmp.$$
+    # beside PQDIR (several of these may run in parallel, one per host).
+    local tmp; tmp=$(dirname "$pq")/.$(basename "$pq").lines.tmp.$$
     mkdir -p "$tmp"
     local status=0
     "$DUCKDB" -init /dev/null <<EOF || status=$?
@@ -544,10 +543,10 @@ EOF
 }
 
 host_summary_cmd() {
-    local dir=${1:?host-summary: RUNDIR missing} process=${2:?host-summary: PROCESS missing}
+    local pq=${1:?host-summary: PQDIR missing} process=${2:?host-summary: PROCESS missing}
     test $# -eq 2 || die "host-summary: too many arguments"
-    dir=$(realpath "$dir")
-    local pqf; pqf=$(process_parquet "$dir" "$process")
+    pq=$(realpath -m "$pq")
+    local pqf; pqf=$(process_parquet "$pq" "$process")
     "$DUCKDB" -init /dev/null -noheader -list <<EOF
 .read $(sqlq "$sql_dir/lib.sql")
 .read $(sqlq "$sql_dir/locli.sql")
@@ -555,11 +554,33 @@ FROM bp_host_summary($(sqlq "$pqf"));
 EOF
 }
 
+head_tail_cmd() {
+    local cmd=$1; shift
+    local pq= process= n=20
+    while test $# -gt 0
+    do case "$1" in
+           -n ) n=${2:?-n needs a number}; shift;;
+           -* ) die "$cmd: unknown option: $1";;
+           * )  if   test -z "$pq";      then pq=$1
+                elif test -z "$process"; then process=$1
+                else die "$cmd: too many arguments"; fi;;
+       esac; shift; done
+    test -n "$pq" -a -n "$process" || die "$cmd: PQDIR PROCESS required"
+    [[ $n =~ ^[0-9]+$ ]] || die "$cmd: -n needs a number, got: $n"
+    pq=$(realpath -m "$pq")
+    local pqf; pqf=$(process_parquet "$pq" "$process")
+    "$DUCKDB" -init /dev/null <<EOF
+.read $(sqlq "$sql_dir/lib.sql")
+COPY (FROM bp_$cmd($(sqlq "$pqf"), $n))
+  TO '/dev/stdout' (FORMAT csv, HEADER false, QUOTE '', ESCAPE '', DELIMITER E'\x1e');
+EOF
+}
+
 ##############################################################################
 # excerpt
 
 excerpt_cmd() {
-    local dir= at= ns= where=true before=5 after=5 outdir= processes=()
+    local pq= at= ns= where=true before=5 after=5 outdir= processes=()
     while test $# -gt 0
     do case "$1" in
            --at )      at=${2:?--at needs a timestamp}; shift;;
@@ -570,13 +591,12 @@ excerpt_cmd() {
            --process ) processes+=("${2:?}"); shift;;
            -o )        outdir=${2:?-o needs a directory}; shift;;
            -* )        die "excerpt: unknown option: $1";;
-           * )         test -z "$dir" || die "excerpt: more than one RUNDIR"; dir=$1;;
+           * )         test -z "$pq" || die "excerpt: more than one PQDIR"; pq=$1;;
        esac; shift; done
-    test -n "$dir" -a -n "$outdir" || die "excerpt: RUNDIR and -o OUTDIR required"
+    test -n "$pq" -a -n "$outdir" || die "excerpt: PQDIR and -o OUTDIR required"
     test -n "$at" -o -n "$ns" || die "excerpt: --at or --ns required"
-    dir=$(realpath "$dir")
-    test -d "$dir" || die "not a directory: $dir"; check_parquets "$dir"
-    local pq=$dir/parquets
+    pq=$(realpath -m "$pq")
+    check_pqdir "$pq"
 
     local pfilter=true p
     if test ${#processes[@]} -gt 0
@@ -620,11 +640,12 @@ excerpt_cmd() {
 
 cmd=${1:-}; test $# -eq 0 || shift
 case "$cmd" in
-    convert-run ) convert_run "$@";;
+    convert )     convert_cmd "$@";;
     restore )     restore_cmd "$@";;
     excerpt )     excerpt_cmd "$@";;
     lines )       lines_cmd "$@";;
     host-summary ) host_summary_cmd "$@";;
+    head | tail ) head_tail_cmd "$cmd" "$@";;
     query )       query_cmd "$@";;
     run )         run_cmd "$@";;
     help | -h | --help | "" ) usage;;

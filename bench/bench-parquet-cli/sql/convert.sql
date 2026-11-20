@@ -1,8 +1,8 @@
--- Conversion of one log to Parquet. Loaded by convert-run only, after lib.sql
+-- Conversion of one log to Parquet. Loaded by convert only, after lib.sql
 -- (bp_parse uses bp_rebuild_line).
 
 -- The rows of one log, in Parquet layout, unsorted. src: the log's lines, each
--- numbered by the caller as "<n>\x1f<line>" (convert-run pipes them through
+-- numbered by the caller as "<n>\x1f<line>" (convert pipes them through
 -- /dev/stdin). One pass, no intermediate tables (each would spill for large logs).
 CREATE OR REPLACE MACRO bp_parse(process, src) AS TABLE
   WITH
