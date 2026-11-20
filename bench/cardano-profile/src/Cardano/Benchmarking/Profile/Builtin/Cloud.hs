@@ -56,6 +56,13 @@ baseVoltaire =
     baseInternal
   . V.genesisVariantVoltaire
 
+-- Dijkstra: the latest mainnet parameters with the v12 preview. Runs with
+-- ERA=dijkstra.
+baseDijkstra :: Types.Profile -> Types.Profile
+baseDijkstra =
+    baseInternal
+  . V.genesisVariantLeios
+
 baseVoting :: Types.Profile -> Types.Profile
 baseVoting =
     baseVoltaire
@@ -140,6 +147,8 @@ profilesCloud =
                  . plutusDesc
       valueVolt  = P.empty & baseVoltaire . V.valueCloud . V.datasetOct2021 . V.fundsDouble . valueDuration  . nomadPerf
                  . valueDesc
+      valueDijkstra = P.empty & baseDijkstra . V.valueCloud . V.datasetOct2021 . V.fundsDouble . valueDuration  . nomadPerf
+                 . P.descAdd "+ Dijkstra" . valueDesc
       plutusVolt = P.empty & baseVoltaire . V.plutusBase . V.datasetOct2021 . V.fundsDouble . plutusDuration . nomadPerf
                  . plutusDesc
       -- memory-constrained
@@ -204,6 +213,8 @@ profilesCloud =
                           )
   , valueVolt & P.name "value-volt-lsmt-nomadperf"                         . P.dreps  10000 . ephemeral . P.lsmt
   , valueVolt & P.name "value-volt-cgmem-nomadperf"                        . P.dreps  10000                      . cgmem
+  -- Value (Dijkstra profiles)
+  , valueDijkstra & P.name "value-dijkstra-nomadperf"                      . P.dreps  10000
   -- Plutus (pre-Voltaire profiles)
   , loop      & P.name "plutus-nomadperf"                                  . P.dreps      0
   , loop      & P.name "plutus-drep1k-nomadperf"                           . P.dreps   1000
