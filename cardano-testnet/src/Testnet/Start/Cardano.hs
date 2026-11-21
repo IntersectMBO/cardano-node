@@ -267,6 +267,7 @@ cardanoTestnet
     , runtimeEnableTracer=cardanoEnableTracer
     , runtimeKESSource=cardanoKESSource
     , runtimeEnableChainStallWatchdog=enableChainStallWatchdog
+    , runtimeEnableReadinessChecks=enableReadinessChecks
     }
   Conf
     { tempAbsPath=TmpAbsolutePath tmpAbsPath
@@ -504,7 +505,8 @@ cardanoTestnet
   let startupHorizon = chainForecastHorizon shelleyGenesis
       startupBlockTimeout =
         startTimeOffsetSeconds + ceiling startupHorizon + startupDetectionMarginSeconds
-  mapConcurrently_ (waitForBlockThrow startupHorizon startupBlockTimeout (File nodeConfigFile')) testnetNodes'
+  when enableReadinessChecks $
+    mapConcurrently_ (waitForBlockThrow startupHorizon startupBlockTimeout (File nodeConfigFile')) testnetNodes'
 
   let runtime = TestnetRuntime
         { configurationFile = File nodeConfigFile'
@@ -531,7 +533,7 @@ cardanoTestnet
 
   execConfig <- mkExecConfig tempBaseAbsPath (NEL.head $ testnetSprockets runtime) testnetMagic
 
-  forM_ wallets $ \wallet -> do
+  when enableReadinessChecks $ forM_ wallets $ \wallet -> do
 
     execCli' execConfig
       [ "latest", "query", "utxo"
@@ -541,7 +543,8 @@ cardanoTestnet
 
   let stakePoolsFp = tmpAbsPath </> "current-stake-pools.json"
 
-  assertExpectedSposInLedgerState stakePoolsFp nPools execConfig
+  when enableReadinessChecks $
+    assertExpectedSposInLedgerState stakePoolsFp nPools execConfig
 
   when enableNewEpochStateLogging $
     TR.startLedgerNewEpochStateLogging runtime tempBaseAbsPath
@@ -549,9 +552,10 @@ cardanoTestnet
   -- Build and atomically write the manifest.  The file appearing is the
   -- ready signal — it is written only after all readiness checks pass, as
   -- the very last step: nothing that can fail runs after it.
-  manifest <- liftIOAnnotated $
-    buildManifest tmpAbsPath runtime (AnyCardanoEra (toCardanoEra Defaults.defaultEra)) (sgSystemStart shelleyGenesis)
-  liftIOAnnotated $ writeManifest tmpAbsPath manifest
+  when enableReadinessChecks $ do
+    manifest <- liftIOAnnotated $
+      buildManifest tmpAbsPath runtime (AnyCardanoEra (toCardanoEra Defaults.defaultEra)) (sgSystemStart shelleyGenesis)
+    liftIOAnnotated $ writeManifest tmpAbsPath manifest
 
   pure runtime
   where

@@ -81,6 +81,7 @@ pRuntimeOptions = TestnetRuntimeOptions
   <*> pEnableTracer
   <*> pKesSource
   <*> pEnableChainStallWatchdog
+  <*> pure True -- readiness checks are always on from the command line
 
 pScratchOutputDir :: Parser (Maybe FilePath)
 pScratchOutputDir = optional $ OA.strOption

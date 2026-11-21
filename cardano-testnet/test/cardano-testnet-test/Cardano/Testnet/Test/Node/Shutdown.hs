@@ -205,7 +205,14 @@ hprop_shutdownOnSlotSynced = integrationRetryWorkspace 2 "shutdown-on-slot-synce
             , genesisActiveSlotsCoeff = 50.0 / fromIntegral epochLength
             }
         }
-  testnetRuntime <- createAndRunTestnet creationOptions def conf
+      -- The node stops by itself at maxSlot, so:
+      -- - no readiness checks: on a slow machine, the node can stop before they finish
+      -- - no stall watchdog: a node that stops on purpose is not a stalled chain
+      runtimeOptions = def
+        { runtimeEnableReadinessChecks = False
+        , runtimeEnableChainStallWatchdog = False
+        }
+  testnetRuntime <- createAndRunTestnet creationOptions runtimeOptions conf
   let allNodes = testnetNodes testnetRuntime
   H.note_ $ "All nodes: " <>  show (nodeName <$> allNodes)
 
@@ -214,7 +221,7 @@ hprop_shutdownOnSlotSynced = integrationRetryWorkspace 2 "shutdown-on-slot-synce
 
   -- Wait for the node to exit
   let timeout :: Int
-      timeout = round (40 + (fromIntegral maxSlot * slotLen))
+      timeout = Testnet.startTimeOffsetSeconds + round (40 + (fromIntegral maxSlot * slotLen))
 
   H.note_ $ "Timeout: " <> show timeout
 

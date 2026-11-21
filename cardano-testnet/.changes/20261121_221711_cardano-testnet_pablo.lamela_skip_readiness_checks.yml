@@ -1,0 +1,4 @@
+pr: 6778
+kind:
+  - compatible
+description: New `runtimeEnableReadinessChecks` option, on by default; turn it off to get the testnet back as soon as its nodes start, without waiting for blocks, querying the nodes or writing the manifest.

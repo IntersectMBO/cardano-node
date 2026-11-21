@@ -229,6 +229,11 @@ data TestnetRuntimeOptions = TestnetRuntimeOptions
     -- soon as the chain has provably stopped producing blocks forever (see
     -- "Testnet.ChainWatchdog"). On by default; disable it only for tests that
     -- legitimately halt all block production.
+  , runtimeEnableReadinessChecks :: Bool
+    -- ^ Whether to check that the testnet works before returning: every node makes a
+    -- block, and the wallets and stake pools can be queried. The manifest is only written
+    -- after these checks. On by default; disable it only for tests whose nodes stop by
+    -- themselves.
   } deriving (Eq, Show)
 
 instance Default TestnetRuntimeOptions where
@@ -238,6 +243,7 @@ instance Default TestnetRuntimeOptions where
     , runtimeEnableTracer = TraceDisabled
     , runtimeKESSource = def
     , runtimeEnableChainStallWatchdog = True
+    , runtimeEnableReadinessChecks = True
     }
 
 -- | Options specific to the @--node-env@ path: the environment directory
