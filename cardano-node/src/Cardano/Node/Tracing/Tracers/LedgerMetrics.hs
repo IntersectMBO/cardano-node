@@ -62,7 +62,7 @@ startLedgerMetricsTracer tr everyNThSlot nodeKernelData =
           !query <- waitForDifferentSlot prevSlot
           threadDelay $ 700 * 1000                      -- 700ms; see Note [Interval]
           case query of
-            SJust current@(CurrentSlot slot')
+            SJust current@(CurrentSlot slot' _)
               | countdown == 1  -> traceLedgerMetrics nodeKernelData slot' tr >> go everyNThSlot current
               | otherwise       -> go (countdown - 1) current
             _ -> go countdown prevSlot
@@ -72,12 +72,12 @@ startLedgerMetricsTracer tr everyNThSlot nodeKernelData =
           mapNodeKernelDataIO (\nk -> atomically $ do
             mSlot <- getCurrentSlot (getBlockchainTime nk)
             case mSlot of
-              current@(CurrentSlot s') | isDifferentSlotNo s' -> return current
+              current@(CurrentSlot s' _) | isDifferentSlotNo s' -> return current
               _ -> retry
             ) nodeKernelData
           where
             isDifferentSlotNo = case prev of
-              CurrentSlot s       -> (/= s)
+              CurrentSlot s _     -> (/= s)
               CurrentSlotUnknown  -> const True
 
 data LedgerMetrics =
