@@ -48,13 +48,14 @@ import           Ouroboros.Consensus.Cardano.Block
 import           Ouroboros.Consensus.Genesis.Governor (TraceGDDEvent (..))
 import           Ouroboros.Consensus.Ledger.Query (Query)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTxId)
-import           Ouroboros.Consensus.Leios.Types (LeiosPoint, LeiosVote)
+import           Ouroboros.Consensus.Leios.Types (EndorserBlock, LeiosPoint, LeiosTx, LeiosVote)
 import           Ouroboros.Consensus.Mempool (TraceEventMempool (..))
 import           Ouroboros.Consensus.MiniProtocol.BlockFetch.Server
                    (TraceBlockFetchServerEvent (..))
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client (TraceChainSyncClientEvent)
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client.Jumping as Jumping
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Server (TraceChainSyncServerEvent)
+import           Ouroboros.Consensus.MiniProtocol.LeiosFetch.Type (LeiosFetch)
 import           Ouroboros.Consensus.MiniProtocol.LeiosNotify.Type (LeiosNotify)
 import           Ouroboros.Consensus.MiniProtocol.LocalTxSubmission.Server
                    (TraceLocalTxSubmissionServerEvent (..))
@@ -71,7 +72,7 @@ import           Ouroboros.Consensus.Protocol.Praos.AgentClient (KESAgentClientT
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import           Ouroboros.Consensus.Tracing (ClientMetrics, ConsensusStartupException,
                    ReplayBlockStats)
-import           Ouroboros.Network.Block (Point (..), SlotNo, Tip)
+import           Ouroboros.Network.Block (Point (..), Serialised, SlotNo, Tip)
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.BlockFetch.Decision.Trace (TraceDecisionEvent)
 import           Ouroboros.Network.ConnectionHandler (ConnectionHandlerTrace (..))
@@ -240,6 +241,9 @@ getAllNamespaces =
         leiosNotifyNS = map (nsGetTuple . nsReplacePrefix ["LeiosNotify", "Remote"])
                         (allNamespaces :: [Namespace (BlockFetch.TraceLabelPeer peer
                           (TraceSendRecv (LeiosNotify LeiosPoint (Header blk) LeiosVote)))])
+        leiosFetchNS = map (nsGetTuple . nsReplacePrefix ["LeiosFetch", "Remote"])
+                        (allNamespaces :: [Namespace (BlockFetch.TraceLabelPeer peer
+                          (TraceSendRecv (LeiosFetch LeiosPoint (Serialised EndorserBlock) LeiosTx)))])
         perasCertInclusionNS = map (nsGetTuple . nsReplacePrefix ["Peras", "Cert", "Inclusion"])
                         (allNamespaces :: [Namespace (TracePerasCertInclusionEvent blk)])
         perasVoteForgingNS = map (nsGetTuple . nsReplacePrefix ["Peras", "Vote", "Forging"])
@@ -495,6 +499,7 @@ getAllNamespaces =
             <> perasVoteForgingNS
 -- Leios
             <> leiosNotifyNS
+            <> leiosFetchNS
 -- NodeToClient
             <> keepAliveClientNS
             <> chainSyncNS

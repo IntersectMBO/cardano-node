@@ -608,6 +608,11 @@ mkNodeToNodeTracers configReflection trBase trForward mbTrEKG _trDataPoint trCon
                 ["LeiosNotify", "Remote"]
     configureTracers configReflection trConfig [leiosNotifyTracer]
 
+    !leiosFetchTracer  <-  mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["LeiosFetch", "Remote"]
+    configureTracers configReflection trConfig [leiosFetchTracer]
+
     pure $ NtN.Tracers
       { NtN.tChainSyncTracer = mkTracer $
           traceWith chainSyncTracer
@@ -629,7 +634,8 @@ mkNodeToNodeTracers configReflection trBase trForward mbTrEKG _trDataPoint trCon
           traceWith txPerasVoteDiffusion
       , NtN.tLeiosNotifyTracer = mkTracer $
           traceWith leiosNotifyTracer
-      , NtN.tLeiosFetchTracer = nullTracer
+      , NtN.tLeiosFetchTracer = mkTracer $
+          traceWith leiosFetchTracer
       }
 
 mkDiffusionTracers ::

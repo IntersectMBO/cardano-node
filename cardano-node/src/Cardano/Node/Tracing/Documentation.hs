@@ -59,13 +59,14 @@ import           Ouroboros.Consensus.Cardano.Block
 import           Ouroboros.Consensus.Genesis.Governor (TraceGDDEvent (..))
 import           Ouroboros.Consensus.Ledger.Query (Query)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTxId)
-import           Ouroboros.Consensus.Leios.Types (LeiosPoint, LeiosVote)
+import           Ouroboros.Consensus.Leios.Types (EndorserBlock, LeiosPoint, LeiosTx, LeiosVote)
 import           Ouroboros.Consensus.Mempool (TraceEventMempool (..))
 import           Ouroboros.Consensus.MiniProtocol.BlockFetch.Server
                    (TraceBlockFetchServerEvent (..))
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client (TraceChainSyncClientEvent)
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client.Jumping as Jumping
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Server (TraceChainSyncServerEvent)
+import           Ouroboros.Consensus.MiniProtocol.LeiosFetch.Type (LeiosFetch)
 import           Ouroboros.Consensus.MiniProtocol.LeiosNotify.Type (LeiosNotify)
 import           Ouroboros.Consensus.MiniProtocol.LocalTxSubmission.Server
                    (TraceLocalTxSubmissionServerEvent (..))
@@ -534,6 +535,14 @@ docTracersFirstPhase condConfigFileName = do
       Logging.Trace IO (BlockFetch.TraceLabelPeer peer
         (TraceSendRecv (LeiosNotify LeiosPoint (Header blk) LeiosVote))))
 
+    leiosFetchTr <- mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["LeiosFetch", "Remote"]
+    configureTracers configReflection trConfig [leiosFetchTr]
+    leiosFetchTrDoc <- documentTracer (leiosFetchTr ::
+      Logging.Trace IO (BlockFetch.TraceLabelPeer peer
+        (TraceSendRecv (LeiosFetch LeiosPoint (Serialised EndorserBlock) LeiosTx))))
+
     perasCertInclusionTr <- mkCardanoTracer
                 trBase trForward mbTrEKG
                 ["Peras", "Cert", "Inclusion"]
@@ -874,6 +883,7 @@ docTracersFirstPhase condConfigFileName = do
             <> perasVoteForgingTrDoc
 -- Leios
             <> leiosNotifyTrDoc
+            <> leiosFetchTrDoc
 -- NodeToClient
             <> keepAliveClientTrDoc
             <> chainSyncTrDoc
