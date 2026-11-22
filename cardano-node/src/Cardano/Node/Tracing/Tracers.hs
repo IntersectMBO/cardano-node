@@ -31,6 +31,8 @@ import           Cardano.Node.Tracing.Consistency (checkNodeTraceConfiguration')
 import qualified Cardano.Node.Tracing.StateRep as SR
 import           Cardano.Node.Tracing.Tracers.ForgingStats (ForgingStateVar, calcForgeStats)
 import           Cardano.Node.Tracing.Tracers.LedgerMetrics ()
+import           Cardano.Node.Tracing.Tracers.LeiosKernel (leiosKernelFromFetchClient,
+                   leiosKernelFromForge, leiosKernelFromVoteState, leiosKernelFromVoting)
 import           Cardano.Node.Tracing.Tracers.NodeToClient ()
 import           Cardano.Node.Tracing.Tracers.NodeToNode ()
 import           Cardano.Node.Tracing.Tracers.NodeVersion (getNodeVersion)
@@ -40,9 +42,7 @@ import           Cardano.Node.Tracing.Tracers.Startup ()
 import           Ouroboros.Consensus.Ledger.Inspect (LedgerEvent)
 import           Ouroboros.Consensus.Leios.Types (LeiosVote (..))
 import           Ouroboros.Consensus.Leios.VoteState (TraceLeiosVoteState (..))
-import           Ouroboros.Consensus.Leios.Voting (TraceLeiosVoting (..))
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client (TraceChainSyncClientEvent)
-import           Ouroboros.Consensus.MiniProtocol.LeiosFetch.Trace (TraceLeiosFetchClientEvent (..))
 import           Ouroboros.Consensus.MiniProtocol.LeiosNotify.Trace
                    (TraceLeiosNotifyClientEvent (..))
 import qualified Ouroboros.Consensus.Network.NodeToClient as NodeToClient
@@ -304,6 +304,11 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
                 ["Forge", "Loop"]
     configureTracers configReflection trConfig [forgeTr]
 
+    !leiosKernelTr <- mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["Consensus", "LeiosKernel"]
+    configureTracers configReflection trConfig [leiosKernelTr]
+
     !forgeStatsTr <- mkCardanoTracer'
                 trBase trForward mbTrEKG
                 ["Forge", "Stats"]
@@ -423,6 +428,9 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
       , Consensus.forgeTracer =
            mkTracer (\(Consensus.TraceLabelCreds _ x) -> traceWith forgeTr x)
            <>
+           mkTracer (\(Consensus.TraceLabelCreds _ x) ->
+             mapM_ (traceWith leiosKernelTr) (leiosKernelFromForge x))
+           <>
            mkTracer (\(Consensus.TraceLabelCreds _ x) -> traceWith forgeStatsTr x)
       , Consensus.blockchainTimeTracer = mkTracer $
           traceWith blockchainTimeTr
@@ -457,18 +465,17 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
       , Consensus.leiosFetchServerTracer = nullTracer
       , Consensus.leiosDbTracer = nullTracer
       , Consensus.leiosNotifyClientTracer = mkTracer traceLeiosNotifyClientToStderr
-      , Consensus.leiosVoteStateTracer = mkTracer traceLeiosVoteStateToStderr
-      , Consensus.leiosVotingTracer = mkTracer traceLeiosVotingToStderr
-      , Consensus.leiosFetchClientTracer = mkTracer traceLeiosFetchClientToStderr
+      , Consensus.leiosVoteStateTracer = mkTracer $ \ev -> do
+          traceLeiosVoteStateToStderr ev
+          mapM_ (traceWith leiosKernelTr) (leiosKernelFromVoteState ev)
+      , Consensus.leiosVotingTracer = mkTracer $
+          mapM_ (traceWith leiosKernelTr) . leiosKernelFromVoting
+      , Consensus.leiosFetchClientTracer = mkTracer $
+          mapM_ (traceWith leiosKernelTr) . leiosKernelFromFetchClient
       }
 
 -- | Until the vote state is traced properly (ouroboros-consensus#2447), the
 -- certificates and missed quorums go to stderr, for the acceptance demo.
-traceLeiosVotingToStderr :: TraceLeiosVoting -> IO ()
-traceLeiosVotingToStderr = \case
-  TraceLeiosVoted vote -> hPutStrLn stderr ("TraceLeiosVoted " <> showVote vote)
-  ev -> hPutStrLn stderr (show ev)
-
 traceLeiosVoteStateToStderr :: TraceLeiosVoteState -> IO ()
 traceLeiosVoteStateToStderr = \case
   TraceLeiosVoteAdding{} -> pure ()
@@ -478,14 +485,6 @@ traceLeiosVoteStateToStderr = \case
   TraceLeiosCertified rbHash _cert -> hPutStrLn stderr ("TraceLeiosCertified " <> show rbHash)
   ev@TraceLeiosAggregationFailed{} -> hPutStrLn stderr (show ev)
   ev@TraceLeiosQuorumMissed{} -> hPutStrLn stderr (show ev)
-
--- | The endorser blocks and closures the node acquires go to stderr too, for
--- the acceptance demo.
-traceLeiosFetchClientToStderr :: Show peer => TraceLeiosFetchClientEvent peer -> IO ()
-traceLeiosFetchClientToStderr = \case
-  TraceLeiosFetchClientBlockArrived{} -> pure ()
-  TraceLeiosFetchClientTxsArrived{} -> pure ()
-  ev -> hPutStrLn stderr (show ev)
 
 -- | The votes the node adds, and those it has too late, go to stderr too, for
 -- the acceptance demo.

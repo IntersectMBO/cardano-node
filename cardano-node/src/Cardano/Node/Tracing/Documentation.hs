@@ -45,6 +45,7 @@ import           Cardano.Node.Tracing.NodeStartupInfo ()
 import qualified Cardano.Node.Tracing.StateRep as SR
 import           Cardano.Node.Tracing.Tracers.ForgingStats (ForgingStats)
 import           Cardano.Node.Tracing.Tracers.LedgerMetrics (LedgerMetrics)
+import           Cardano.Node.Tracing.Tracers.LeiosKernel (LeiosKernelEvent)
 import           Cardano.Node.Tracing.Tracers.NodeToClient ()
 import           Cardano.Node.Tracing.Tracers.NodeToNode ()
 import           Cardano.Node.Tracing.Tracers.NodeVersion (NodeVersionTrace)
@@ -535,6 +536,13 @@ docTracersFirstPhase condConfigFileName = do
       Logging.Trace IO (BlockFetch.TraceLabelPeer peer
         (TraceSendRecv (LeiosNotify LeiosPoint (Header blk) LeiosVote))))
 
+    leiosKernelTr <- mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["Consensus", "LeiosKernel"]
+    configureTracers configReflection trConfig [leiosKernelTr]
+    leiosKernelTrDoc <- documentTracer (leiosKernelTr ::
+      Logging.Trace IO LeiosKernelEvent)
+
     leiosFetchTr <- mkCardanoTracer
                 trBase trForward mbTrEKG
                 ["LeiosFetch", "Remote"]
@@ -884,6 +892,7 @@ docTracersFirstPhase condConfigFileName = do
 -- Leios
             <> leiosNotifyTrDoc
             <> leiosFetchTrDoc
+            <> leiosKernelTrDoc
 -- NodeToClient
             <> keepAliveClientTrDoc
             <> chainSyncTrDoc

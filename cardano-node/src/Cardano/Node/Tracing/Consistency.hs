@@ -34,6 +34,7 @@ import           Cardano.Node.Tracing.DefaultTraceConfig (defaultCardanoConfig)
 import           Cardano.Node.Tracing.Documentation (docTracersFirstPhase)
 import qualified Cardano.Node.Tracing.StateRep as SR
 import           Cardano.Node.Tracing.Tracers.LedgerMetrics (LedgerMetrics)
+import           Cardano.Node.Tracing.Tracers.LeiosKernel (LeiosKernelEvent)
 import           Cardano.Node.Tracing.Tracers.NodeToClient ()
 import           Cardano.Node.Tracing.Tracers.NodeToNode ()
 import           Cardano.Node.Tracing.Tracers.NodeVersion (NodeVersionTrace)
@@ -241,6 +242,8 @@ getAllNamespaces =
         leiosNotifyNS = map (nsGetTuple . nsReplacePrefix ["LeiosNotify", "Remote"])
                         (allNamespaces :: [Namespace (BlockFetch.TraceLabelPeer peer
                           (TraceSendRecv (LeiosNotify LeiosPoint (Header blk) LeiosVote)))])
+        leiosKernelNS = map (nsGetTuple . nsReplacePrefix ["Consensus", "LeiosKernel"])
+                        (allNamespaces :: [Namespace LeiosKernelEvent])
         leiosFetchNS = map (nsGetTuple . nsReplacePrefix ["LeiosFetch", "Remote"])
                         (allNamespaces :: [Namespace (BlockFetch.TraceLabelPeer peer
                           (TraceSendRecv (LeiosFetch LeiosPoint (Serialised EndorserBlock) LeiosTx)))])
@@ -500,6 +503,7 @@ getAllNamespaces =
 -- Leios
             <> leiosNotifyNS
             <> leiosFetchNS
+            <> leiosKernelNS
 -- NodeToClient
             <> keepAliveClientNS
             <> chainSyncNS

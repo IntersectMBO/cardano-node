@@ -109,6 +109,7 @@ library
                         Cardano.Node.Tracing.Tracers
                         Cardano.Node.Tracing.Tracers.ForgingStats
                         Cardano.Node.Tracing.Tracers.LedgerMetrics
+                        Cardano.Node.Tracing.Tracers.LeiosKernel
                         Cardano.Node.Tracing.Tracers.NodeToClient
                         Cardano.Node.Tracing.Tracers.NodeToNode
                         Cardano.Node.Tracing.Tracers.NodeVersion
@@ -129,6 +130,7 @@ library
                       , cardano-api ^>= 11.11
                       , cardano-config ^>= 2.2.3
                       , cardano-crypto-class ^>=2.6
+                      , cardano-crypto-leios
                       , cardano-crypto-wrapper
                       , cardano-git-rev ^>=0.2.2
                       , cardano-ledger-alonzo
