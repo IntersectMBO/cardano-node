@@ -23,6 +23,7 @@ import qualified Cardano.Testnet.Test.Cli.Transaction.WithdrawalReward
 import qualified Cardano.Testnet.Test.Dijkstra.DirectDeposits as Dijkstra
 import qualified Cardano.Testnet.Test.Dijkstra.Governance as Dijkstra
 import qualified Cardano.Testnet.Test.Dijkstra.NestedTransaction
+import qualified Cardano.Testnet.Test.Dijkstra.OnlineBalancing as Dijkstra
 import qualified Cardano.Testnet.Test.Dijkstra.Scripts as Dijkstra
 import qualified Cardano.Testnet.Test.Dijkstra.Staking as Dijkstra
 import qualified Cardano.Testnet.Test.Dijkstra.TopLevelGuards as Dijkstra
@@ -158,6 +159,10 @@ tests = do
           , ignoreOnMacAndWindows "Enable Tracer" Cardano.Testnet.Test.EnableTracer.hprop_enable_tracer
           , ignoreOnWindows "Hard fork to Dijkstra" Cardano.Testnet.Test.Node.DijkstraEra.hprop_hardfork_to_dijkstra
           , ignoreOnWindows "Nested transaction swap" Cardano.Testnet.Test.Dijkstra.NestedTransaction.hprop_nested_transaction_swap
+          , ignoreOnWindows "Dijkstra online sub-transaction balances" Dijkstra.hprop_online_sub_transaction_balances
+          , ignoreOnWindows "Dijkstra online sub-transaction certificates" Dijkstra.hprop_online_sub_transaction_certificates
+          , ignoreOnWindows "Dijkstra online sub-transaction script (direct)" (Dijkstra.hprop_online_sub_transaction_script False)
+          , ignoreOnWindows "Dijkstra online sub-transaction script (reference)" (Dijkstra.hprop_online_sub_transaction_script True)
           , ignoreOnWindows "Dijkstra sub-transaction guards" Dijkstra.hprop_sub_transaction_guards
           , ignoreOnWindows "Dijkstra sub-transaction Plutus V4" Dijkstra.hprop_sub_transaction_plutus_v4
           , ignoreOnWindows "Dijkstra top-level Plutus V4 mint and spend (direct)" Dijkstra.hprop_top_level_plutus_v4

@@ -233,6 +233,7 @@ test-suite cardano-testnet-test
                         Cardano.Testnet.Test.Dijkstra.DirectDeposits
                         Cardano.Testnet.Test.Dijkstra.Governance
                         Cardano.Testnet.Test.Dijkstra.NestedTransaction
+                        Cardano.Testnet.Test.Dijkstra.OnlineBalancing
                         Cardano.Testnet.Test.Dijkstra.Scripts
                         Cardano.Testnet.Test.Dijkstra.Staking
                         Cardano.Testnet.Test.Dijkstra.TopLevelGuards
