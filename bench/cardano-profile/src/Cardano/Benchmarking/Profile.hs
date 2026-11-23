@@ -84,12 +84,6 @@ addUnusedDefaults p =
             -- TODO: Remove property?
             , Types.single_shot = True
             }
-    , Types.generator =
-        let generator = Types.generator p
-        in  generator {
-              -- TODO: Remove property?
-              Types.add_tx_size = 100
-            }
     , Types.analysis =
         let analysis = Types.analysis p
         in  analysis {
