@@ -150,14 +150,23 @@ profilesCloud =
       valueDijkstra = P.empty & baseDijkstra . V.valueCloud . V.datasetOct2021 . V.fundsDouble . valueDuration  . nomadPerf
                  . P.descAdd "+ Dijkstra" . valueDesc
       -- valueDijkstra with transactions carrying 4 sub-transactions of 2 inputs
-      -- and 2 outputs each, at the same saturation: one is about 1,435 bytes
-      -- against 380, so 63 rather than 236 fill a block, and 3.2 tps keeps
-      -- valueCloud's margin over that. Its 2,048,000 UTxOs (10 per transaction)
-      -- should take the splitting phase into the third epoch, so the analysis
-      -- starts at the fourth.
+      -- and 2 outputs each, at the same saturation: one is about 1,426 bytes
+      -- against 377, so 62 rather than 236 fit in the 89,088 bytes a block
+      -- holds for transactions, and 3.2 tps offers a few more than that. Its
+      -- 2,048,000 UTxOs (10 per transaction) should take the splitting phase
+      -- into the third epoch, so the analysis starts at the fourth.
       valueDijkstraNested = P.empty & baseDijkstra . V.valueBase . P.tps 3.2 . P.subTxs 4 2 2 . V.datasetOct2021 . V.fundsDouble
                  . valueDurationBase . P.analysisEpoch4Plus . nomadPerf
                  . P.descAdd "+ Dijkstra, 4 sub-txs" . valueDesc
+      -- valueDijkstraNested doing valueDijkstra's work per block: a transaction
+      -- with its 4 sub-transactions is 5 signed bodies of 2 inputs and 2
+      -- outputs, so 47 of them come to about valueDijkstra's 236. Padded to
+      -- about 1,890 bytes, 47 and not 48 fit in the 89,088 bytes a block holds
+      -- for transactions, and at 2.4 tps (12 / 5) it needs valueDijkstra's
+      -- 1,536,000 UTxOs, so the same splitting phase.
+      valueDijkstraNestedPadded = P.empty & baseDijkstra . V.valueBase . P.tps 2.4 . P.subTxs 4 2 2 . P.addTxSize 559
+                 . V.datasetOct2021 . V.fundsDouble . valueDuration . nomadPerf
+                 . P.descAdd "+ Dijkstra, 4 sub-txs, padded" . valueDesc
       plutusVolt = P.empty & baseVoltaire . V.plutusBase . V.datasetOct2021 . V.fundsDouble . plutusDuration . nomadPerf
                  . plutusDesc
       -- memory-constrained
@@ -225,6 +234,7 @@ profilesCloud =
   -- Value (Dijkstra profiles)
   , valueDijkstra & P.name "value-dijkstra-nomadperf"                      . P.dreps  10000
   , valueDijkstraNested & P.name "value-dijkstra-nested-nomadperf"         . P.dreps  10000
+  , valueDijkstraNestedPadded & P.name "value-dijkstra-nested-padded-nomadperf" . P.dreps 10000
   -- Plutus (pre-Voltaire profiles)
   , loop      & P.name "plutus-nomadperf"                                  . P.dreps      0
   , loop      & P.name "plutus-drep1k-nomadperf"                           . P.dreps   1000
