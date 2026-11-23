@@ -87,6 +87,7 @@ compareConfigurations pom adapted =
       , cmp "MempoolTimeoutSoft" ncMempoolTimeoutSoft
       , cmp "MempoolTimeoutHard" ncMempoolTimeoutHard
       , cmp "MempoolTimeoutCapacity" ncMempoolTimeoutCapacity
+      , cmp "ForgeViewLeadTime" ncForgeViewLeadTime
       , cmp "AcceptedConnectionsLimit" ncAcceptedConnectionsLimit
       , cmp "DeadlineTargetOfRootPeers" ncDeadlineTargetOfRootPeers
       , cmp "DeadlineTargetOfKnownPeers" ncDeadlineTargetOfKnownPeers

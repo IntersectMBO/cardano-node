@@ -167,6 +167,10 @@ data NodeConfiguration
           -- capacity, ie it's full, ie no tx can be added.
        , ncMempoolTimeoutCapacity :: DiffTime
 
+         -- | How long before a slot it leads the node starts preparing the
+         -- forge view.
+       , ncForgeViewLeadTime :: DiffTime
+
          -- | Node AcceptedConnectionsLimit
        , ncAcceptedConnectionsLimit :: !AcceptedConnectionsLimit
 
@@ -270,6 +274,7 @@ data PartialNodeConfiguration
        , pncMempoolTimeoutSoft :: !(Last DiffTime)
        , pncMempoolTimeoutHard :: !(Last DiffTime)
        , pncMempoolTimeoutCapacity :: !(Last DiffTime)
+       , pncForgeViewLeadTime :: !(Last DiffTime)
 
          -- AcceptedConnectionsLimit
        , pncAcceptedConnectionsLimit :: !(Last AcceptedConnectionsLimit)
@@ -402,6 +407,7 @@ instance FromJSON PartialNodeConfiguration where
       pncMempoolTimeoutSoft <- Last <$> v .:? "MempoolTimeoutSoft"
       pncMempoolTimeoutHard <- Last <$> v .:? "MempoolTimeoutHard"
       pncMempoolTimeoutCapacity <- Last <$> v .:? "MempoolTimeoutCapacity"
+      pncForgeViewLeadTime <- Last <$> v .:? "ForgeViewLeadTime"
 
       -- Peer Sharing
       pncPeerSharing <- Last <$> v .:? "PeerSharing"
@@ -444,6 +450,7 @@ instance FromJSON PartialNodeConfiguration where
            , pncMempoolTimeoutSoft
            , pncMempoolTimeoutHard
            , pncMempoolTimeoutCapacity
+           , pncForgeViewLeadTime
            , pncEgressPollInterval
            , pncAcceptedConnectionsLimit
            , pncDeadlineTargetOfRootPeers
@@ -810,6 +817,7 @@ defaultPartialNodeConfiguration =
     , pncMempoolTimeoutSoft       = mempty
     , pncMempoolTimeoutHard       = mempty
     , pncMempoolTimeoutCapacity   = mempty
+    , pncForgeViewLeadTime        = mempty
 
     -- these targets are set properly in makeNodeConfiguration below
     , pncDeadlineTargetOfRootPeers                 = mempty
@@ -945,6 +953,7 @@ makeNodeConfiguration pnc = do
       (Just s, Just h, Just c) -> pure (s, h, c)
       (Nothing, Nothing, Nothing) -> pure (1, 1.5, 5)
       _ -> Left "Mempool timeouts must be either all set or all unset"
+  let ncForgeViewLeadTime = fromMaybe 1 $ getLast $ pncForgeViewLeadTime pnc
 
   let ncPeerSharing =
         case pncPeerSharing pnc of
@@ -1022,6 +1031,7 @@ makeNodeConfiguration pnc = do
              , ncMempoolTimeoutSoft
              , ncMempoolTimeoutHard
              , ncMempoolTimeoutCapacity
+             , ncForgeViewLeadTime
              , ncEgressPollInterval
              , ncAcceptedConnectionsLimit
              , ncDeadlineTargetOfRootPeers

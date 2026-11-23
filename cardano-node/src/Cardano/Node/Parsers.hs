@@ -135,6 +135,7 @@ nodeRunParser = do
            , pncMempoolTimeoutSoft = mempty
            , pncMempoolTimeoutHard = mempty
            , pncMempoolTimeoutCapacity = mempty
+           , pncForgeViewLeadTime = mempty
            , pncAcceptedConnectionsLimit = mempty
            , pncDeadlineTargetOfRootPeers = mempty
            , pncDeadlineTargetOfKnownPeers = mempty

@@ -411,6 +411,7 @@ handleSimpleNode blockType shelleyGenesisHash pInfo mkBlockForging tracers forgi
               , mempoolTimeoutHard     = ncMempoolTimeoutHard nc
               , mempoolTimeoutCapacity = ncMempoolTimeoutCapacity nc
               }
+          , rnForgeViewLeadTime = ncForgeViewLeadTime nc
           , rnNodeKernelHook = \registry nodeKernel -> do
               -- set the initial block forging
               blockForging <- mkBlockForging (Consensus.kesAgentTracer $ consensusTracers tracers)
