@@ -81,6 +81,7 @@ pRuntimeOptions = TestnetRuntimeOptions
   <*> pEnableTracer
   <*> pKesSource
   <*> pEnableChainStallWatchdog
+  <*> pure ReadinessChecksEnabled
 
 pScratchOutputDir :: Parser (Maybe FilePath)
 pScratchOutputDir = optional $ OA.strOption
@@ -98,8 +99,8 @@ pNumDReps = OA.option OA.auto
   <>  OA.value 3
   )
 
-pEnableNewEpochStateLogging :: Parser Bool
-pEnableNewEpochStateLogging = OA.switch
+pEnableNewEpochStateLogging :: Parser NewEpochStateLogging
+pEnableNewEpochStateLogging = OA.flag NewEpochStateLoggingDisabled NewEpochStateLoggingEnabled
   (   OA.long "enable-new-epoch-state-logging"
   <>  OA.help "Enable new epoch state logging to logs/ledger-epoch-state.log"
   <>  OA.showDefault
@@ -183,8 +184,8 @@ pKesSource = OA.flag UseKesKeyFile UseKesSocket
   <>  OA.showDefault
   )
 
-pEnableChainStallWatchdog :: Parser Bool
-pEnableChainStallWatchdog = OA.flag True False
+pEnableChainStallWatchdog :: Parser ChainStallWatchdog
+pEnableChainStallWatchdog = OA.flag ChainStallWatchdogEnabled ChainStallWatchdogDisabled
   (   OA.long "disable-chain-stall-watchdog"
   <>  OA.help "Disable the background watchdog that makes the run fail fast, with a diagnosis, when the chain stops producing blocks forever."
   )

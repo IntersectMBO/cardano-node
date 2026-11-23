@@ -267,6 +267,7 @@ cardanoTestnet
     , runtimeEnableTracer=cardanoEnableTracer
     , runtimeKESSource=cardanoKESSource
     , runtimeEnableChainStallWatchdog=enableChainStallWatchdog
+    , runtimeEnableReadinessChecks=enableReadinessChecks
     }
   Conf
     { tempAbsPath=TmpAbsolutePath tmpAbsPath
@@ -504,7 +505,8 @@ cardanoTestnet
   let startupHorizon = chainForecastHorizon shelleyGenesis
       startupBlockTimeout =
         startTimeOffsetSeconds + ceiling startupHorizon + startupDetectionMarginSeconds
-  mapConcurrently_ (waitForBlockThrow startupHorizon startupBlockTimeout (File nodeConfigFile')) testnetNodes'
+  when (enableReadinessChecks == ReadinessChecksEnabled) $
+    mapConcurrently_ (waitForBlockThrow startupHorizon startupBlockTimeout (File nodeConfigFile')) testnetNodes'
 
   let runtime = TestnetRuntime
         { configurationFile = File nodeConfigFile'
@@ -520,7 +522,7 @@ cardanoTestnet
   -- overloaded machine starves the nodes of CPU for longer than the forecast horizon.
   -- So watch the chain in the background and fail the test with a diagnosis
   -- as soon as a stall is provable.
-  when enableChainStallWatchdog $ do
+  when (enableChainStallWatchdog == ChainStallWatchdogEnabled) $ do
     testThread <- liftIOAnnotated myThreadId
     void . asyncRegister_ $
       chainStallWatchdog stderrTracer shelleyGenesis
@@ -531,7 +533,7 @@ cardanoTestnet
 
   execConfig <- mkExecConfig tempBaseAbsPath (NEL.head $ testnetSprockets runtime) testnetMagic
 
-  forM_ wallets $ \wallet -> do
+  when (enableReadinessChecks == ReadinessChecksEnabled) $ forM_ wallets $ \wallet -> do
 
     execCli' execConfig
       [ "latest", "query", "utxo"
@@ -541,17 +543,19 @@ cardanoTestnet
 
   let stakePoolsFp = tmpAbsPath </> "current-stake-pools.json"
 
-  assertExpectedSposInLedgerState stakePoolsFp nPools execConfig
+  when (enableReadinessChecks == ReadinessChecksEnabled) $
+    assertExpectedSposInLedgerState stakePoolsFp nPools execConfig
 
-  when enableNewEpochStateLogging $
+  when (enableNewEpochStateLogging == NewEpochStateLoggingEnabled) $
     TR.startLedgerNewEpochStateLogging runtime tempBaseAbsPath
 
   -- Build and atomically write the manifest.  The file appearing is the
   -- ready signal — it is written only after all readiness checks pass, as
   -- the very last step: nothing that can fail runs after it.
-  manifest <- liftIOAnnotated $
-    buildManifest tmpAbsPath runtime (AnyCardanoEra (toCardanoEra Defaults.defaultEra)) (sgSystemStart shelleyGenesis)
-  liftIOAnnotated $ writeManifest tmpAbsPath manifest
+  when (enableReadinessChecks == ReadinessChecksEnabled) $ do
+    manifest <- liftIOAnnotated $
+      buildManifest tmpAbsPath runtime (AnyCardanoEra (toCardanoEra Defaults.defaultEra)) (sgSystemStart shelleyGenesis)
+    liftIOAnnotated $ writeManifest tmpAbsPath manifest
 
   pure runtime
   where

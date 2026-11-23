@@ -22,6 +22,9 @@ module Testnet.Start.Types
   , RpcSupport(..)
   , RpcHttpOptions(..)
   , TraceSupport(..)
+  , NewEpochStateLogging(..)
+  , ChainStallWatchdog(..)
+  , ReadinessChecks(..)
   , creationNumPools
   , creationNumRelays
 
@@ -192,6 +195,18 @@ data TraceSupport
       -- ^ Using this port for prometheus, when given. Choose randomly otherwise.
   deriving (Eq, Show)
 
+-- | Whether to log the ledger state at each new epoch, to @logs/ledger-epoch-state.log@.
+data NewEpochStateLogging = NewEpochStateLoggingDisabled | NewEpochStateLoggingEnabled
+  deriving (Eq, Show)
+
+-- | Whether to fail fast when the chain stops making blocks for good.
+data ChainStallWatchdog = ChainStallWatchdogDisabled | ChainStallWatchdogEnabled
+  deriving (Eq, Show)
+
+-- | Whether to check that the testnet works before handing it over.
+data ReadinessChecks = ReadinessChecksDisabled | ReadinessChecksEnabled
+  deriving (Eq, Show)
+
 -- | Options for creating a testnet environment (genesis files, topology, ports).
 -- Used by both the @cardano@ and @create-env@ subcommands, and by
 -- 'Testnet.Start.Cardano.createAndRunTestnet' in tests.
@@ -220,24 +235,30 @@ instance Default TestnetCreationOptions where
 -- These are independent of how the environment was created (from scratch
 -- or from an existing @--node-env@ path).
 data TestnetRuntimeOptions = TestnetRuntimeOptions
-  { runtimeEnableNewEpochStateLogging :: Bool -- ^ if epoch state logging is enabled
+  { runtimeEnableNewEpochStateLogging :: NewEpochStateLogging -- ^ if epoch state logging is enabled
   , runtimeEnableRpc :: RpcSupport -- ^ Whether to enable gRPC endpoints in all testnet nodes
   , runtimeEnableTracer :: TraceSupport -- ^ Whether to enable cardano-tracer support for all testnet nodes
   , runtimeKESSource :: PraosCredentialsSource
-  , runtimeEnableChainStallWatchdog :: Bool
+  , runtimeEnableChainStallWatchdog :: ChainStallWatchdog
     -- ^ Whether to run a background watchdog that kills the testnet with a diagnosis as
     -- soon as the chain has provably stopped producing blocks forever (see
     -- "Testnet.ChainWatchdog"). On by default; disable it only for tests that
     -- legitimately halt all block production.
+  , runtimeEnableReadinessChecks :: ReadinessChecks
+    -- ^ Whether to check that the testnet works before returning: every node makes a
+    -- block, and the wallets and stake pools can be queried. The manifest is only written
+    -- after these checks. On by default; disable it only for tests whose nodes stop by
+    -- themselves.
   } deriving (Eq, Show)
 
 instance Default TestnetRuntimeOptions where
   def = TestnetRuntimeOptions
-    { runtimeEnableNewEpochStateLogging = True
+    { runtimeEnableNewEpochStateLogging = NewEpochStateLoggingEnabled
     , runtimeEnableRpc = RpcDisabled
     , runtimeEnableTracer = TraceDisabled
     , runtimeKESSource = def
-    , runtimeEnableChainStallWatchdog = True
+    , runtimeEnableChainStallWatchdog = ChainStallWatchdogEnabled
+    , runtimeEnableReadinessChecks = ReadinessChecksEnabled
     }
 
 -- | Options specific to the @--node-env@ path: the environment directory
