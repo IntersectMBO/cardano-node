@@ -116,7 +116,10 @@ in pkgs.commonLib.defServiceModule
         tps             = opt (either float int) 100
                                              "Strength of generated load, in TPS.";
         init_cooldown   = opt int 50         "Delay between init and main submissions.";
-        min_utxo_value  = opt int 10000000   "Minimum value allowed per UTxO entry";
+        ## Above the ledger's minimum (about 1 ADA at mainnet parameters) for
+        ## every output the generator creates, script outputs with a datum hash
+        ## included.
+        min_utxo_value  = opt int 2000000    "Minimum value allowed per UTxO entry";
         keepalive       = opt int 30         "Default timeout for keep-alive mini-protocol";
 
         runScriptFn     = opt (functionTo attrs) defaultGeneratorScriptFn
