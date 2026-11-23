@@ -209,8 +209,8 @@ hprop_shutdownOnSlotSynced = integrationRetryWorkspace 2 "shutdown-on-slot-synce
       -- - no readiness checks: on a slow machine, the node can stop before they finish
       -- - no stall watchdog: a node that stops on purpose is not a stalled chain
       runtimeOptions = def
-        { runtimeEnableReadinessChecks = False
-        , runtimeEnableChainStallWatchdog = False
+        { runtimeEnableReadinessChecks = ReadinessChecksDisabled
+        , runtimeEnableChainStallWatchdog = ChainStallWatchdogDisabled
         }
   testnetRuntime <- createAndRunTestnet creationOptions runtimeOptions conf
   let allNodes = testnetNodes testnetRuntime

@@ -1,0 +1,4 @@
+pr: 6778
+kind:
+  - breaking
+description: The `runtimeEnableNewEpochStateLogging` and `runtimeEnableChainStallWatchdog` options take `NewEpochStateLogging` and `ChainStallWatchdog` instead of `Bool`; use `NewEpochStateLoggingEnabled`/`NewEpochStateLoggingDisabled` and `ChainStallWatchdogEnabled`/`ChainStallWatchdogDisabled` instead of `True`/`False`.
