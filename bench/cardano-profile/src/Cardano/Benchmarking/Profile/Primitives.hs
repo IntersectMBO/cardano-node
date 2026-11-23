@@ -88,7 +88,7 @@ module Cardano.Benchmarking.Profile.Primitives (
 
   -- Generator params.
   , tps, txIn, txOut, txFee, txFeeOverwrite, initCooldown
-  , subTxs, txCount
+  , subTxs, txCount, addTxSize
   , plutusType, plutusScript
   , redeemerInt, redeemerFields
   , plutusVariants, plutusVariantGroup, plutusVariantPadding
@@ -205,7 +205,7 @@ empty = Types.Profile {
     , Types.plutus = Types.Plutus Nothing Nothing Nothing Nothing
     , Types.epochs = 0
     , Types.tx_count = Nothing
-    , Types.add_tx_size = 0
+    , Types.add_tx_size = defaultAddTxSize
     , Types.sub_txs = Nothing
   }
   , Types.workloads = []
@@ -765,6 +765,19 @@ txCount i = generator
     then error "txCount: `tx_count` already set."
     else g {Types.tx_count = Just i}
   )
+
+-- | Metadata padding each benchmarking transaction carries, in bytes, instead
+-- of the default.
+addTxSize :: HasCallStack => Integer -> Types.Profile -> Types.Profile
+addTxSize i = generator
+  (\g ->
+    if Types.add_tx_size g /= defaultAddTxSize
+    then error "addTxSize: `add_tx_size` already set (not the default)."
+    else g {Types.add_tx_size = i}
+  )
+
+defaultAddTxSize :: Integer
+defaultAddTxSize = 100
 
 txFeeOverwrite :: HasCallStack => Integer -> Types.Profile -> Types.Profile
 txFeeOverwrite i = generator
