@@ -153,9 +153,9 @@ profilesCloud =
       -- and 2 outputs each, at the same saturation: one is about 1,435 bytes
       -- against 380, so 63 rather than 236 fill a block, and 3.2 tps keeps
       -- valueCloud's margin over that. Its 2,048,000 UTxOs (10 per transaction)
-      -- need fundsQuadruple, and should take the splitting phase into the
-      -- third epoch, so the analysis starts at the fourth.
-      valueDijkstraNested = P.empty & baseDijkstra . V.valueBase . P.tps 3.2 . P.subTxs 4 2 2 . V.datasetOct2021 . V.fundsQuadruple
+      -- should take the splitting phase into the third epoch, so the analysis
+      -- starts at the fourth.
+      valueDijkstraNested = P.empty & baseDijkstra . V.valueBase . P.tps 3.2 . P.subTxs 4 2 2 . V.datasetOct2021 . V.fundsDouble
                  . valueDurationBase . P.analysisEpoch4Plus . nomadPerf
                  . P.descAdd "+ Dijkstra, 4 sub-txs" . valueDesc
       plutusVolt = P.empty & baseVoltaire . V.plutusBase . V.datasetOct2021 . V.fundsDouble . plutusDuration . nomadPerf
