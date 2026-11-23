@@ -1,0 +1,4 @@
+pr: 6778
+kind:
+  - bugfix
+description: The chain-stall watchdog counts from genesis start when that lies in the future, so it no longer fires before the first block is due on a testnet with a short forecast horizon.

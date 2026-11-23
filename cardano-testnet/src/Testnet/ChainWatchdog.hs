@@ -77,7 +77,8 @@ chainStallTimeoutFromHorizon horizon = max 60 (2 * horizon)
 
 -- | Watch the chain through the given node connection and, when it has made no progress
 -- for 'chainStallTimeoutFromHorizon' of the genesis, fail the given test thread with
--- a 'ChainStallException' explaining the mechanism.
+-- a 'ChainStallException' explaining the mechanism. If genesis start lies in the
+-- future, the time is counted from genesis start.
 --
 -- The full diagnosis is emitted through the given tracer first, so the explanation
 -- can outlive the test thread (see 'stderrTracer' for the standard sink and why).
@@ -97,7 +98,8 @@ chainStallWatchdog
   -> ThreadId -- ^ the test thread to fail when the chain stalls
   -> IO ()
 chainStallWatchdog tracer shelleyGenesis connectInfo nodeHandles testThread = do
-    start <- DTC.getCurrentTime
+    -- no block can appear before genesis start
+    start <- max (sgSystemStart shelleyGenesis) <$> DTC.getCurrentTime
     go start Nothing
   where
     horizon = chainForecastHorizon shelleyGenesis
