@@ -22,6 +22,7 @@ global_basedir=${global_basedir:-$(realpath "$(dirname "$0")")}
 . "$global_basedir"/parquet.sh
 . "$global_basedir"/publish.sh
 . "$global_basedir"/run.sh
+. "$global_basedir"/sanity-check.sh
 . "$global_basedir"/scenario.sh
 
 . "$global_basedir"/analyse/analyse.sh

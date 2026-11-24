@@ -58,6 +58,10 @@ usage_run() {
 
     $(helpcmd stop RUN)              Stop the named run
 
+    $(helpcmd sanity-check RUN)      Check a finished run: exit codes, stderr, logs, and
+                            the package checks over parquets/ where it exists;
+                            verdict in RUN/sanity-check.txt, exit status 1 on a fail
+
     $(helpcmd restart [--no-generator] BACKEND-START-ARGS..)
                           Stop and restart the current run (without a new allocation)
 
@@ -354,6 +358,9 @@ EOF
         test -f "$dir"/profile.json \
            -a \( -f "$dir"/genesis-shelley.json -o -f "$dir"/genesis/genesis.shelley.json \) \
            || run fix-cardano-ops-run-structure "$run";;
+
+    sanity-check )
+        sanity_check "$@";;
 
     get-path | get )
         local usage="USAGE: wb run $op [--query] RUN"
