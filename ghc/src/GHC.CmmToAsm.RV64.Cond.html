@@ -1,0 +1,63 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="GHC.CmmToAsm.RV64.Cond.html"><span class="hs-identifier">GHC.CmmToAsm.RV64.Cond</span></a></span><span>
+</span><span id="line-2"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="GHC.CmmToAsm.RV64.Cond.html#Cond"><span class="hs-identifier">Cond</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-3"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-4"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Prelude.html"><span class="hs-identifier">GHC.Prelude</span></a></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">EQ</span></span><span class="hs-special">)</span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span class="hs-comment">-- | Condition codes.</span><span>
+</span><span id="line-9"></span><span class="hs-comment">--</span><span>
+</span><span id="line-10"></span><span class="hs-comment">-- Used in conditional branches and bit setters. According to the available</span><span>
+</span><span id="line-11"></span><span class="hs-comment">-- instruction set, some conditions are encoded as their negated opposites. I.e.</span><span>
+</span><span id="line-12"></span><span class="hs-comment">-- these are logical things that don't necessarily map 1:1 to hardware/ISA.</span><span>
+</span><span id="line-13"></span><span class="hs-keyword">data</span><span> </span><span id="Cond"><span class="annot"><a href="GHC.CmmToAsm.RV64.Cond.html#Cond"><span class="hs-identifier hs-var">Cond</span></a></span></span><span>
+</span><span id="line-14"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-comment">-- | int and float</span></span><span>
+</span><span id="line-15"></span><span>    </span><span id="EQ"><span class="annot"><a href="GHC.CmmToAsm.RV64.Cond.html#EQ"><span class="hs-identifier hs-var">EQ</span></a></span></span><span>
+</span><span id="line-16"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="hs-comment">-- | int and float</span></span><span>
+</span><span id="line-17"></span><span>    </span><span id="NE"><span class="annot"><a href="GHC.CmmToAsm.RV64.Cond.html#NE"><span class="hs-identifier hs-var">NE</span></a></span></span><span>
+</span><span id="line-18"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="hs-comment">-- | signed less than</span></span><span>
+</span><span id="line-19"></span><span>    </span><span id="SLT"><span class="annot"><a href="GHC.CmmToAsm.RV64.Cond.html#SLT"><span class="hs-identifier hs-var">SLT</span></a></span></span><span>
+</span><span id="line-20"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="hs-comment">-- | signed less than or equal</span></span><span>
+</span><span id="line-21"></span><span>    </span><span id="SLE"><span class="annot"><a href="GHC.CmmToAsm.RV64.Cond.html#SLE"><span class="hs-identifier hs-var">SLE</span></a></span></span><span>
+</span><span id="line-22"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="hs-comment">-- | signed greater than or equal</span></span><span>
+</span><span id="line-23"></span><span>    </span><span id="SGE"><span class="annot"><a href="GHC.CmmToAsm.RV64.Cond.html#SGE"><span class="hs-identifier hs-var">SGE</span></a></span></span><span>
+</span><span id="line-24"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="hs-comment">-- | signed greater than</span></span><span>
+</span><span id="line-25"></span><span>    </span><span id="SGT"><span class="annot"><a href="GHC.CmmToAsm.RV64.Cond.html#SGT"><span class="hs-identifier hs-var">SGT</span></a></span></span><span>
+</span><span id="line-26"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="hs-comment">-- | unsigned less than</span></span><span>
+</span><span id="line-27"></span><span>    </span><span id="ULT"><span class="annot"><a href="GHC.CmmToAsm.RV64.Cond.html#ULT"><span class="hs-identifier hs-var">ULT</span></a></span></span><span>
+</span><span id="line-28"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="hs-comment">-- | unsigned less than or equal</span></span><span>
+</span><span id="line-29"></span><span>    </span><span id="ULE"><span class="annot"><a href="GHC.CmmToAsm.RV64.Cond.html#ULE"><span class="hs-identifier hs-var">ULE</span></a></span></span><span>
+</span><span id="line-30"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="hs-comment">-- | unsigned greater than or equal</span></span><span>
+</span><span id="line-31"></span><span>    </span><span id="UGE"><span class="annot"><a href="GHC.CmmToAsm.RV64.Cond.html#UGE"><span class="hs-identifier hs-var">UGE</span></a></span></span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="hs-comment">-- | unsigned greater than</span></span><span>
+</span><span id="line-33"></span><span>    </span><span id="UGT"><span class="annot"><a href="GHC.CmmToAsm.RV64.Cond.html#UGT"><span class="hs-identifier hs-var">UGT</span></a></span></span><span>
+</span><span id="line-34"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="hs-comment">-- | floating point instruction @flt@</span></span><span>
+</span><span id="line-35"></span><span>    </span><span id="FLT"><span class="annot"><a href="GHC.CmmToAsm.RV64.Cond.html#FLT"><span class="hs-identifier hs-var">FLT</span></a></span></span><span>
+</span><span id="line-36"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="hs-comment">-- | floating point instruction @fle@</span></span><span>
+</span><span id="line-37"></span><span>    </span><span id="FLE"><span class="annot"><a href="GHC.CmmToAsm.RV64.Cond.html#FLE"><span class="hs-identifier hs-var">FLE</span></a></span></span><span>
+</span><span id="line-38"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="hs-comment">-- | floating point instruction @fge@</span></span><span>
+</span><span id="line-39"></span><span>    </span><span id="FGE"><span class="annot"><a href="GHC.CmmToAsm.RV64.Cond.html#FGE"><span class="hs-identifier hs-var">FGE</span></a></span></span><span>
+</span><span id="line-40"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="hs-comment">-- | floating point instruction @fgt@</span></span><span>
+</span><span id="line-41"></span><span>    </span><span id="FGT"><span class="annot"><a href="GHC.CmmToAsm.RV64.Cond.html#FGT"><span class="hs-identifier hs-var">FGT</span></a></span></span><span>
+</span><span id="line-42"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621682474645"><span id="local-6989586621682474650"><span class="annot"><span class="annottext">Cond -&gt; Cond -&gt; Bool
+(Cond -&gt; Cond -&gt; Bool) -&gt; (Cond -&gt; Cond -&gt; Bool) -&gt; Eq Cond
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: Cond -&gt; Cond -&gt; Bool
+== :: Cond -&gt; Cond -&gt; Bool
+$c/= :: Cond -&gt; Cond -&gt; Bool
+/= :: Cond -&gt; Cond -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621682474655"><span id="local-6989586621682474657"><span id="local-6989586621682474661"><span class="annot"><span class="annottext">Int -&gt; Cond -&gt; ShowS
+[Cond] -&gt; ShowS
+Cond -&gt; String
+(Int -&gt; Cond -&gt; ShowS)
+-&gt; (Cond -&gt; String) -&gt; ([Cond] -&gt; ShowS) -&gt; Show Cond
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; Cond -&gt; ShowS
+showsPrec :: Int -&gt; Cond -&gt; ShowS
+$cshow :: Cond -&gt; String
+show :: Cond -&gt; String
+$cshowList :: [Cond] -&gt; ShowS
+showList :: [Cond] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span></pre></body></html>

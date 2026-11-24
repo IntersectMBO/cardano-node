@@ -1,0 +1,112 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DeriveDataTypeable #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-dodgy-exports #-}</span><span> </span><span class="hs-comment">-- For re-export of GHC.Hs.Basic instances</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="annot"><span class="hs-comment">-- | Fixity</span></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="GHC.Types.Fixity.html"><span class="hs-identifier">GHC.Types.Fixity</span></a></span><span>
+</span><span id="line-6"></span><span>   </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Language.Haskell.Syntax.Basic.html#Fixity"><span class="hs-identifier">Fixity</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-7"></span><span>   </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Language.Haskell.Syntax.Basic.html#FixityDirection"><span class="hs-identifier">FixityDirection</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-8"></span><span>   </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Language.Haskell.Syntax.Basic.html#LexicalFixity"><span class="hs-identifier">LexicalFixity</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-9"></span><span>   </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Types.Fixity.html#maxPrecedence"><span class="hs-identifier">maxPrecedence</span></a></span><span>
+</span><span id="line-10"></span><span>   </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Types.Fixity.html#minPrecedence"><span class="hs-identifier">minPrecedence</span></a></span><span>
+</span><span id="line-11"></span><span>   </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Types.Fixity.html#defaultFixity"><span class="hs-identifier">defaultFixity</span></a></span><span>
+</span><span id="line-12"></span><span>   </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Types.Fixity.html#negateFixity"><span class="hs-identifier">negateFixity</span></a></span><span>
+</span><span id="line-13"></span><span>   </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Types.Fixity.html#funTyFixity"><span class="hs-identifier">funTyFixity</span></a></span><span>
+</span><span id="line-14"></span><span>   </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Types.Fixity.html#compareFixity"><span class="hs-identifier">compareFixity</span></a></span><span>
+</span><span id="line-15"></span><span>   </span><span class="hs-special">,</span><span> </span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="GHC.Hs.Basic.html"><span class="hs-identifier">GHC.Hs.Basic</span></a></span><span>
+</span><span id="line-16"></span><span>   </span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Prelude.html"><span class="hs-identifier">GHC.Prelude</span></a></span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Language.Haskell.Syntax.Basic.html"><span class="hs-identifier">Language.Haskell.Syntax.Basic</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Language.Haskell.Syntax.Basic.html#LexicalFixity"><span class="hs-identifier">LexicalFixity</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Language.Haskell.Syntax.Basic.html#FixityDirection"><span class="hs-identifier">FixityDirection</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Language.Haskell.Syntax.Basic.html#Fixity"><span class="hs-identifier">Fixity</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Hs.Basic.html"><span class="hs-identifier">GHC.Hs.Basic</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-comment">-- For instances only</span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span class="hs-comment">------------------------</span><span>
+</span><span id="line-25"></span><span>
+</span><span id="line-26"></span><span class="annot"><a href="GHC.Types.Fixity.html#maxPrecedence"><span class="hs-identifier hs-type">maxPrecedence</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Types.Fixity.html#minPrecedence"><span class="hs-identifier hs-type">minPrecedence</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span>
+</span><span id="line-27"></span><span id="maxPrecedence"><span class="annot"><span class="annottext">maxPrecedence :: Int
+</span><a href="GHC.Types.Fixity.html#maxPrecedence"><span class="hs-identifier hs-var hs-var">maxPrecedence</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">9</span></span><span>
+</span><span id="line-28"></span><span id="minPrecedence"><span class="annot"><span class="annottext">minPrecedence :: Int
+</span><a href="GHC.Types.Fixity.html#minPrecedence"><span class="hs-identifier hs-var hs-var">minPrecedence</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span class="annot"><a href="GHC.Types.Fixity.html#defaultFixity"><span class="hs-identifier hs-type">defaultFixity</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Language.Haskell.Syntax.Basic.html#Fixity"><span class="hs-identifier hs-type">Fixity</span></a></span><span>
+</span><span id="line-31"></span><span id="defaultFixity"><span class="annot"><span class="annottext">defaultFixity :: Fixity
+</span><a href="GHC.Types.Fixity.html#defaultFixity"><span class="hs-identifier hs-var hs-var">defaultFixity</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; FixityDirection -&gt; Fixity
+</span><a href="Language.Haskell.Syntax.Basic.html#Fixity"><span class="hs-identifier hs-var">Fixity</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="GHC.Types.Fixity.html#maxPrecedence"><span class="hs-identifier hs-var">maxPrecedence</span></a></span><span> </span><span class="annot"><span class="annottext">FixityDirection
+</span><a href="Language.Haskell.Syntax.Basic.html#InfixL"><span class="hs-identifier hs-var">InfixL</span></a></span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span class="annot"><a href="GHC.Types.Fixity.html#negateFixity"><span class="hs-identifier hs-type">negateFixity</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Types.Fixity.html#funTyFixity"><span class="hs-identifier hs-type">funTyFixity</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Language.Haskell.Syntax.Basic.html#Fixity"><span class="hs-identifier hs-type">Fixity</span></a></span><span>
+</span><span id="line-34"></span><span class="hs-comment">-- Wired-in fixities</span><span>
+</span><span id="line-35"></span><span id="negateFixity"><span class="annot"><span class="annottext">negateFixity :: Fixity
+</span><a href="GHC.Types.Fixity.html#negateFixity"><span class="hs-identifier hs-var hs-var">negateFixity</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; FixityDirection -&gt; Fixity
+</span><a href="Language.Haskell.Syntax.Basic.html#Fixity"><span class="hs-identifier hs-var">Fixity</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">6</span></span><span> </span><span class="annot"><span class="annottext">FixityDirection
+</span><a href="Language.Haskell.Syntax.Basic.html#InfixL"><span class="hs-identifier hs-var">InfixL</span></a></span><span>  </span><span class="hs-comment">-- Fixity of unary negate</span><span>
+</span><span id="line-36"></span><span id="funTyFixity"><span class="annot"><span class="annottext">funTyFixity :: Fixity
+</span><a href="GHC.Types.Fixity.html#funTyFixity"><span class="hs-identifier hs-var hs-var">funTyFixity</span></a></span></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; FixityDirection -&gt; Fixity
+</span><a href="Language.Haskell.Syntax.Basic.html#Fixity"><span class="hs-identifier hs-var">Fixity</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">-</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">FixityDirection
+</span><a href="Language.Haskell.Syntax.Basic.html#InfixR"><span class="hs-identifier hs-var">InfixR</span></a></span><span>  </span><span class="hs-comment">-- Fixity of '-&gt;', see #15235</span><span>
+</span><span id="line-37"></span><span>
+</span><span id="line-38"></span><span class="hs-comment">{-
+Consider
+
+\begin{verbatim}
+        a `op1` b `op2` c
+\end{verbatim}
+@(compareFixity op1 op2)@ tells which way to arrange application, or
+whether there's an error.
+-}</span><span>
+</span><span id="line-47"></span><span>
+</span><span id="line-48"></span><span class="annot"><a href="GHC.Types.Fixity.html#compareFixity"><span class="hs-identifier hs-type">compareFixity</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Language.Haskell.Syntax.Basic.html#Fixity"><span class="hs-identifier hs-type">Fixity</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Language.Haskell.Syntax.Basic.html#Fixity"><span class="hs-identifier hs-type">Fixity</span></a></span><span>
+</span><span id="line-49"></span><span>              </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span class="hs-special">,</span><span>         </span><span class="hs-comment">-- Error please</span><span>
+</span><span id="line-50"></span><span>                  </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span class="hs-special">)</span><span>         </span><span class="hs-comment">-- Associate to the right: a op1 (b op2 c)</span><span>
+</span><span id="line-51"></span><span id="compareFixity"><span class="annot"><span class="annottext">compareFixity :: Fixity -&gt; Fixity -&gt; (Bool, Bool)
+</span><a href="GHC.Types.Fixity.html#compareFixity"><span class="hs-identifier hs-var hs-var">compareFixity</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Language.Haskell.Syntax.Basic.html#Fixity"><span class="hs-identifier hs-type">Fixity</span></a></span><span> </span><span id="local-6989586621682516265"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621682516265"><span class="hs-identifier hs-var">prec1</span></a></span></span><span> </span><span id="local-6989586621682516266"><span class="annot"><span class="annottext">FixityDirection
+</span><a href="#local-6989586621682516266"><span class="hs-identifier hs-var">dir1</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Language.Haskell.Syntax.Basic.html#Fixity"><span class="hs-identifier hs-type">Fixity</span></a></span><span> </span><span id="local-6989586621682516267"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621682516267"><span class="hs-identifier hs-var">prec2</span></a></span></span><span> </span><span id="local-6989586621682516268"><span class="annot"><span class="annottext">FixityDirection
+</span><a href="#local-6989586621682516268"><span class="hs-identifier hs-var">dir2</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-52"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621682516265"><span class="hs-identifier hs-var">prec1</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Ordering
+forall a. Ord a =&gt; a -&gt; a -&gt; Ordering
+</span><span class="hs-operator hs-var">`compare`</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621682516267"><span class="hs-identifier hs-var">prec2</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-53"></span><span>        </span><span class="annot"><span class="annottext">Ordering
+</span><span class="hs-identifier hs-var">GT</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(Bool, Bool)
+</span><a href="#local-6989586621682516270"><span class="hs-identifier hs-var">left</span></a></span><span>
+</span><span id="line-54"></span><span>        </span><span class="annot"><span class="annottext">Ordering
+</span><span class="hs-identifier hs-var">LT</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(Bool, Bool)
+</span><a href="#local-6989586621682516271"><span class="hs-identifier hs-var">right</span></a></span><span>
+</span><span id="line-55"></span><span>        </span><span class="annot"><span class="annottext">Ordering
+</span><span class="hs-identifier hs-var">EQ</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FixityDirection
+</span><a href="#local-6989586621682516266"><span class="hs-identifier hs-var">dir1</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">FixityDirection
+</span><a href="#local-6989586621682516268"><span class="hs-identifier hs-var">dir2</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-56"></span><span>                        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FixityDirection
+</span><a href="Language.Haskell.Syntax.Basic.html#InfixR"><span class="hs-identifier hs-var">InfixR</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">FixityDirection
+</span><a href="Language.Haskell.Syntax.Basic.html#InfixR"><span class="hs-identifier hs-var">InfixR</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(Bool, Bool)
+</span><a href="#local-6989586621682516271"><span class="hs-identifier hs-var">right</span></a></span><span>
+</span><span id="line-57"></span><span>                        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FixityDirection
+</span><a href="Language.Haskell.Syntax.Basic.html#InfixL"><span class="hs-identifier hs-var">InfixL</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">FixityDirection
+</span><a href="Language.Haskell.Syntax.Basic.html#InfixL"><span class="hs-identifier hs-var">InfixL</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(Bool, Bool)
+</span><a href="#local-6989586621682516270"><span class="hs-identifier hs-var">left</span></a></span><span>
+</span><span id="line-58"></span><span>                        </span><span class="annot"><span class="annottext">(FixityDirection, FixityDirection)
+</span><span class="hs-identifier">_</span></span><span>                </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(Bool, Bool)
+</span><a href="#local-6989586621682516272"><span class="hs-identifier hs-var">error_please</span></a></span><span>
+</span><span id="line-59"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-60"></span><span>    </span><span id="local-6989586621682516271"><span class="annot"><span class="annottext">right :: (Bool, Bool)
+</span><a href="#local-6989586621682516271"><span class="hs-identifier hs-var hs-var">right</span></a></span></span><span>        </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span class="hs-special">)</span><span>
+</span><span id="line-61"></span><span>    </span><span id="local-6989586621682516270"><span class="annot"><span class="annottext">left :: (Bool, Bool)
+</span><a href="#local-6989586621682516270"><span class="hs-identifier hs-var hs-var">left</span></a></span></span><span>         </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span class="hs-special">)</span><span>
+</span><span id="line-62"></span><span>    </span><span id="local-6989586621682516272"><span class="annot"><span class="annottext">error_please :: (Bool, Bool)
+</span><a href="#local-6989586621682516272"><span class="hs-identifier hs-var hs-var">error_please</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span class="hs-special">,</span><span>  </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span class="hs-special">)</span><span>
+</span><span id="line-63"></span></pre></body></html>

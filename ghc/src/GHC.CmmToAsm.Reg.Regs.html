@@ -1,0 +1,361 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DerivingStrategies #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="GHC.CmmToAsm.Reg.Regs.html"><span class="hs-identifier">GHC.CmmToAsm.Reg.Regs</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-4"></span><span>        </span><span class="annot"><a href="GHC.CmmToAsm.Reg.Regs.html#Regs"><span class="hs-identifier">Regs</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-5"></span><span>        </span><span class="annot"><a href="GHC.CmmToAsm.Reg.Regs.html#noRegs"><span class="hs-identifier">noRegs</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-6"></span><span>        </span><span class="annot"><a href="GHC.CmmToAsm.Reg.Regs.html#addRegMaxFmt"><span class="hs-identifier">addRegMaxFmt</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.CmmToAsm.Reg.Regs.html#addRegsMaxFmt"><span class="hs-identifier">addRegsMaxFmt</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-7"></span><span>        </span><span class="annot"><a href="GHC.CmmToAsm.Reg.Regs.html#mkRegsMaxFmt"><span class="hs-identifier">mkRegsMaxFmt</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-8"></span><span>        </span><span class="annot"><a href="GHC.CmmToAsm.Reg.Regs.html#minusCoveredRegs"><span class="hs-identifier">minusCoveredRegs</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-9"></span><span>        </span><span class="annot"><a href="GHC.CmmToAsm.Reg.Regs.html#minusRegs"><span class="hs-identifier">minusRegs</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-10"></span><span>        </span><span class="annot"><a href="GHC.CmmToAsm.Reg.Regs.html#unionRegsMaxFmt"><span class="hs-identifier">unionRegsMaxFmt</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-11"></span><span>        </span><span class="annot"><a href="GHC.CmmToAsm.Reg.Regs.html#unionManyRegsMaxFmt"><span class="hs-identifier">unionManyRegsMaxFmt</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-12"></span><span>        </span><span class="annot"><a href="GHC.CmmToAsm.Reg.Regs.html#intersectRegsMaxFmt"><span class="hs-identifier">intersectRegsMaxFmt</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-13"></span><span>        </span><span class="annot"><a href="GHC.CmmToAsm.Reg.Regs.html#shrinkingRegs"><span class="hs-identifier">shrinkingRegs</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-14"></span><span>        </span><span class="annot"><a href="GHC.CmmToAsm.Reg.Regs.html#mapRegs"><span class="hs-identifier">mapRegs</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-15"></span><span>        </span><span class="annot"><a href="GHC.CmmToAsm.Reg.Regs.html#elemRegs"><span class="hs-identifier">elemRegs</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.CmmToAsm.Reg.Regs.html#lookupReg"><span class="hs-identifier">lookupReg</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-16"></span><span>
+</span><span id="line-17"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Prelude.html"><span class="hs-identifier">GHC.Prelude</span></a></span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Platform.Reg.html"><span class="hs-identifier">GHC.Platform.Reg</span></a></span><span>     </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="GHC.Platform.Reg.html#Reg"><span class="hs-identifier">Reg</span></a></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.CmmToAsm.Format.html"><span class="hs-identifier">GHC.CmmToAsm.Format</span></a></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="GHC.CmmToAsm.Format.html#Format"><span class="hs-identifier">Format</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.CmmToAsm.Format.html#RegWithFormat"><span class="hs-identifier">RegWithFormat</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.CmmToAsm.Format.html#isVecFormat"><span class="hs-identifier">isVecFormat</span></a></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Utils.Outputable.html"><span class="hs-identifier">GHC.Utils.Outputable</span></a></span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="GHC.Utils.Outputable.html#Outputable"><span class="hs-identifier">Outputable</span></a></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Types.Unique.html"><span class="hs-identifier">GHC.Types.Unique</span></a></span><span>     </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="GHC.Types.Unique.html#Uniquable"><span class="hs-identifier">Uniquable</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Types.Unique.Set.html"><span class="hs-identifier">GHC.Types.Unique.Set</span></a></span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.21.2.0-inplace/src/Data.Coerce.html"><span class="hs-identifier">Data.Coerce</span></a></span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-identifier">coerce</span></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span class="hs-comment">-----------------------------------------------------------------------------</span><span>
+</span><span id="line-31"></span><span>
+</span><span id="line-32"></span><span class="hs-comment">-- | A set of registers, with their respective formats, mostly for use in</span><span>
+</span><span id="line-33"></span><span class="hs-comment">-- register liveness analysis.  See Note [Register formats in liveness analysis]</span><span>
+</span><span id="line-34"></span><span class="hs-comment">-- in GHC.CmmToAsm.Reg.Liveness.</span><span>
+</span><span id="line-35"></span><span class="hs-keyword">newtype</span><span> </span><span id="Regs"><span class="annot"><a href="GHC.CmmToAsm.Reg.Regs.html#Regs"><span class="hs-identifier hs-var">Regs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Regs"><span class="annot"><a href="GHC.CmmToAsm.Reg.Regs.html#Regs"><span class="hs-identifier hs-var">Regs</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="getRegs"><span class="annot"><span class="annottext">Regs -&gt; UniqSet RegWithFormat
+</span><a href="GHC.CmmToAsm.Reg.Regs.html#getRegs"><span class="hs-identifier hs-var hs-var">getRegs</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Types.Unique.Set.html#UniqSet"><span class="hs-identifier hs-type">UniqSet</span></a></span><span> </span><span class="annot"><a href="GHC.CmmToAsm.Format.html#RegWithFormat"><span class="hs-identifier hs-type">RegWithFormat</span></a></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-36"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">newtype</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621682820310"><span id="local-6989586621682820315"><span class="annot"><span class="annottext">Regs -&gt; Regs -&gt; Bool
+(Regs -&gt; Regs -&gt; Bool) -&gt; (Regs -&gt; Regs -&gt; Bool) -&gt; Eq Regs
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: Regs -&gt; Regs -&gt; Bool
+== :: Regs -&gt; Regs -&gt; Bool
+$c/= :: Regs -&gt; Regs -&gt; Bool
+/= :: Regs -&gt; Regs -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621682820322"><span class="annot"><span class="annottext">Regs -&gt; SDoc
+(Regs -&gt; SDoc) -&gt; Outputable Regs
+forall a. (a -&gt; SDoc) -&gt; Outputable a
+$cppr :: Regs -&gt; SDoc
+ppr :: Regs -&gt; SDoc
+</span><a href="GHC.Utils.Outputable.html#Outputable"><span class="hs-identifier hs-var hs-var hs-var hs-var">Outputable</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span>
+</span><span id="line-38"></span><span class="annot"><a href="GHC.CmmToAsm.Reg.Regs.html#maxRegWithFormat"><span class="hs-identifier hs-type">maxRegWithFormat</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.CmmToAsm.Format.html#RegWithFormat"><span class="hs-identifier hs-type">RegWithFormat</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.CmmToAsm.Format.html#RegWithFormat"><span class="hs-identifier hs-type">RegWithFormat</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.CmmToAsm.Format.html#RegWithFormat"><span class="hs-identifier hs-type">RegWithFormat</span></a></span><span>
+</span><span id="line-39"></span><span id="maxRegWithFormat"><span class="annot"><span class="annottext">maxRegWithFormat :: RegWithFormat -&gt; RegWithFormat -&gt; RegWithFormat
+</span><a href="GHC.CmmToAsm.Reg.Regs.html#maxRegWithFormat"><span class="hs-identifier hs-var hs-var">maxRegWithFormat</span></a></span></span><span> </span><span id="local-6989586621682820332"><span class="annot"><span class="annottext">r1 :: RegWithFormat
+</span><a href="#local-6989586621682820332"><span class="hs-identifier hs-var">r1</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="GHC.CmmToAsm.Format.html#RegWithFormat"><span class="hs-identifier hs-type">RegWithFormat</span></a></span><span> </span><span class="annot"><span class="annottext">Reg
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621682820334"><span class="annot"><span class="annottext">Format
+</span><a href="#local-6989586621682820334"><span class="hs-identifier hs-var">fmt1</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621682820335"><span class="annot"><span class="annottext">r2 :: RegWithFormat
+</span><a href="#local-6989586621682820335"><span class="hs-identifier hs-var">r2</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="GHC.CmmToAsm.Format.html#RegWithFormat"><span class="hs-identifier hs-type">RegWithFormat</span></a></span><span> </span><span class="annot"><span class="annottext">Reg
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621682820336"><span class="annot"><span class="annottext">Format
+</span><a href="#local-6989586621682820336"><span class="hs-identifier hs-var">fmt2</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Format
+</span><a href="#local-6989586621682820334"><span class="hs-identifier hs-var">fmt1</span></a></span><span> </span><span class="annot"><span class="annottext">Format -&gt; Format -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&gt;=</span></span><span> </span><span class="annot"><span class="annottext">Format
+</span><a href="#local-6989586621682820336"><span class="hs-identifier hs-var">fmt2</span></a></span><span>
+</span><span id="line-41"></span><span>    </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">RegWithFormat
+</span><a href="#local-6989586621682820332"><span class="hs-identifier hs-var">r1</span></a></span><span>
+</span><span id="line-42"></span><span>    </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">RegWithFormat
+</span><a href="#local-6989586621682820335"><span class="hs-identifier hs-var">r2</span></a></span><span>
+</span><span id="line-43"></span><span>  </span><span class="hs-comment">-- Re-using one of the arguments avoids allocating a new 'RegWithFormat',</span><span>
+</span><span id="line-44"></span><span>  </span><span class="hs-comment">-- compared with returning 'RegWithFormat r1 (max fmt1 fmt2)'.</span><span>
+</span><span id="line-45"></span><span>
+</span><span id="line-46"></span><span class="annot"><a href="GHC.CmmToAsm.Reg.Regs.html#noRegs"><span class="hs-identifier hs-type">noRegs</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.CmmToAsm.Reg.Regs.html#Regs"><span class="hs-identifier hs-type">Regs</span></a></span><span>
+</span><span id="line-47"></span><span id="noRegs"><span class="annot"><span class="annottext">noRegs :: Regs
+</span><a href="GHC.CmmToAsm.Reg.Regs.html#noRegs"><span class="hs-identifier hs-var hs-var">noRegs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">UniqSet RegWithFormat -&gt; Regs
+</span><a href="GHC.CmmToAsm.Reg.Regs.html#Regs"><span class="hs-identifier hs-var">Regs</span></a></span><span> </span><span class="annot"><span class="annottext">UniqSet RegWithFormat
+forall a. UniqSet a
+</span><a href="GHC.Types.Unique.Set.html#emptyUniqSet"><span class="hs-identifier hs-var">emptyUniqSet</span></a></span><span>
+</span><span id="line-48"></span><span>
+</span><span id="line-49"></span><span class="annot"><a href="GHC.CmmToAsm.Reg.Regs.html#addRegsMaxFmt"><span class="hs-identifier hs-type">addRegsMaxFmt</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.CmmToAsm.Reg.Regs.html#Regs"><span class="hs-identifier hs-type">Regs</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="GHC.CmmToAsm.Format.html#RegWithFormat"><span class="hs-identifier hs-type">RegWithFormat</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.CmmToAsm.Reg.Regs.html#Regs"><span class="hs-identifier hs-type">Regs</span></a></span><span>
+</span><span id="line-50"></span><span id="addRegsMaxFmt"><span class="annot"><span class="annottext">addRegsMaxFmt :: Regs -&gt; [RegWithFormat] -&gt; Regs
+</span><a href="GHC.CmmToAsm.Reg.Regs.html#addRegsMaxFmt"><span class="hs-identifier hs-var hs-var">addRegsMaxFmt</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Regs -&gt; RegWithFormat -&gt; Regs) -&gt; Regs -&gt; [RegWithFormat] -&gt; Regs
+forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; [a] -&gt; b
+forall (t :: * -&gt; *) b a.
+Foldable t =&gt;
+(b -&gt; a -&gt; b) -&gt; b -&gt; t a -&gt; b
+</span><span class="hs-identifier hs-var">foldl'</span></span><span> </span><span class="annot"><span class="annottext">Regs -&gt; RegWithFormat -&gt; Regs
+</span><a href="GHC.CmmToAsm.Reg.Regs.html#addRegMaxFmt"><span class="hs-identifier hs-var">addRegMaxFmt</span></a></span><span>
+</span><span id="line-51"></span><span>
+</span><span id="line-52"></span><span class="annot"><a href="GHC.CmmToAsm.Reg.Regs.html#mkRegsMaxFmt"><span class="hs-identifier hs-type">mkRegsMaxFmt</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="GHC.CmmToAsm.Format.html#RegWithFormat"><span class="hs-identifier hs-type">RegWithFormat</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.CmmToAsm.Reg.Regs.html#Regs"><span class="hs-identifier hs-type">Regs</span></a></span><span>
+</span><span id="line-53"></span><span id="mkRegsMaxFmt"><span class="annot"><span class="annottext">mkRegsMaxFmt :: [RegWithFormat] -&gt; Regs
+</span><a href="GHC.CmmToAsm.Reg.Regs.html#mkRegsMaxFmt"><span class="hs-identifier hs-var hs-var">mkRegsMaxFmt</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Regs -&gt; [RegWithFormat] -&gt; Regs
+</span><a href="GHC.CmmToAsm.Reg.Regs.html#addRegsMaxFmt"><span class="hs-identifier hs-var">addRegsMaxFmt</span></a></span><span> </span><span class="annot"><span class="annottext">Regs
+</span><a href="GHC.CmmToAsm.Reg.Regs.html#noRegs"><span class="hs-identifier hs-var">noRegs</span></a></span><span>
+</span><span id="line-54"></span><span>
+</span><span id="line-55"></span><span class="annot"><a href="GHC.CmmToAsm.Reg.Regs.html#addRegMaxFmt"><span class="hs-identifier hs-type">addRegMaxFmt</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.CmmToAsm.Reg.Regs.html#Regs"><span class="hs-identifier hs-type">Regs</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.CmmToAsm.Format.html#RegWithFormat"><span class="hs-identifier hs-type">RegWithFormat</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.CmmToAsm.Reg.Regs.html#Regs"><span class="hs-identifier hs-type">Regs</span></a></span><span>
+</span><span id="line-56"></span><span id="addRegMaxFmt"><span class="annot"><span class="annottext">addRegMaxFmt :: Regs -&gt; RegWithFormat -&gt; Regs
+</span><a href="GHC.CmmToAsm.Reg.Regs.html#addRegMaxFmt"><span class="hs-identifier hs-var hs-var">addRegMaxFmt</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(UniqSet RegWithFormat -&gt; RegWithFormat -&gt; UniqSet RegWithFormat)
+-&gt; Regs -&gt; RegWithFormat -&gt; Regs
+forall a b. Coercible a b =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">coerce</span></span><span> </span><span class="annot"><span class="annottext">((UniqSet RegWithFormat -&gt; RegWithFormat -&gt; UniqSet RegWithFormat)
+ -&gt; Regs -&gt; RegWithFormat -&gt; Regs)
+-&gt; (UniqSet RegWithFormat
+    -&gt; RegWithFormat -&gt; UniqSet RegWithFormat)
+-&gt; Regs
+-&gt; RegWithFormat
+-&gt; Regs
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">(RegWithFormat -&gt; RegWithFormat -&gt; RegWithFormat)
+-&gt; UniqSet RegWithFormat -&gt; RegWithFormat -&gt; UniqSet RegWithFormat
+forall a.
+Uniquable a =&gt;
+(a -&gt; a -&gt; a) -&gt; UniqSet a -&gt; a -&gt; UniqSet a
+</span><a href="GHC.Types.Unique.Set.html#strictAddOneToUniqSet_C"><span class="hs-identifier hs-var">strictAddOneToUniqSet_C</span></a></span><span> </span><span class="annot"><span class="annottext">RegWithFormat -&gt; RegWithFormat -&gt; RegWithFormat
+</span><a href="GHC.CmmToAsm.Reg.Regs.html#maxRegWithFormat"><span class="hs-identifier hs-var">maxRegWithFormat</span></a></span><span>
+</span><span id="line-57"></span><span>  </span><span class="hs-comment">-- Don't build up thunks when combining with 'maxRegWithFormat'</span><span>
+</span><span id="line-58"></span><span>
+</span><span id="line-59"></span><span class="hs-comment">-- | Remove 2nd argument registers from the 1st argument, but only</span><span>
+</span><span id="line-60"></span><span class="hs-comment">-- if the format in the second argument is at least as large as the format</span><span>
+</span><span id="line-61"></span><span class="hs-comment">-- in the first argument.</span><span>
+</span><span id="line-62"></span><span class="annot"><a href="GHC.CmmToAsm.Reg.Regs.html#minusCoveredRegs"><span class="hs-identifier hs-type">minusCoveredRegs</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.CmmToAsm.Reg.Regs.html#Regs"><span class="hs-identifier hs-type">Regs</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.CmmToAsm.Reg.Regs.html#Regs"><span class="hs-identifier hs-type">Regs</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.CmmToAsm.Reg.Regs.html#Regs"><span class="hs-identifier hs-type">Regs</span></a></span><span>
+</span><span id="line-63"></span><span id="minusCoveredRegs"><span class="annot"><span class="annottext">minusCoveredRegs :: Regs -&gt; Regs -&gt; Regs
+</span><a href="GHC.CmmToAsm.Reg.Regs.html#minusCoveredRegs"><span class="hs-identifier hs-var hs-var">minusCoveredRegs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(UniqSet RegWithFormat
+ -&gt; UniqSet RegWithFormat -&gt; UniqSet RegWithFormat)
+-&gt; Regs -&gt; Regs -&gt; Regs
+forall a b. Coercible a b =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">coerce</span></span><span> </span><span class="annot"><span class="annottext">((UniqSet RegWithFormat
+  -&gt; UniqSet RegWithFormat -&gt; UniqSet RegWithFormat)
+ -&gt; Regs -&gt; Regs -&gt; Regs)
+-&gt; (UniqSet RegWithFormat
+    -&gt; UniqSet RegWithFormat -&gt; UniqSet RegWithFormat)
+-&gt; Regs
+-&gt; Regs
+-&gt; Regs
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">(RegWithFormat -&gt; RegWithFormat -&gt; Maybe RegWithFormat)
+-&gt; UniqSet RegWithFormat
+-&gt; UniqSet RegWithFormat
+-&gt; UniqSet RegWithFormat
+forall a.
+(a -&gt; a -&gt; Maybe a) -&gt; UniqSet a -&gt; UniqSet a -&gt; UniqSet a
+</span><a href="GHC.Types.Unique.Set.html#minusUniqSet_C"><span class="hs-identifier hs-var">minusUniqSet_C</span></a></span><span> </span><span class="annot"><span class="annottext">RegWithFormat -&gt; RegWithFormat -&gt; Maybe RegWithFormat
+</span><a href="#local-6989586621682820341"><span class="hs-identifier hs-var">f</span></a></span><span>
+</span><span id="line-64"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-65"></span><span>    </span><span class="annot"><a href="#local-6989586621682820341"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.CmmToAsm.Format.html#RegWithFormat"><span class="hs-identifier hs-type">RegWithFormat</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.CmmToAsm.Format.html#RegWithFormat"><span class="hs-identifier hs-type">RegWithFormat</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><a href="GHC.CmmToAsm.Format.html#RegWithFormat"><span class="hs-identifier hs-type">RegWithFormat</span></a></span><span>
+</span><span id="line-66"></span><span>    </span><span id="local-6989586621682820341"><span class="annot"><span class="annottext">f :: RegWithFormat -&gt; RegWithFormat -&gt; Maybe RegWithFormat
+</span><a href="#local-6989586621682820341"><span class="hs-identifier hs-var hs-var">f</span></a></span></span><span> </span><span id="local-6989586621682820342"><span class="annot"><span class="annottext">r1 :: RegWithFormat
+</span><a href="#local-6989586621682820342"><span class="hs-identifier hs-var">r1</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="GHC.CmmToAsm.Format.html#RegWithFormat"><span class="hs-identifier hs-type">RegWithFormat</span></a></span><span> </span><span class="annot"><span class="annottext">Reg
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621682820343"><span class="annot"><span class="annottext">Format
+</span><a href="#local-6989586621682820343"><span class="hs-identifier hs-var">fmt1</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.CmmToAsm.Format.html#RegWithFormat"><span class="hs-identifier hs-type">RegWithFormat</span></a></span><span> </span><span class="annot"><span class="annottext">Reg
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621682820344"><span class="annot"><span class="annottext">Format
+</span><a href="#local-6989586621682820344"><span class="hs-identifier hs-var">fmt2</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-67"></span><span>      </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Format
+</span><a href="#local-6989586621682820344"><span class="hs-identifier hs-var">fmt2</span></a></span><span> </span><span class="annot"><span class="annottext">Format -&gt; Format -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&gt;=</span></span><span> </span><span class="annot"><span class="annottext">Format
+</span><a href="#local-6989586621682820343"><span class="hs-identifier hs-var">fmt1</span></a></span><span>
+</span><span id="line-68"></span><span>           </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><span class="hs-operator hs-var">||</span></span><span>
+</span><span id="line-69"></span><span>         </span><span class="annot"><span class="annottext">Bool -&gt; Bool
+</span><span class="hs-identifier hs-var">not</span></span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">Format -&gt; Bool
+</span><a href="GHC.CmmToAsm.Format.html#isVecFormat"><span class="hs-identifier hs-var">isVecFormat</span></a></span><span> </span><span class="annot"><span class="annottext">Format
+</span><a href="#local-6989586621682820343"><span class="hs-identifier hs-var">fmt1</span></a></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-70"></span><span>          </span><span class="hs-comment">-- See Wrinkle [Don't allow scalar partial writes]</span><span>
+</span><span id="line-71"></span><span>          </span><span class="hs-comment">-- in Note [Register formats in liveness analysis] in GHC.CmmToAsm.Reg.Liveness.</span><span>
+</span><span id="line-72"></span><span>      </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">Maybe RegWithFormat
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span>
+</span><span id="line-73"></span><span>      </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">RegWithFormat -&gt; Maybe RegWithFormat
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="annot"><span class="annottext">RegWithFormat
+</span><a href="#local-6989586621682820342"><span class="hs-identifier hs-var">r1</span></a></span><span>
+</span><span id="line-74"></span><span>
+</span><span id="line-75"></span><span class="hs-comment">-- | Remove 2nd argument registers from the 1st argument, regardless of format.</span><span>
+</span><span id="line-76"></span><span class="hs-comment">--</span><span>
+</span><span id="line-77"></span><span class="hs-comment">-- See also 'minusCoveredRegs', which looks at the formats.</span><span>
+</span><span id="line-78"></span><span class="annot"><a href="GHC.CmmToAsm.Reg.Regs.html#minusRegs"><span class="hs-identifier hs-type">minusRegs</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.CmmToAsm.Reg.Regs.html#Regs"><span class="hs-identifier hs-type">Regs</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.CmmToAsm.Reg.Regs.html#Regs"><span class="hs-identifier hs-type">Regs</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.CmmToAsm.Reg.Regs.html#Regs"><span class="hs-identifier hs-type">Regs</span></a></span><span>
+</span><span id="line-79"></span><span id="minusRegs"><span class="annot"><span class="annottext">minusRegs :: Regs -&gt; Regs -&gt; Regs
+</span><a href="GHC.CmmToAsm.Reg.Regs.html#minusRegs"><span class="hs-identifier hs-var hs-var">minusRegs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(UniqSet RegWithFormat
+ -&gt; UniqSet RegWithFormat -&gt; UniqSet RegWithFormat)
+-&gt; Regs -&gt; Regs -&gt; Regs
+forall a b. Coercible a b =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">coerce</span></span><span> </span><span class="annot"><span class="annottext">((UniqSet RegWithFormat
+  -&gt; UniqSet RegWithFormat -&gt; UniqSet RegWithFormat)
+ -&gt; Regs -&gt; Regs -&gt; Regs)
+-&gt; (UniqSet RegWithFormat
+    -&gt; UniqSet RegWithFormat -&gt; UniqSet RegWithFormat)
+-&gt; Regs
+-&gt; Regs
+-&gt; Regs
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">forall a. UniqSet a -&gt; UniqSet a -&gt; UniqSet a
+</span><a href="GHC.Types.Unique.Set.html#minusUniqSet"><span class="hs-identifier hs-var">minusUniqSet</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="GHC.CmmToAsm.Format.html#RegWithFormat"><span class="hs-identifier hs-type">RegWithFormat</span></a></span><span>
+</span><span id="line-80"></span><span>
+</span><span id="line-81"></span><span class="annot"><a href="GHC.CmmToAsm.Reg.Regs.html#unionRegsMaxFmt"><span class="hs-identifier hs-type">unionRegsMaxFmt</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.CmmToAsm.Reg.Regs.html#Regs"><span class="hs-identifier hs-type">Regs</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.CmmToAsm.Reg.Regs.html#Regs"><span class="hs-identifier hs-type">Regs</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.CmmToAsm.Reg.Regs.html#Regs"><span class="hs-identifier hs-type">Regs</span></a></span><span>
+</span><span id="line-82"></span><span id="unionRegsMaxFmt"><span class="annot"><span class="annottext">unionRegsMaxFmt :: Regs -&gt; Regs -&gt; Regs
+</span><a href="GHC.CmmToAsm.Reg.Regs.html#unionRegsMaxFmt"><span class="hs-identifier hs-var hs-var">unionRegsMaxFmt</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(UniqSet RegWithFormat
+ -&gt; UniqSet RegWithFormat -&gt; UniqSet RegWithFormat)
+-&gt; Regs -&gt; Regs -&gt; Regs
+forall a b. Coercible a b =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">coerce</span></span><span> </span><span class="annot"><span class="annottext">((UniqSet RegWithFormat
+  -&gt; UniqSet RegWithFormat -&gt; UniqSet RegWithFormat)
+ -&gt; Regs -&gt; Regs -&gt; Regs)
+-&gt; (UniqSet RegWithFormat
+    -&gt; UniqSet RegWithFormat -&gt; UniqSet RegWithFormat)
+-&gt; Regs
+-&gt; Regs
+-&gt; Regs
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">(RegWithFormat -&gt; RegWithFormat -&gt; RegWithFormat)
+-&gt; UniqSet RegWithFormat
+-&gt; UniqSet RegWithFormat
+-&gt; UniqSet RegWithFormat
+forall a. (a -&gt; a -&gt; a) -&gt; UniqSet a -&gt; UniqSet a -&gt; UniqSet a
+</span><a href="GHC.Types.Unique.Set.html#strictUnionUniqSets_C"><span class="hs-identifier hs-var">strictUnionUniqSets_C</span></a></span><span> </span><span class="annot"><span class="annottext">RegWithFormat -&gt; RegWithFormat -&gt; RegWithFormat
+</span><a href="GHC.CmmToAsm.Reg.Regs.html#maxRegWithFormat"><span class="hs-identifier hs-var">maxRegWithFormat</span></a></span><span>
+</span><span id="line-83"></span><span>  </span><span class="hs-comment">-- Don't build up thunks when combining with 'maxRegWithFormat'</span><span>
+</span><span id="line-84"></span><span>
+</span><span id="line-85"></span><span class="annot"><a href="GHC.CmmToAsm.Reg.Regs.html#unionManyRegsMaxFmt"><span class="hs-identifier hs-type">unionManyRegsMaxFmt</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="GHC.CmmToAsm.Reg.Regs.html#Regs"><span class="hs-identifier hs-type">Regs</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.CmmToAsm.Reg.Regs.html#Regs"><span class="hs-identifier hs-type">Regs</span></a></span><span>
+</span><span id="line-86"></span><span id="unionManyRegsMaxFmt"><span class="annot"><span class="annottext">unionManyRegsMaxFmt :: [Regs] -&gt; Regs
+</span><a href="GHC.CmmToAsm.Reg.Regs.html#unionManyRegsMaxFmt"><span class="hs-identifier hs-var hs-var">unionManyRegsMaxFmt</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">([UniqSet RegWithFormat] -&gt; UniqSet RegWithFormat)
+-&gt; [Regs] -&gt; Regs
+forall a b. Coercible a b =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">coerce</span></span><span> </span><span class="annot"><span class="annottext">(([UniqSet RegWithFormat] -&gt; UniqSet RegWithFormat)
+ -&gt; [Regs] -&gt; Regs)
+-&gt; ([UniqSet RegWithFormat] -&gt; UniqSet RegWithFormat)
+-&gt; [Regs]
+-&gt; Regs
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">(RegWithFormat -&gt; RegWithFormat -&gt; RegWithFormat)
+-&gt; [UniqSet RegWithFormat] -&gt; UniqSet RegWithFormat
+forall a. (a -&gt; a -&gt; a) -&gt; [UniqSet a] -&gt; UniqSet a
+</span><a href="GHC.Types.Unique.Set.html#strictUnionManyUniqSets_C"><span class="hs-identifier hs-var">strictUnionManyUniqSets_C</span></a></span><span> </span><span class="annot"><span class="annottext">RegWithFormat -&gt; RegWithFormat -&gt; RegWithFormat
+</span><a href="GHC.CmmToAsm.Reg.Regs.html#maxRegWithFormat"><span class="hs-identifier hs-var">maxRegWithFormat</span></a></span><span>
+</span><span id="line-87"></span><span>  </span><span class="hs-comment">-- Don't build up thunks when combining with 'maxRegWithFormat'</span><span>
+</span><span id="line-88"></span><span>
+</span><span id="line-89"></span><span class="annot"><a href="GHC.CmmToAsm.Reg.Regs.html#intersectRegsMaxFmt"><span class="hs-identifier hs-type">intersectRegsMaxFmt</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.CmmToAsm.Reg.Regs.html#Regs"><span class="hs-identifier hs-type">Regs</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.CmmToAsm.Reg.Regs.html#Regs"><span class="hs-identifier hs-type">Regs</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.CmmToAsm.Reg.Regs.html#Regs"><span class="hs-identifier hs-type">Regs</span></a></span><span>
+</span><span id="line-90"></span><span id="intersectRegsMaxFmt"><span class="annot"><span class="annottext">intersectRegsMaxFmt :: Regs -&gt; Regs -&gt; Regs
+</span><a href="GHC.CmmToAsm.Reg.Regs.html#intersectRegsMaxFmt"><span class="hs-identifier hs-var hs-var">intersectRegsMaxFmt</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(UniqSet RegWithFormat
+ -&gt; UniqSet RegWithFormat -&gt; UniqSet RegWithFormat)
+-&gt; Regs -&gt; Regs -&gt; Regs
+forall a b. Coercible a b =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">coerce</span></span><span> </span><span class="annot"><span class="annottext">((UniqSet RegWithFormat
+  -&gt; UniqSet RegWithFormat -&gt; UniqSet RegWithFormat)
+ -&gt; Regs -&gt; Regs -&gt; Regs)
+-&gt; (UniqSet RegWithFormat
+    -&gt; UniqSet RegWithFormat -&gt; UniqSet RegWithFormat)
+-&gt; Regs
+-&gt; Regs
+-&gt; Regs
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">(RegWithFormat -&gt; RegWithFormat -&gt; RegWithFormat)
+-&gt; UniqSet RegWithFormat
+-&gt; UniqSet RegWithFormat
+-&gt; UniqSet RegWithFormat
+forall a. (a -&gt; a -&gt; a) -&gt; UniqSet a -&gt; UniqSet a -&gt; UniqSet a
+</span><a href="GHC.Types.Unique.Set.html#strictIntersectUniqSets_C"><span class="hs-identifier hs-var">strictIntersectUniqSets_C</span></a></span><span> </span><span class="annot"><span class="annottext">RegWithFormat -&gt; RegWithFormat -&gt; RegWithFormat
+</span><a href="GHC.CmmToAsm.Reg.Regs.html#maxRegWithFormat"><span class="hs-identifier hs-var">maxRegWithFormat</span></a></span><span>
+</span><span id="line-91"></span><span>  </span><span class="hs-comment">-- Don't build up thunks when combining with 'maxRegWithFormat'</span><span>
+</span><span id="line-92"></span><span>
+</span><span id="line-93"></span><span class="hs-comment">-- | Computes the set of registers in both arguments whose size is smaller in</span><span>
+</span><span id="line-94"></span><span class="hs-comment">-- the second argument than in the first.</span><span>
+</span><span id="line-95"></span><span class="annot"><a href="GHC.CmmToAsm.Reg.Regs.html#shrinkingRegs"><span class="hs-identifier hs-type">shrinkingRegs</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.CmmToAsm.Reg.Regs.html#Regs"><span class="hs-identifier hs-type">Regs</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.CmmToAsm.Reg.Regs.html#Regs"><span class="hs-identifier hs-type">Regs</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.CmmToAsm.Reg.Regs.html#Regs"><span class="hs-identifier hs-type">Regs</span></a></span><span>
+</span><span id="line-96"></span><span id="shrinkingRegs"><span class="annot"><span class="annottext">shrinkingRegs :: Regs -&gt; Regs -&gt; Regs
+</span><a href="GHC.CmmToAsm.Reg.Regs.html#shrinkingRegs"><span class="hs-identifier hs-var hs-var">shrinkingRegs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(UniqSet RegWithFormat
+ -&gt; UniqSet RegWithFormat -&gt; UniqSet RegWithFormat)
+-&gt; Regs -&gt; Regs -&gt; Regs
+forall a b. Coercible a b =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">coerce</span></span><span> </span><span class="annot"><span class="annottext">((UniqSet RegWithFormat
+  -&gt; UniqSet RegWithFormat -&gt; UniqSet RegWithFormat)
+ -&gt; Regs -&gt; Regs -&gt; Regs)
+-&gt; (UniqSet RegWithFormat
+    -&gt; UniqSet RegWithFormat -&gt; UniqSet RegWithFormat)
+-&gt; Regs
+-&gt; Regs
+-&gt; Regs
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">(RegWithFormat -&gt; RegWithFormat -&gt; Maybe RegWithFormat)
+-&gt; UniqSet RegWithFormat
+-&gt; UniqSet RegWithFormat
+-&gt; UniqSet RegWithFormat
+forall a.
+(a -&gt; a -&gt; Maybe a) -&gt; UniqSet a -&gt; UniqSet a -&gt; UniqSet a
+</span><a href="GHC.Types.Unique.Set.html#minusUniqSet_C"><span class="hs-identifier hs-var">minusUniqSet_C</span></a></span><span> </span><span class="annot"><span class="annottext">RegWithFormat -&gt; RegWithFormat -&gt; Maybe RegWithFormat
+</span><a href="#local-6989586621682820351"><span class="hs-identifier hs-var">f</span></a></span><span>
+</span><span id="line-97"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-98"></span><span>    </span><span class="annot"><a href="#local-6989586621682820351"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.CmmToAsm.Format.html#RegWithFormat"><span class="hs-identifier hs-type">RegWithFormat</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.CmmToAsm.Format.html#RegWithFormat"><span class="hs-identifier hs-type">RegWithFormat</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><a href="GHC.CmmToAsm.Format.html#RegWithFormat"><span class="hs-identifier hs-type">RegWithFormat</span></a></span><span>
+</span><span id="line-99"></span><span>    </span><span id="local-6989586621682820351"><span class="annot"><span class="annottext">f :: RegWithFormat -&gt; RegWithFormat -&gt; Maybe RegWithFormat
+</span><a href="#local-6989586621682820351"><span class="hs-identifier hs-var hs-var">f</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.CmmToAsm.Format.html#RegWithFormat"><span class="hs-identifier hs-type">RegWithFormat</span></a></span><span> </span><span class="annot"><span class="annottext">Reg
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621682820352"><span class="annot"><span class="annottext">Format
+</span><a href="#local-6989586621682820352"><span class="hs-identifier hs-var">fmt1</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621682820353"><span class="annot"><span class="annottext">r2 :: RegWithFormat
+</span><a href="#local-6989586621682820353"><span class="hs-identifier hs-var">r2</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="GHC.CmmToAsm.Format.html#RegWithFormat"><span class="hs-identifier hs-type">RegWithFormat</span></a></span><span> </span><span class="annot"><span class="annottext">Reg
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621682820354"><span class="annot"><span class="annottext">Format
+</span><a href="#local-6989586621682820354"><span class="hs-identifier hs-var">fmt2</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-100"></span><span>      </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Format
+</span><a href="#local-6989586621682820354"><span class="hs-identifier hs-var">fmt2</span></a></span><span> </span><span class="annot"><span class="annottext">Format -&gt; Format -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&lt;</span></span><span> </span><span class="annot"><span class="annottext">Format
+</span><a href="#local-6989586621682820352"><span class="hs-identifier hs-var">fmt1</span></a></span><span>
+</span><span id="line-101"></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">RegWithFormat -&gt; Maybe RegWithFormat
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="annot"><span class="annottext">RegWithFormat
+</span><a href="#local-6989586621682820353"><span class="hs-identifier hs-var">r2</span></a></span><span>
+</span><span id="line-102"></span><span>      </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">otherwise</span></span><span>
+</span><span id="line-103"></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe RegWithFormat
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span>
+</span><span id="line-104"></span><span>
+</span><span id="line-105"></span><span class="hs-comment">-- | Map a function that may change the 'Unique' of the register,</span><span>
+</span><span id="line-106"></span><span class="hs-comment">-- which entails going via lists.</span><span>
+</span><span id="line-107"></span><span class="hs-comment">--</span><span>
+</span><span id="line-108"></span><span class="hs-comment">-- See Note [UniqSet invariant] in GHC.Types.Unique.Set.</span><span>
+</span><span id="line-109"></span><span class="annot"><a href="GHC.CmmToAsm.Reg.Regs.html#mapRegs"><span class="hs-identifier hs-type">mapRegs</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Platform.Reg.html#Reg"><span class="hs-identifier hs-type">Reg</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Platform.Reg.html#Reg"><span class="hs-identifier hs-type">Reg</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.CmmToAsm.Reg.Regs.html#Regs"><span class="hs-identifier hs-type">Regs</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.CmmToAsm.Reg.Regs.html#Regs"><span class="hs-identifier hs-type">Regs</span></a></span><span>
+</span><span id="line-110"></span><span id="mapRegs"><span class="annot"><span class="annottext">mapRegs :: (Reg -&gt; Reg) -&gt; Regs -&gt; Regs
+</span><a href="GHC.CmmToAsm.Reg.Regs.html#mapRegs"><span class="hs-identifier hs-var hs-var">mapRegs</span></a></span></span><span> </span><span id="local-6989586621682820356"><span class="annot"><span class="annottext">Reg -&gt; Reg
+</span><a href="#local-6989586621682820356"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.CmmToAsm.Reg.Regs.html#Regs"><span class="hs-identifier hs-type">Regs</span></a></span><span> </span><span id="local-6989586621682820357"><span class="annot"><span class="annottext">UniqSet RegWithFormat
+</span><a href="#local-6989586621682820357"><span class="hs-identifier hs-var">live</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-111"></span><span>  </span><span class="annot"><span class="annottext">UniqSet RegWithFormat -&gt; Regs
+</span><a href="GHC.CmmToAsm.Reg.Regs.html#Regs"><span class="hs-identifier hs-var">Regs</span></a></span><span> </span><span class="annot"><span class="annottext">(UniqSet RegWithFormat -&gt; Regs) -&gt; UniqSet RegWithFormat -&gt; Regs
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-112"></span><span>    </span><span class="annot"><span class="annottext">(RegWithFormat -&gt; RegWithFormat)
+-&gt; UniqSet RegWithFormat -&gt; UniqSet RegWithFormat
+forall b a. Uniquable b =&gt; (a -&gt; b) -&gt; UniqSet a -&gt; UniqSet b
+</span><a href="GHC.Types.Unique.Set.html#mapUniqSet"><span class="hs-identifier hs-var">mapUniqSet</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.CmmToAsm.Format.html#RegWithFormat"><span class="hs-identifier hs-type">RegWithFormat</span></a></span><span> </span><span id="local-6989586621682820359"><span class="annot"><span class="annottext">Reg
+</span><a href="#local-6989586621682820359"><span class="hs-identifier hs-var">r</span></a></span></span><span> </span><span id="local-6989586621682820360"><span class="annot"><span class="annottext">Format
+</span><a href="#local-6989586621682820360"><span class="hs-identifier hs-var">fmt</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Reg -&gt; Format -&gt; RegWithFormat
+</span><a href="GHC.CmmToAsm.Format.html#RegWithFormat"><span class="hs-identifier hs-var">RegWithFormat</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Reg -&gt; Reg
+</span><a href="#local-6989586621682820356"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Reg
+</span><a href="#local-6989586621682820359"><span class="hs-identifier hs-var">r</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Format
+</span><a href="#local-6989586621682820360"><span class="hs-identifier hs-var">fmt</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">UniqSet RegWithFormat
+</span><a href="#local-6989586621682820357"><span class="hs-identifier hs-var">live</span></a></span><span>
+</span><span id="line-113"></span><span>
+</span><span id="line-114"></span><span class="annot"><a href="GHC.CmmToAsm.Reg.Regs.html#elemRegs"><span class="hs-identifier hs-type">elemRegs</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Platform.Reg.html#Reg"><span class="hs-identifier hs-type">Reg</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.CmmToAsm.Reg.Regs.html#Regs"><span class="hs-identifier hs-type">Regs</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span>
+</span><span id="line-115"></span><span id="elemRegs"><span class="annot"><span class="annottext">elemRegs :: Reg -&gt; Regs -&gt; Bool
+</span><a href="GHC.CmmToAsm.Reg.Regs.html#elemRegs"><span class="hs-identifier hs-var hs-var">elemRegs</span></a></span></span><span> </span><span id="local-6989586621682820361"><span class="annot"><span class="annottext">Reg
+</span><a href="#local-6989586621682820361"><span class="hs-identifier hs-var">r</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.CmmToAsm.Reg.Regs.html#Regs"><span class="hs-identifier hs-type">Regs</span></a></span><span> </span><span id="local-6989586621682820362"><span class="annot"><span class="annottext">UniqSet RegWithFormat
+</span><a href="#local-6989586621682820362"><span class="hs-identifier hs-var">live</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Unique -&gt; UniqSet RegWithFormat -&gt; Bool
+forall a. Unique -&gt; UniqSet a -&gt; Bool
+</span><a href="GHC.Types.Unique.Set.html#elemUniqSet_Directly"><span class="hs-identifier hs-var">elemUniqSet_Directly</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Reg -&gt; Unique
+forall a. Uniquable a =&gt; a -&gt; Unique
+</span><a href="GHC.Types.Unique.html#getUnique"><span class="hs-identifier hs-var">getUnique</span></a></span><span> </span><span class="annot"><span class="annottext">Reg
+</span><a href="#local-6989586621682820361"><span class="hs-identifier hs-var">r</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">UniqSet RegWithFormat
+</span><a href="#local-6989586621682820362"><span class="hs-identifier hs-var">live</span></a></span><span>
+</span><span id="line-116"></span><span>
+</span><span id="line-117"></span><span class="annot"><a href="GHC.CmmToAsm.Reg.Regs.html#lookupReg"><span class="hs-identifier hs-type">lookupReg</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Platform.Reg.html#Reg"><span class="hs-identifier hs-type">Reg</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.CmmToAsm.Reg.Regs.html#Regs"><span class="hs-identifier hs-type">Regs</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><a href="GHC.CmmToAsm.Format.html#Format"><span class="hs-identifier hs-type">Format</span></a></span><span>
+</span><span id="line-118"></span><span id="lookupReg"><span class="annot"><span class="annottext">lookupReg :: Reg -&gt; Regs -&gt; Maybe Format
+</span><a href="GHC.CmmToAsm.Reg.Regs.html#lookupReg"><span class="hs-identifier hs-var hs-var">lookupReg</span></a></span></span><span> </span><span id="local-6989586621682820365"><span class="annot"><span class="annottext">Reg
+</span><a href="#local-6989586621682820365"><span class="hs-identifier hs-var">r</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.CmmToAsm.Reg.Regs.html#Regs"><span class="hs-identifier hs-type">Regs</span></a></span><span> </span><span id="local-6989586621682820366"><span class="annot"><span class="annottext">UniqSet RegWithFormat
+</span><a href="#local-6989586621682820366"><span class="hs-identifier hs-var">live</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-119"></span><span>  </span><span class="annot"><span class="annottext">RegWithFormat -&gt; Format
+</span><a href="GHC.CmmToAsm.Format.html#regWithFormat_format"><span class="hs-identifier hs-var">regWithFormat_format</span></a></span><span> </span><span class="annot"><span class="annottext">(RegWithFormat -&gt; Format) -&gt; Maybe RegWithFormat -&gt; Maybe Format
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">UniqSet RegWithFormat -&gt; Unique -&gt; Maybe RegWithFormat
+forall a. UniqSet a -&gt; Unique -&gt; Maybe a
+</span><a href="GHC.Types.Unique.Set.html#lookupUniqSet_Directly"><span class="hs-identifier hs-var">lookupUniqSet_Directly</span></a></span><span> </span><span class="annot"><span class="annottext">UniqSet RegWithFormat
+</span><a href="#local-6989586621682820366"><span class="hs-identifier hs-var">live</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Reg -&gt; Unique
+forall a. Uniquable a =&gt; a -&gt; Unique
+</span><a href="GHC.Types.Unique.html#getUnique"><span class="hs-identifier hs-var">getUnique</span></a></span><span> </span><span class="annot"><span class="annottext">Reg
+</span><a href="#local-6989586621682820365"><span class="hs-identifier hs-var">r</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-120"></span></pre></body></html>
