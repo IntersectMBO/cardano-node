@@ -109,7 +109,7 @@ The `Resources` sample follows the performance observability specification: only
 
 == The database backend
 
-`prepare-db` (`Cardano.Unlog.BackendDB.prepareDB`) parses a node's log files once and stores the persistable log objects in a per-node SQLite database (`Cardano.Unlog.LogObjectDB`): tables for events, transactions, resource samples (the full sample as a JSON blob, a few fields as columns for ad-hoc queries), leadership checks and ledger metrics, plus a summary table (log line count, first and last timestamp) and the trace frequencies. `unlog-db` loads every node's database concurrently (`runLiftLogObjectsDB`, `loadHostLogsDB`) and converts the rows back into log objects.
+`prepare-db` (`Cardano.Unlog.BackendDB.prepareDB`) parses a node's log files once and stores the persistable log objects in a per-node SQLite database (`Cardano.Unlog.LogObjectDB`): tables for events, transactions, resource samples (the full sample as a JSON blob, a few fields as columns for ad-hoc queries), leadership checks and ledger metrics, plus a summary table (log line count, first and last timestamp) and the trace frequencies. `prepare-db-from-lines` (`prepareDBFromLines`) builds the same database from log lines on stdin: the workbench streams only the lines of the interpreted namespaces (`list-interpreted-namespaces`) from a run's Parquet files (`bench-parquet lines`), so what `prepare-db` counts over all lines (trace frequencies, line count, first and last timestamp) comes precomputed as a host summary (`bench-parquet host-summary`); both commands share the per-line decoding (`ingestLine`). `unlog-db` loads every node's database concurrently (`runLiftLogObjectsDB`, `loadHostLogsDB`) and converts the rows back into log objects.
 
 Databases written by older versions must stay readable. Rows are read through per-constructor converters (`toLOBodyConverters`); an unknown row shape is an error, while missing optional content stays lenient.
 
@@ -290,7 +290,7 @@ Plain-text outputs stay ASCII, since they're read over SSH on the benchmarking m
   [`report`], [`report --typst analysis/report-RUN.typ`],
 )
 
-Further entry points: `wb a prep RUN` (`prepare-db` per node), `wb a variance RUN…` (reads the runs' results, computes and renders the multi-run results into a new run directory, and ends with `report`), `wb a compare RUN…` (`compare` into a new run directory), and `wb a pdf RUN` (compiles the run's `report-*.typ`).
+Further entry points: `wb a prep RUN` (`prepare-db` per node; `prepare-db-from-lines` where `RUN/parquets/` holds the node's log, unless `--from-logs`), `wb a variance RUN…` (reads the runs' results, computes and renders the multi-run results into a new run directory, and ends with `report`), `wb a compare RUN…` (`compare` into a new run directory), and `wb a pdf RUN` (compiles the run's `report-*.typ`).
 
 = Testing
 

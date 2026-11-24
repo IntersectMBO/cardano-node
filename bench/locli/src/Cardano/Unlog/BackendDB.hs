@@ -1,6 +1,8 @@
 
 module Cardano.Unlog.BackendDB
        ( prepareDB
+       , prepareDBFromLines
+       , HostSummary(..)
        , readRunLogsBare
        , runLiftLogObjectsDB
        , LoadFromDB(..)
@@ -20,7 +22,7 @@ module Cardano.Unlog.BackendDB
        ) where
 
 import           Cardano.Analysis.API.Ground (Host (..), JsonInputFile (..), LogObjectSource (..))
-import           Cardano.Prelude (ExceptT (..), (<|>))
+import           Cardano.Prelude (ExceptT (..), throwError, (<|>))
 import           Cardano.Unlog.LogObject (HostLogs (..), LogObject (..), RunLogs (..), fromTextRef)
 import           Cardano.Unlog.LogObjectDB
 import           Cardano.Util (sequenceConcurrentlyChunksOf, withTimingInfo)
@@ -29,7 +31,7 @@ import           Prelude hiding (log)
 
 import           Control.Exception (SomeException (..), catch)
 import           Control.Monad
-import           Data.Aeson as Aeson (decode, eitherDecode)
+import           Data.Aeson as Aeson (FromJSON (..), decode, eitherDecode, withObject, (.:))
 import qualified Data.ByteString.Lazy.Char8 as BSL
 import           Data.Kind (Type)
 import           Data.List (sort)
@@ -42,6 +44,7 @@ import           Data.Time.Format.ISO8601
 import           Data.Word (Word64)
 import           GHC.Conc (numCapabilities)
 import           System.Directory (removeFile)
+import           System.IO (stdin)
 
 import           Database.Sqlite.Easy hiding (Text)
 
@@ -118,19 +121,8 @@ prepareDB machName (sort -> logFiles) outFile = liftIO $ do
 
     tracefreqs <- foldM prepareFile (ML.empty :: TraceFreqs) logFiles
 
-    transaction $ mapM_ runSqlRunnable (traceFreqsToSql tracefreqs)
-
     (tMin, tMax) <- liftIO $ tMinMax logFiles
-    now          <- liftIO getCurrentTime
-    let
-      dbSummary = SummaryDB
-        { sdbName     = fromString machName
-        , sdbLines    = sum tracefreqs
-        , sdbFirstAt  = tMin
-        , sdbLastAt   = tMax
-        , sdbCreated  = now
-        }
-    void $ runSqlRunnable $ summaryToSql dbSummary
+    writeSummary machName tracefreqs tMin tMax
   where
     dbName = fromString outFile
 
@@ -142,15 +134,76 @@ prepareFile tracefreqs log = do
     alterFunc :: Maybe Int -> Maybe Int
     alterFunc = maybe (Just 1) (Just . succ)
 
-    go acc line = case Aeson.eitherDecode line of
-      Right logObject@LogObject{loNS} -> do
-        forM_ (logObjectToSql logObject)
-            runSqlRunnable
+    -- Strict in the map and its counts: a lazy accumulator would keep every
+    -- line's decoded object alive until the end of the file.
+    go !acc line = do
+      decoded <- ingestLine line
+      pure $! case decoded of
+        Nothing                -> acc
+        Just LogObject{loNS}   -> Map.alter alterFunc (fromTextRef loNS) acc
 
-        let name = fromTextRef loNS
-        pure $ ML.alter alterFunc name acc
+-- | Decode one log line and write what's persistable; a line that doesn't decode
+--   becomes an error row. The decoded line, for counting.
+ingestLine :: BSL.ByteString -> SQLite (Maybe LogObject)
+ingestLine line = case Aeson.eitherDecode line of
+  Right logObject -> do
+    forM_ (logObjectToSql logObject)
+        runSqlRunnable
+    pure $ Just logObject
 
-      Left err -> runSqlRunnable (errorToSql err $ BSL.unpack line) >> pure acc
+  Left err -> runSqlRunnable (errorToSql err $ BSL.unpack line) >> pure Nothing
+
+-- | The tables 'prepareDB' fills from what it counted while decoding.
+writeSummary :: String -> TraceFreqs -> UTCTime -> UTCTime -> SQLite ()
+writeSummary machName tracefreqs tMin tMax = do
+  transaction $ mapM_ runSqlRunnable (traceFreqsToSql tracefreqs)
+  now <- liftIO getCurrentTime
+  let
+    dbSummary = SummaryDB
+      { sdbName     = fromString machName
+      , sdbLines    = sum tracefreqs
+      , sdbFirstAt  = tMin
+      , sdbLastAt   = tMax
+      , sdbCreated  = now
+      }
+  void $ runSqlRunnable $ summaryToSql dbSummary
+
+-- | What 'prepareDB' counts while decoding every line of a host's logs, computed
+--   beforehand by whatever provides the lines (bench-parquet host-summary).
+data HostSummary
+  = HostSummary
+    { hsTraceFreqs :: !TraceFreqs  -- ^ JSON lines per namespace
+    , hsLines      :: !Int         -- ^ JSON lines
+    , hsFirstAt    :: !UTCTime     -- ^ the first JSON line, in log order
+    , hsLastAt     :: !UTCTime     -- ^ the last JSON line, in log order
+    }
+
+instance FromJSON HostSummary where
+  parseJSON = withObject "HostSummary" $ \o ->
+    HostSummary
+      <$> o .: "tracefreqs"
+      <*> o .: "lines"
+      <*> o .: "firstAt"
+      <*> o .: "lastAt"
+
+-- | Like 'prepareDB', for a host's log lines on stdin, usually only those of the
+--   interpreted namespaces ('logObjectStreamInterpreterKeys'), in log order. What
+--   'prepareDB' counts over all lines comes precomputed in the 'HostSummary'.
+prepareDBFromLines :: String -> HostSummary -> FilePath -> ExceptT String IO ()
+prepareDBFromLines machName HostSummary{..} outFile = do
+  when (sum hsTraceFreqs /= hsLines) $
+    throwError $ "host summary: the counts per namespace add up to " ++ show (sum hsTraceFreqs)
+                 ++ ", expected its line count " ++ show hsLines
+  liftIO $ do
+    removeFile outFile `catch` \SomeException{} -> pure ()
+
+    withTimingInfo ("prepareDBFromLines/" ++ machName) $ withDb (fromString outFile) $ do
+      mapM_ run createSchema
+
+      ls <- BSL.lines <$> liftIO (BSL.hGetContents stdin)
+      transaction $ mapM_ ingestLine ls
+
+      writeSummary machName hsTraceFreqs hsFirstAt hsLastAt
 
 tMinMax :: [FilePath] -> IO (UTCTime, UTCTime)
 tMinMax [] = fail "tMinMax: empty list of log files"

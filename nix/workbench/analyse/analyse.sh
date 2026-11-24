@@ -510,13 +510,16 @@ case "$op" in
         analyse prepare-db "$@";;
 
     prepare-db | prep-db )
-        local usage="USAGE: wb analyse $op [--force] [[IDENT:]RUN-NAME=current].."
+        local usage="USAGE: wb analyse $op [--force] [--from-logs] [[IDENT:]RUN-NAME=current].."
 
-        local remanifest_reasons=()
+        ## DBs come from RUN/parquets/<host>.parquet where it exists (see
+        ## 'wb parquet create'), else from the hosts' stdout; --from-logs: always stdout.
+        local remanifest_reasons=() from_logs=
         while test $# -gt 0; do
           case "$1" in
-            --force ) remanifest_reasons+=("$(blue the --force was used)");;
-            * )       break;;
+            --force )     remanifest_reasons+=("$(blue the --force was used)");;
+            --from-logs ) from_logs=t;;
+            * )           break;;
           esac
           shift
         done
@@ -552,20 +555,42 @@ case "$op" in
              echo '{}' > $run_logs
              # with useCabalRun we have to make sure the binary is built before launching off shell job spawns
              local dummy=($(locli 2>/dev/null))
+             local pq=$dir/parquets
+             local nsfile=$adir/interpreted-namespaces.txt
+             if test -z "$from_logs" -a -d "$pq"
+             then locli list-interpreted-namespaces > "$nsfile"; fi
              time {
                  for d in "${logdirs[@]}"
                  do throttle_shell_job_spawns
+                    local mach=$(basename "$d")
+                    local  out="$adir"/logs-$mach
+                    local  pqf=$pq/$mach.parquet
+                    if test -z "$from_logs" -a -f "$pqf"
+                    then ## Only the lines of the namespaces locli interprets; what prepare-db
+                         ## counts over all lines comes from the host summary.
+                         local logfiles=("$pqf")
+                         ( set -o pipefail
+                           bench_parquet host-summary "$pq" "$mach" > "$out".host-summary.json &&
+                           bench_parquet lines "$pq" "$mach" --ns-file "$nsfile" |
+                             call_locli "silent" "serial" \
+                               prepare-db-from-lines \
+                               --mach "$mach" \
+                               --summary "$out".host-summary.json \
+                               --db "$adir/logs-$mach.sqlite3" &&
+                           rm -f "$out".host-summary.json ||
+                           msg "$(red prepare-db failed) for $mach from $pqf (kept $out.host-summary.json)"
+                         ) &
+                    else
                     local logfiles=($(ls --reverse -t "$d"stdout* "$d"node-[0-9]*.json \
                                          2>/dev/null))
                     if test -z "${logfiles[*]}"
                     then msg "no logs in $d, skipping.."; fi
-                    local mach=$(basename "$d")
-                    local  out="$adir"/logs-$mach
                     call_locli "silent" "serial" \
                         prepare-db \
                         --mach "$mach" \
                         --db "$adir/logs-$mach.sqlite3" \
-                        ${logfiles[*]/#/--log } & 
+                        ${logfiles[*]/#/--log } &
+                    fi
                     jq_fmutate "$run_logs" '
                       .rlHostLogs["'"$mach"'"] =
                         { hlRawLogfiles:    ["'"$(echo ${logfiles[*]} |
