@@ -98,6 +98,7 @@ project.shellFor {
   nativeBuildInputs =
      (with pkgs; [
        cairo
+       duckdb
        dyff
        git
        graphviz
