@@ -69,7 +69,7 @@ writeV4 path = H.writeFile path
 
 withDijkstra :: String -> Bool -> (DijkstraTest -> H.Integration ()) -> Property
 withDijkstra name guardrail action = integrationRetryWorkspace 2 name $ \tmp -> H.runWithDefaultWatchdog_ $ do
-  conf@Conf{tempAbsPath} <- mkConf tmp
+  let conf@Conf{tempAbsPath} = mkConfig tmp
   work <- H.createDirectoryIfMissing $ tmp </> "work"
   let script = work </> "always-succeeds-v4.plutus"
       options = def

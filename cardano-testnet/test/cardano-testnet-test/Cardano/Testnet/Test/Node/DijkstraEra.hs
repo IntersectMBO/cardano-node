@@ -78,8 +78,8 @@ import           Hedgehog.Internal.Property (MonadTest)
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/Hard fork to Dijkstra/"'@
 hprop_hardfork_to_dijkstra :: Property
 hprop_hardfork_to_dijkstra = integrationRetryWorkspace 2 "hardfork-to-dijkstra" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
-  conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
-  let tempAbsPath' = unTmpAbsPath tempAbsPath
+  let conf@Conf { tempAbsPath } = mkConfig tempAbsBasePath'
+      tempAbsPath' = unTmpAbsPath tempAbsPath
       tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
 
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
