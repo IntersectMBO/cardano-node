@@ -1024,6 +1024,7 @@ mkDiffusionConfiguration
     , Diffusion.dcBulkChurnInterval        = Configuration.defaultBulkChurnInterval
     , Diffusion.dcMuxForkPolicy
     , Diffusion.dcLocalMuxForkPolicy
+    , Diffusion.dcMuxCountersInterval      = Configuration.defaultMuxCountersInterval
     , Diffusion.dcEgressPollInterval       = ncEgressPollInterval nc
     }
   where

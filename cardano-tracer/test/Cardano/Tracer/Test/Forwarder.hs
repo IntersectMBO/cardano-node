@@ -28,7 +28,7 @@ import           Ouroboros.Network.Driver.Limits (ProtocolTimeLimits)
 import           Ouroboros.Network.IOManager (IOManager, withIOManager)
 import           Ouroboros.Network.Mux (MiniProtocol (..), MiniProtocolLimits (..),
                    MiniProtocolNum (..), OuroborosApplication (..), RunMiniProtocol (..),
-                   miniProtocolLimits, miniProtocolNum, miniProtocolRun)
+                   symmetricLimits)
 import           Ouroboros.Network.Protocol.Handshake (Handshake, HandshakeArguments (..))
 import qualified Ouroboros.Network.Protocol.Handshake as Handshake
 import           Ouroboros.Network.Protocol.Handshake.Codec (codecHandshake,
@@ -246,7 +246,7 @@ doConnectToAcceptor TestSetup{..} snocket muxBearer address timeLimits (ekgConfi
       [ MiniProtocol
          { miniProtocolNum    = MiniProtocolNum num
          , miniProtocolStart  = Mux.StartEagerly
-         , miniProtocolLimits = MiniProtocolLimits { maximumIngressQueue = maxBound }
+         , miniProtocolLimits = symmetricLimits MiniProtocolLimits { maximumIngressQueue = maxBound }
          , miniProtocolRun    = prot
          }
       | (prot, num) <- protocols
@@ -309,7 +309,7 @@ doListenToAcceptor TestSetup{..}
       [ MiniProtocol
          { miniProtocolNum    = MiniProtocolNum num
          , miniProtocolStart  = Mux.StartEagerly
-         , miniProtocolLimits = MiniProtocolLimits { maximumIngressQueue = maxBound }
+         , miniProtocolLimits = symmetricLimits MiniProtocolLimits { maximumIngressQueue = maxBound }
          , miniProtocolRun    = prot
          }
       | (prot, num) <- protocols

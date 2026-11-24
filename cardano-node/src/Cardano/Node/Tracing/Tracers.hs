@@ -591,6 +591,11 @@ mkDiffusionTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
                 ["Net", "Mux", "Remote"]
     configureTracers configReflection trConfig [dtMuxTr]
 
+    !dtMuxCountersTr <- mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["Net", "Mux", "Counters"]
+    configureTracers configReflection trConfig [dtMuxCountersTr]
+
     !dtChannelTracer <- mkCardanoTracer
                 trBase trForward mbTrEKG
                 ["Net", "Mux", "Remote", "Channel"]
@@ -714,6 +719,8 @@ mkDiffusionTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
     pure $ Diffusion.Tracers
        { Diffusion.dtMuxTracer = mkTracer $
            traceWith dtMuxTr
+       , Diffusion.dtMuxCountersTracer = mkTracer $
+           traceWith dtMuxCountersTr
        , Diffusion.dtChannelTracer = mkTracer $
            traceWith dtChannelTracer
        , Diffusion.dtBearerTracer = mkTracer $

@@ -330,6 +330,8 @@ getAllNamespaces =
         dtMuxNS = map (nsGetTuple . nsReplacePrefix ["Net", "Mux", "Remote"])
                              (allNamespaces :: [Namespace
                                  (Mux.WithBearer (ConnectionId RemoteAddress) Mux.Trace)])
+        dtMuxCountersNS = map (nsGetTuple . nsReplacePrefix ["Net", "Mux", "Counters"])
+                             (allNamespaces :: [Namespace Mux.CountersTrace])
         dtMuxBearerNS = map (nsGetTuple . nsReplacePrefix ["Net", "Mux", "Remote", "Bearer"])
                              (allNamespaces :: [Namespace
                                  (Mux.WithBearer (ConnectionId RemoteAddress) Mux.BearerTrace)])
@@ -504,6 +506,7 @@ getAllNamespaces =
             <> peerSharingRemoteNS
 -- Diffusion
             <> dtMuxNS
+            <> dtMuxCountersNS
             <> dtMuxBearerNS
             <> dtMuxChannelNS
             <> dtLocalMuxNS

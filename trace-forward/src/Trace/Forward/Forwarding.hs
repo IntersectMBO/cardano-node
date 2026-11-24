@@ -23,7 +23,7 @@ import           Ouroboros.Network.IOManager (IOManager)
 import           Ouroboros.Network.Magic (NetworkMagic)
 import           Ouroboros.Network.Mux (MiniProtocol (..), MiniProtocolLimits (..),
                    MiniProtocolNum (..), OuroborosApplication (..), RunMiniProtocol (..),
-                   miniProtocolLimits, miniProtocolNum, miniProtocolRun)
+                   symmetricLimits)
 import           Ouroboros.Network.Protocol.Handshake (HandshakeArguments (..))
 import           Ouroboros.Network.Protocol.Handshake.Codec (codecHandshake,
                    mkVersionedCodecCBORTerm, noTimeLimitsHandshake, timeLimitsHandshake)
@@ -301,7 +301,7 @@ doConnectToAcceptor magic snocket makeBearer configureSocket address timeLimits
       [ MiniProtocol
          { miniProtocolNum    = MiniProtocolNum num
          , miniProtocolStart  = Mux.StartEagerly
-         , miniProtocolLimits = MiniProtocolLimits { maximumIngressQueue = maxBound }
+         , miniProtocolLimits = symmetricLimits MiniProtocolLimits { maximumIngressQueue = maxBound }
          , miniProtocolRun    = prot
          }
       | (prot, num) <- protocols
@@ -366,7 +366,7 @@ doListenToAcceptor magic snocket makeBearer configureSocket address timeLimits
       [ MiniProtocol
          { miniProtocolNum    = MiniProtocolNum num
          , miniProtocolStart  = Mux.StartEagerly
-         , miniProtocolLimits = MiniProtocolLimits { maximumIngressQueue = maxBound }
+         , miniProtocolLimits = symmetricLimits MiniProtocolLimits { maximumIngressQueue = maxBound }
          , miniProtocolRun    = prot
          }
       | (prot, num) <- protocols

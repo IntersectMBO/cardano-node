@@ -19,8 +19,7 @@ import           Ouroboros.Network.IOManager (withIOManager)
 import           Ouroboros.Network.Magic (NetworkMagic (..))
 import           Ouroboros.Network.Mux (MiniProtocol (..), MiniProtocolLimits (..),
                    MiniProtocolNum (..), OuroborosApplication (..),
-                   OuroborosApplicationWithMinimalCtx, RunMiniProtocol (..), miniProtocolLimits,
-                   miniProtocolNum, miniProtocolRun)
+                   OuroborosApplicationWithMinimalCtx, RunMiniProtocol (..), symmetricLimits)
 import           Ouroboros.Network.Protocol.Handshake.Codec (codecHandshake,
                    mkVersionedCodecCBORTerm, noTimeLimitsHandshake, timeLimitsHandshake)
 import           Ouroboros.Network.Protocol.Handshake.Type (Handshake)
@@ -99,7 +98,7 @@ runAcceptorsClient tracerEnv howToConnect (ekgConfig, tfConfig, dpfConfig) = wit
       [ MiniProtocol
          { miniProtocolNum    = MiniProtocolNum num
          , miniProtocolStart  = Mux.StartEagerly
-         , miniProtocolLimits = MiniProtocolLimits { maximumIngressQueue = maxBound }
+         , miniProtocolLimits = symmetricLimits MiniProtocolLimits { maximumIngressQueue = maxBound }
          , miniProtocolRun    = protocol
          }
       | (protocol, num) <- protocolsWithNums
