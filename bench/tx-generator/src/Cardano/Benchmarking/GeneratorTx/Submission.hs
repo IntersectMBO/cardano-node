@@ -29,28 +29,24 @@ module Cardano.Benchmarking.GeneratorTx.Submission
   , txStreamSource
   ) where
 
-import           Cardano.Prelude hiding (ByteString, atomically, retry, state, threadDelay)
-import           Prelude (String, error)
+import           Cardano.Api.Experimental (SignedTx)
 
-import qualified Control.Concurrent.STM as STM
-
-import qualified Streaming.Prelude as Streaming
-
-import           Data.Time.Clock (NominalDiffTime, UTCTime)
-import qualified Data.Time.Clock as Clock
-
-
-import           Ouroboros.Network.Protocol.TxSubmission2.Type (SingBlockingStyle (..))
-
-import           Cardano.Api hiding (Active)
-import           Cardano.TxGenerator.Types (TPSRate, TxGenError)
-
+import           Cardano.Benchmarking.GeneratorTx.SubmissionClient
 import           Cardano.Benchmarking.LogTypes
 import           Cardano.Benchmarking.TpsThrottle
 import           Cardano.Benchmarking.Types
-
-import           Cardano.Benchmarking.GeneratorTx.SubmissionClient
 import           Cardano.Benchmarking.Wallet
+import           Cardano.Prelude hiding (ByteString, atomically, retry, state, threadDelay)
+import           Cardano.TxGenerator.Types (TPSRate, TxGenError)
+import           Ouroboros.Network.Protocol.TxSubmission2.Type (SingBlockingStyle (..))
+
+import           Prelude (String, error)
+
+import qualified Control.Concurrent.STM as STM
+import           Data.Time.Clock (NominalDiffTime, UTCTime)
+import qualified Data.Time.Clock as Clock
+
+import qualified Streaming.Prelude as Streaming
 
 {-------------------------------------------------------------------------------
   Parametrisation & state
@@ -119,7 +115,7 @@ mkSubmissionSummary startTime reportsRefs
 txStreamSource :: forall era. MVar (StreamState (TxStream IO era)) -> TpsThrottle -> TxSource era
 txStreamSource streamRef tpsThrottle = Active worker
  where
-  worker :: forall m blocking . MonadIO m => SingBlockingStyle blocking -> Req -> m (TxSource era, [Tx era])
+  worker :: forall m blocking . MonadIO m => SingBlockingStyle blocking -> Req -> m (TxSource era, [SignedTx era])
   worker blocking req = do
     (done, txCount) <- case blocking of
        SingBlocking -> liftIO $ consumeTxsBlocking tpsThrottle req
@@ -129,7 +125,7 @@ txStreamSource streamRef tpsThrottle = Active worker
       Stop -> return (Exhausted, txList)
       Next -> return (Active worker, txList)
 
-  unFold :: Int -> IO [Tx era]
+  unFold :: Int -> IO [SignedTx era]
   unFold 0 = return []
   unFold n = nextOnMVar streamRef >>= \case
     -- Node2node clients buffer a number x of TXs internally (x is determined by the node.)
@@ -141,13 +137,13 @@ txStreamSource streamRef tpsThrottle = Active worker
       l <- unFold $ pred n
       return $ tx:l
 
-  nextOnMVar :: MVar (StreamState (TxStream IO era)) -> IO (StreamState (Tx era))
+  nextOnMVar :: MVar (StreamState (TxStream IO era)) -> IO (StreamState (SignedTx era))
   nextOnMVar v = modifyMVar v $ \case
     StreamEmpty -> return (StreamEmpty, StreamEmpty)
     StreamError err -> return (StreamError err, StreamError err)
     StreamActive s -> update <$> Streaming.next s
    where
-    update :: Either () (Either TxGenError (Tx era), TxStream IO era) -> (StreamState (TxStream IO era), StreamState (Tx era))
+    update :: Either () (Either TxGenError (SignedTx era), TxStream IO era) -> (StreamState (TxStream IO era), StreamState (SignedTx era))
     update x = case x of
       Left () -> (StreamEmpty, StreamEmpty)
       Right (Right tx, t) -> (StreamActive t, StreamActive tx)
