@@ -25,6 +25,7 @@ import qualified Cardano.Api
 import           Cardano.Binary (DecoderError (..))
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import           Cardano.Logging (Trace, traceWith)
+import           Cardano.TxSubmit.Deprecation (deprecationMiddleware)
 import           Cardano.TxSubmit.Rest.Types (WebserverConfig (..), toWarpSettings)
 import qualified Cardano.TxSubmit.Rest.Web as Web
 import           Cardano.TxSubmit.Tracing.TraceSubmitApi (TraceSubmitApi (..))
@@ -91,7 +92,7 @@ txSubmitApp
   -> SocketPath
   -> Application
 txSubmitApp trace connectInfo networkId socketPath =
-    Servant.serve (Proxy :: Proxy TxSubmitApi) (toServant handlers)
+    deprecationMiddleware $ Servant.serve (Proxy :: Proxy TxSubmitApi) (toServant handlers)
   where
     handlers :: TxSubmitApiRecord (AsServerT Handler)
     handlers = TxSubmitApiRecord
