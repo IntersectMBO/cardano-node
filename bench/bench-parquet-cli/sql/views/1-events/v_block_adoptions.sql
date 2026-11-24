@@ -1,0 +1,111 @@
+-- "v_block_adoptions": the AXIOMATIC view of EVERY ADOPTION, one row per
+-- adoption, which node took which block and when. That is all a row is.
+-- No role, no path, no filter: the forger's adoption of its own block sits
+-- here exactly like any peer's, and an adoption reached by rolling back sits
+-- here exactly like one reached by extending. Who is the forger and who is a
+-- peer is "v_block_adoptions_by_peer", which is built on this view (what a
+-- rollback GAVE UP is in "v_fork_switches" and which blocks a node rolled back
+-- onto is in "v_fork_blocks").
+-- THERE IS NO RANKING-VERSUS-ENDORSER SPLIT HERE, AND THERE CANNOT BE. A
+-- node adopts a CHAIN, and adopting a ranking block adopts everything that
+-- block carries with it -- including, when its body holds a Leios
+-- certificate, the endorser block that certificate certifies. The two are
+-- taken in the same instant by the same event, so there is no separate
+-- endorser adoption to trace and no trace that states one. That is why this
+-- view is named for the act and not for a kind of block, unlike every other
+-- stage: forged, announced, fetched and written each happen to the two kinds
+-- separately and each has a pair of views. To go from a row here to the
+-- endorser block it also adopted, read certified_eb_hash for the same block
+-- in "v_block_forged".
+-- Axiomatic means a property of the event as the protocol defines it; the
+-- traces are only the evidence, and where no trace evidences a value the
+-- cell is NULL, never inferred.
+-- THE TWO PATHS ARE THE TWO TRACES. A node reaches a block either by
+-- extending its chain ("ChainDB.AddBlockEvent.AddedToCurrentChain") or by
+-- rolling back onto a better one ("ChainDB.AddBlockEvent.SwitchedToAFork").
+-- Both state the block the node JUST PUT ON its chain, so both are
+-- adoptions, and this view unions them without marking which was which,
+-- because that is not a property of the adoption.
+-- The two partition the adoptions cleanly: no (node, block) pair appears in
+-- both and neither trace repeats one, so the union needs no grouping to pick
+-- a winner and every row here is one event. (Contrast
+-- "v_eb_deliveries", which does have to pick: its trace fires again on
+-- every re-delivery.)
+-- AN ADOPTION STAYS AN ADOPTION. A block the node later rolls away from
+-- keeps its row, with the instant it was adopted. Nothing here is undone by
+-- what happened afterwards.
+-- Same shape as v_fork_blocks, which is a subset of it: the switches, named by
+-- when the node DECIDED to switch rather than when the switch landed.
+--
+-- (Tier 1.)
+--
+-- Fields:
+-- --------
+-- * ts       When the node put the block on its chain.
+--   (NOT NULL)
+--
+-- * process  The node that adopted it.
+--   (NOT NULL)
+--
+-- * hash     The block it adopted, cut from "data.newtip" ("<64-char
+--   (NOT NULL) hash>@<slot>"; a tip in any other shape has no row).
+--
+-- Example (in chronological order):
+------------------------------------
+--
+-- at    2026-10-18T18:41:11.365516629Z
+-- ns    ChainDB.AddBlockEvent.AddedToCurrentChain
+-- data  { "newSuffixSelectView":
+--         { "blockNo":24
+--         , "issueNo":0
+--         , "issuerHash":"6484e5.."
+--         , "kind":"PraosTiebreakerView"
+--         , "slotNo":592
+--         , "tieBreakVRF":"9a0ee6.."
+--         , "weightBoost":0
+--         }
+--       , "newtip":"bb416f..@592"
+--       }
+-- (The ordinary path: the block extended the chain this node already had.)
+--
+-- at    2026-10-18T18:50:04.800310350Z
+-- ns    ChainDB.AddBlockEvent.SwitchedToAFork
+-- data  { "newSuffixSelectView":
+--         { "blockNo":51
+--         , "issueNo":0
+--         , "issuerHash":"5cd731.."
+--         , "kind":"PraosTiebreakerView"
+--         , "slotNo":1125
+--         , "tieBreakVRF":"0626b9.."
+--         , "weightBoost":0
+--         }
+--       , "newtip":"99be39..@1125"
+--       , "oldSuffixSelectView":
+--         { "blockNo":51
+--         , "issueNo":0
+--         , "issuerHash":"3f7cef.."
+--         , "kind":"PraosTiebreakerView"
+--         , "slotNo":1125
+--         , "tieBreakVRF":"bd384c.."
+--         , "weightBoost":0
+--         }
+--       , "reason":{ "candidate":"OutputVRF {getOutputVRFByteArr.."
+--                  , "era":"Dijkstra"
+--                  , "our":"OutputVRF {getOutputVRFByteArr.."
+--                  , "reason":"VRFTiebreak"
+--                  }
+--       }
+-- (The rollback path, a different block: this node abandoned a suffix and
+-- took another. Both traces are adoptions and both are rows here.)
+--
+CREATE OR REPLACE VIEW v_block_adoptions AS
+SELECT
+    ts                                       AS ts
+  , process                                  AS process
+  , split_part(data->>'$.newtip', '@', 1)    AS hash
+FROM raw
+WHERE ns IN ( 'ChainDB.AddBlockEvent.AddedToCurrentChain'   -- extending the chain
+            , 'ChainDB.AddBlockEvent.SwitchedToAFork')      -- rolling back onto a better one
+  AND strpos(data->>'$.newtip', '@') = 65;
+
+COMMENT ON VIEW v_block_adoptions IS 'tier 1: every adoption of a block (AddedToCurrentChain or SwitchedToAFork), forger''s own included: ts, process, hash (previously: block_adoptions)';

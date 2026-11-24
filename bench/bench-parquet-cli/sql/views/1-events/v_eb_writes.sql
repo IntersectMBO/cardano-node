@@ -1,0 +1,115 @@
+-- "v_eb_writes": the AXIOMATIC view of every WRITE of an endorser
+-- block's body into a node's own LeiosDB, one row per trace line — which node
+-- put which EB on its own disk, and when.
+--
+-- Tier 1, Leios family: EXPERIMENTAL until the Leios observables are final.
+--
+-- IT IS THE FOURTH STAGE and the ranking-block twin of v_block_writes:
+-- forged, then announced on the wire, then fetched, then written. The trace
+-- "Consensus.LeiosKernel.BlockAcquired".
+-- "ACQUIRED" IS THE EB BODY, NOT ITS TRANSACTIONS, which is why this view is
+-- called written and not acquired. In LeiosDemoLogic the trace fires inside
+-- `settle`, once the write of the EB body has been awaited and made durable
+-- and the node has worked out which of the EB's transaction references it is
+-- still missing, which it registers as a fetch job pool. The source says it
+-- plainly: settle "claims 'BodyAcquired' with the pool the write still leaves
+-- to fetch". So the transactions are typically STILL OUTSTANDING here. An
+-- endorser block is a list of (tx hash, size) references and this is that
+-- LIST written down, nothing more.
+-- THE CLOSURE COMPLETING IS A DIFFERENT TRACE,
+-- "Consensus.LeiosKernel.BlockTxsAcquired", carrying its own
+-- data.closureAgeSeconds, and it lands a long way further on -- typically
+-- an order of magnitude past the wire-to-write gap. A reading that needs
+-- "the node can USE this EB"
+-- wants that trace and not this view.
+-- DO NOT CONFUSE IT WITH "Consensus.LeiosKernel.BlockStored", which this
+-- view does NOT read. That is a different and much smaller trace -- its own
+-- data.hash and data.slot rather than ebHash and ebSlot -- and it fires ONLY
+-- on an EB's own forger, once per forging. This view is
+-- EVERY node's write, forger included. The stage is called "written" rather
+-- than "stored" precisely so the two cannot be read as the same thing.
+-- v_eb_timing is where the forger-only trace is read, as
+-- its forger_stored_at column.
+-- THE FORGER IS HERE TOO, unlike v_eb_deliveries. A forger writes its
+-- own EB without fetching it, so it has a row here and none there: exactly
+-- one forger row per distinct endorser block.
+-- AN EB REALLY IS WRITTEN SEVERAL TIMES BY ONE NODE, and unlike
+-- v_block_writes's second row this is not a trace bracket: the trace
+-- has no risingEdge field and no closing row. It is one write per DELIVERY.
+-- The kernel's settle runs on each received body, so a node offered the same
+-- EB by several peers writes it several times. So NO (node, EB) pair has more
+-- writes than it had deliveries, while many have fewer -- a delivery that
+-- arrived with the body already held.
+-- Every write is a row; the first one is when the node came to hold the body,
+-- and that reading is made in v_eb_timing, not here.
+-- Axiomatic means a property of the event as the protocol defines it; the
+-- traces are only the evidence, and where no trace evidences a value the cell
+-- is NULL, never inferred.
+--
+-- NO slot_start HERE. A slot start is the instant a slot was SCHEDULED
+-- for, and the row below is a write, not a forging: its slot is the
+-- BLOCK's identity, carried so the row can be read against the forging,
+-- not a clock for when it was written. v_block_forged and v_eb_forged
+-- carry slot_start because their ts IS the forging the slot scheduled;
+-- join one of them on hash to measure against it.
+--
+--
+-- Fields:
+-- --------
+-- * ts          When the write was traced. A (node, EB) pair can have more
+--   (NOT NULL)  than one row; the earliest is when it came to hold the body.
+--
+-- * process     The node that wrote it. The forger appears here for its own
+--   (NOT NULL)  EB.
+--
+-- * hash        The endorser block written: the hash of its (tx hash, size)
+--   (NOT NULL)  list, from data.ebHash.
+--
+-- * slot_no     Its slot, from data.ebSlot. Unlike the fetch trace, which
+--   (NOT NULL)  names no slot at all, this one does -- so a re-forged hash
+--               can be told apart here by (hash, slot_no).
+--
+-- * body_age_s  How long before this write the EB was FIRST ANNOUNCED, in
+--   (NULL)      SECONDS, as the trace states it (data.bodyAgeSeconds). Not
+--               the time since this node fetched it: per LeiosDemoTypes the
+--               age is measured from "the wall-clock onset of its earliest
+--               announcement slot", so it is a diffusion age for the whole
+--               cluster, not a local cost, and typically far longer than
+--               the wire-to-write gap.
+--               NULL ON EXACTLY THE FORGER'S OWN ROWS, because the kernel
+--               records no onset for an EB it forged itself -- these ages
+--               are about diffusion and a forger diffused nothing to itself.
+--               So "body_age_s IS NULL" IS the forger test for this view.
+--
+-- Example (in chronological order):
+-- --------
+--
+-- at    2026-10-18T18:41:11.784593689Z
+-- ns    LeiosFetch.Remote.Receive.Block
+-- data  { "msg":{ "ebBytesSize":25718
+--               , "ebHash":"0b302b.."
+--               , "kind":"MsgLeiosBlock"
+--               }
+--       , "peer":{"connectionId":"172.31.14.36:30005 13.238.107.224:30008"}
+--       }
+-- (Not read here -- v_eb_deliveries's trace, shown because the store
+-- below is the same body, 6.8 ms later, on the same node.)
+--
+-- at    2026-10-18T18:41:11.791392668Z
+-- ns    Consensus.LeiosKernel.BlockAcquired
+-- data  { "bodyAgeSeconds":0.784606042
+--       , "ebHash":"0b302b.."
+--       , "ebSlot":592
+--       }
+--
+CREATE OR REPLACE VIEW v_eb_writes AS
+SELECT
+    ts                                             AS ts
+  , process                                        AS process
+  , data->>'$.ebHash'                              AS hash
+  , CAST(data->>'$.ebSlot' AS UBIGINT)             AS slot_no
+  , CAST(data->>'$.bodyAgeSeconds' AS DOUBLE)      AS body_age_s
+FROM raw
+WHERE ns = 'Consensus.LeiosKernel.BlockAcquired';
+
+COMMENT ON VIEW v_eb_writes IS 'tier 1, Leios (experimental): every write of an endorser-block body into a node''s LeiosDB (Consensus.LeiosKernel.BlockAcquired), forger included, one per delivery: ts, process, hash, slot_no, body_age_s (previously: block_endorser_writes)';

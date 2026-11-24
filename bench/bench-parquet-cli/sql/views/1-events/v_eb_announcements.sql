@@ -1,0 +1,126 @@
+-- "v_eb_announcements": the AXIOMATIC view of every ANNOUNCEMENT
+-- of an endorser block to a peer, one row per trace line, which node told
+-- which connection about which endorser block, and when.
+--
+-- Tier 1, Leios family: EXPERIMENTAL until the Leios observables are final.
+--
+-- THIS IS THE TWIN OF v_block_announcements. Both are wire diffusion
+-- on the SEND side: a node telling a peer that a block exists. Read them
+-- together.
+-- EVERY NODE ANNOUNCES EVERY ENDORSER BLOCK TO ITS PEERS, ONCE PER
+-- CONNECTION; the forger does so exactly as a relaying node does. Every row
+-- is a send to ANOTHER node. Grouped on (process, hash, slot_no)
+-- the row count equals the connection count: no re-announcement to a
+-- connection, and no second trace of one send. So the row count is the
+-- cluster size times the connection degree times the endorser blocks. For one
+-- row per announcing node,
+-- GROUP BY process, hash.
+-- A (node, EB) PAIR THAT READS DOUBLE is the re-forge below — two slots, not
+-- a repeat. Group on (process, hash, slot_no) to see the rule hold exactly.
+-- IT COUNTS DIFFERENTLY FROM ITS TWIN, SO DO NOT COMPARE ROW COUNTS -- but
+-- NOT because one kind is announced more often than the other. The
+-- multiplicity is the same in both. What differs is how many rows ONE SEND TO
+-- ONE PEER leaves behind: a ranking-block send is traced TWICE, the
+-- risingEdge = 1 row and then the row without it, and an endorser-block send is
+-- traced ONCE, this trace having no such field -- which is why there is no
+-- rising_edge column to carry. Both still mean "every connection, once".
+-- THE SEND SIDE, LIKE ITS TWIN. "LeiosNotify.Remote.Receive.BlockAnnouncement"
+-- is the same announcement seen by its recipient. Their totals match, but
+-- equal totals are not a per-announcement pairing and none is claimed. This
+-- family takes Send because its twin is a send ("ChainSync.ServerHeader.Update"
+-- is the ChainSync SERVER); the fetched family takes Receive because a fetch
+-- completes at the fetcher. Announce outward, fetch inward.
+-- A NODE ANNOUNCES OVER FEWER CONNECTIONS HERE THAN IN THE RANKING TWIN, and
+-- the difference is not a gap in Leios. Each node also serves the benchmark's
+-- tx-centrifuge, which follows the chain to learn when its funds are
+-- confirmed so it can recycle them. It is a chain consumer, not a node: it
+-- takes headers and bodies and no endorser blocks, so it appears in ChainSync
+-- and never in this trace. It is identified only by its far-side port, a node
+-- listening on the 30000 range and the centrifuge dialling from an ephemeral
+-- one; nothing in any trace marks it.
+-- Axiomatic means a property of the event as the protocol defines it; the
+-- traces are only the evidence, and where no trace evidences a value the cell
+-- is NULL, never inferred.
+-- THE ANNOUNCING RANKING BLOCK IS NOT HERE. The wire message names the
+-- endorser block and nothing else: there is no rbHash on it, so this view
+-- cannot say which ranking block's header carried the announcement. That
+-- linkage is a forger-side statement, "Consensus.LeiosKernel.BlockAnnounced",
+-- and it is already in v_block_forged.announced_eb_hash, read from that very
+-- trace. Go there for "which block announced this EB".
+-- IT IS NOT THE WHOLE POPULATION OF ANNOUNCED ENDORSER BLOCKS, and the gap is
+-- the point of the view rather than a defect in it. An endorser block can be
+-- declared in a ranking block's header and never put on the wire by anyone,
+-- and such a block has no row here at all. Anyone wanting every endorser
+-- block a header announced wants v_block_forged.announced_eb_hash; this view
+-- answers the narrower question of which ones went out.
+-- A HASH IS NOT A KEY HERE, (hash, slot_no) IS. An endorser block IS its list
+-- of (TxHash, BytesSize), so a node that re-forges an unchanged full mempool
+-- produces the same hash again, in a later slot, and announces it under both.
+-- A re-forge is the SAME node forging twice (two nodes landing on one hash
+-- would need identical mempools at the same moment). Both slots have rows here, as they must: each was a separate
+-- announcement of a separate forging.
+--
+-- NO slot_start HERE. A slot start is the instant a slot was SCHEDULED
+-- for, and the row below is an announcement, not a forging: its slot is the
+-- BLOCK's identity, carried so the row can be read against the forging,
+-- not a clock for when it was announced. v_block_forged and v_eb_forged
+-- carry slot_start because their ts IS the forging the slot scheduled;
+-- join one of them on hash to measure against it.
+--
+--
+-- Fields:
+-- --------
+-- * ts          When this announcement was traced.
+--   (NOT NULL)
+--
+-- * process     The node that announced it.
+--   (NOT NULL)
+--
+-- * hash        The endorser block announced, verbatim from "data.msg.ebHash".
+--   (NOT NULL)  NOT unique on its own: see the re-forge comment above.
+--
+-- * slot_no     Its slot, from "data.msg.ebSlot". Together with the "hash"
+--   (NOT NULL)  field it is what identifies the forging being announced.
+--
+-- * bytes       Its body size, from "data.msg.ebBodySize". Should be the SAME
+--   (NOT NULL)  number as v_eb_forged's "bytes" (forging) and
+--               v_eb_deliveries's "bytes" (ebBytesSize).
+--               An announcement states the size up front, which is what lets a
+--               peer decide to fetch.
+--
+-- * conn_id     The CONNECTION it was announced over: the same row's
+--   (NOT NULL)  "peer.connectionId", verbatim. Two space-separated endpoints,
+--               "localAddr:port remoteAddr:port", the local one first.
+--               Addresses, not node names. Named "conn_id" as in
+--               v_block_announcements.
+--
+-- Example (in chronological order):
+-- --------
+--
+-- at    2026-10-18T18:40:15.261047732Z
+-- ns    LeiosNotify.Remote.Send.BlockAnnouncement
+-- data  { "kind":"Send"
+--       , "msg":{ "kind":"MsgLeiosBlockAnnouncement"
+--               , "ebHash":"e10e329a.."
+--               , "ebSlot":536
+--               , "ebBodySize":25718
+--               }
+--       , "peer":{"connectionId":"172.31.85.10:30010 3.24.66.136:30011"}
+--       }
+--
+-- A peer.connectionId on every row, because every row IS a send, exactly as
+-- in v_block_announcements. No rbHash on any row, which is why the
+-- announcing ranking block is not a column.
+--
+CREATE OR REPLACE VIEW v_eb_announcements AS
+SELECT
+    ts                                           AS ts
+  , process                                      AS process
+  , data->>'$.msg.ebHash'                        AS hash
+  , CAST(data->>'$.msg.ebSlot' AS UBIGINT)       AS slot_no
+  , CAST(data->>'$.msg.ebBodySize' AS UBIGINT)   AS bytes
+  , data->>'$.peer.connectionId'                 AS conn_id
+FROM raw
+WHERE ns = 'LeiosNotify.Remote.Send.BlockAnnouncement';
+
+COMMENT ON VIEW v_eb_announcements IS 'tier 1, Leios (experimental): every endorser-block announcement to a peer (LeiosNotify send), one row per trace line: ts, process, hash, slot_no, bytes, conn_id (previously: block_endorser_announcements)';
