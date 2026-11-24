@@ -178,8 +178,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-ledger
-  tag: 1d7d9ef35e61207d7ea8ad51435baedfb04e0c7d
-  --sha256: sha256-WhXmmIFU7p0xw8yq7FCgjobWfTSIl95zGMghVcjKp6c=
+  tag: 9fde906a0a7e3244ca70c4abc12adaf5978a33dd
+  --sha256: sha256-lETA7EyHS71xrvZUKEVhG3mhbyjhtiLBrN6pZonu0AU=
   subdir:
     libs/cardano-data
     libs/cardano-ledger-api
@@ -204,14 +204,14 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: 700bbfeb1c5e808e2d51a89a0e33d57060ce4fbe
-  --sha256: sha256-CvvBduyPEjKoSiKL03XeoetKqIF795q89FrK9slmdb4=
+  tag: 0eaf7d854d9e4bf8723a64c5c37526414bac2691
+  --sha256: sha256-5QLbrLm9W+C7CLHtuVrSJ2I58XOTyXBVT0XyetCzWc0=
 
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-api
-  tag: bd7ab66021206b8e41887e4fe67823af2839aeec
-  --sha256: sha256-US0GQO7jQZD160yso9LM14zQ89rSFCXacDN2Z71RxHM=
+  tag: 0de14869e4f6a99216cd0f503634cd4df848be2d
+  --sha256: sha256-WI93d8xDjeOtjmY/SSQ/FyE/6FEFp+AExzOWUMjVoIw=
   subdir:
     cardano-api
 
