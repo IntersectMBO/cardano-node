@@ -49,6 +49,14 @@
 
     incl.url = "github:divnix/incl";
 
+    # Bean node flake input. Optional bean flake providing
+    # `packages.<system>.cardano-node` (JVM bean node). Pinned to a published,
+    # versioned bean release on bean.zw3rk.com; repoint (or
+    # `--override-input bean <ref>`) to test another bean. Consumed only when the workbench `nodeImpl` knob is `bean`;
+    # plain `cardano` runs never touch it. When the bean flake lacks the
+    # output, bean mode fails closed with an explicit error.
+    bean.url = "https://bean.zw3rk.com/flake/bean-0.1.0-cut.cbed267c0def.tar.gz";
+
     iohkNix = {
       url = "github:input-output-hk/iohk-nix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -284,13 +292,21 @@
             profileName,
             eraName,
             workbenchStartArgs ? [],
+            # Bean node override: defaults keep CI on `cardano`.
+            nodeImpl ? "cardano",
+            beanJavaOpts ? [],
           }:
             (pkgs.workbench-runner
               {
                 inherit profileName eraName workbenchStartArgs;
+                inherit nodeImpl beanJavaOpts;
                 backendName = "supervisor";
                 useCabalRun = false;
                 cardano-node-rev = pkgs.gitrev;
+                # Optional bean flake output; absent (or bean flake without the
+                # output) evaluates to null and bean mode fails closed in
+                # nodes.nix. Lazy: never forced unless nodeImpl == "bean".
+                beanNodePackage = input.bean.packages.${system}.cardano-node or null;
               })
             .workbench-profile-run;
         in {

@@ -3,6 +3,9 @@
 , backend
 , profile
 , nodeSpecs
+# Bean node override: implementation selector plus node package.
+, nodeImpl        ? "cardano"
+, beanNodePackage ? null
 }:
 
 with pkgs.lib;
@@ -13,10 +16,30 @@ let
   supervisor      = pkgs.supervisor;
   grep            = pkgs.gnugrep;
   jq              = pkgs.jq;
+  # Bean node override: with NODE=bean the producers are bean nodes,
+  # which have no GHC RTS (`+RTS --info` would fail the healthcheck, so the
+  # per-node dump below is skipped in bean mode). cardano-cli stays on the
+  # reference build in both modes; the sync gate reads every node over its
+  # local socket with `cardano-cli query tip`, which bean serves (its
+  # GetGenesisConfig reply carries the tagless activeSlotsCoeff encoding
+  # cardano-cli expects).
+  isBean = nodeImpl == "bean";
+  beanNodeBin =
+    if beanNodePackage == null
+    then throw "NODE=bean but no bean node package was provided: point the `bean` flake input at a bean flake exposing `packages.<system>.cardano-node` (see flake.nix)"
+    else beanNodePackage + "/bin/cardano-node";
+  # Per-node RTS dump, skipped in bean mode (JVM has no GHC RTS). `node`
+  # here is the bash loop variable, hence the `''${node}` escaping.
+  rtsInfoDump =
+    if isBean
+    then ''${coreutils}/bin/echo "bean mode: skipping +RTS --info"''
+    else ''${cardano-node} +RTS --info > "../''${node}/healthcheck/rts.info"'';
   # Decide where the executables come from:
   #########################################
   cardano-node =
-    if backend.useCabalRun
+    if isBean
+    then beanNodeBin
+    else if backend.useCabalRun
     then "cardano-node"
     else haskellProject.exes.cardano-node + "/bin/cardano-node"
   ;
@@ -133,8 +156,8 @@ in {
         # Cardano cluster connectivity (cardano-ping)
         connectivity_topology_producers "''${node}"
 
-        # Store the `+RTS --info`
-        ${cardano-node} +RTS --info > "../''${node}/healthcheck/rts.info"
+        # Store the `+RTS --info` (cardano-only: bean nodes are JVM, no GHC RTS)
+        ${rtsInfoDump}
 
       done
 

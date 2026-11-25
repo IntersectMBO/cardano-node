@@ -173,6 +173,10 @@ in lib.fix (self: {
     , batchName
     , workbenchStartArgs
     , cardano-node-rev
+    # Bean node override: implementation selector plus JVM flags and package.
+    , nodeImpl        ? "cardano"
+    , beanJavaOpts    ? []
+    , beanNodePackage ? null
     }:
     let
         # Only a name needed to create a profile attrset (no era or backend).
@@ -198,6 +202,7 @@ in lib.fix (self: {
           inherit eraName;
           inherit batchName workbenchStartArgs;
           inherit cardano-node-rev;
+          inherit nodeImpl beanJavaOpts beanNodePackage;
       }
   ;
 })

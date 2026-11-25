@@ -33,6 +33,12 @@ in with final;
     , batchName          ? customConfig.localCluster.batchName
     , workbenchStartArgs ? customConfig.localCluster.workbenchStartArgs
     , cardano-node-rev   ? null
+    # Bean node override: node implementation selector ("cardano" | "bean"),
+    # extra JVM flags for bean nodes, and the bean node derivation
+    # (null = not provided).
+    , nodeImpl           ? "cardano"
+    , beanJavaOpts       ? []
+    , beanNodePackage    ? null
     }:
     workbench.runner
       { # To construct the profile attrset with its `materialise-profile` function.
@@ -43,6 +49,8 @@ in with final;
         inherit backendName stateDir basePort useCabalRun profiling;
         # Parameters for the workbench shell `start-cluster` command.
         inherit batchName workbenchStartArgs cardano-node-rev;
+        # Bean node override passthrough.
+        inherit nodeImpl beanJavaOpts beanNodePackage;
       }
   ;
 

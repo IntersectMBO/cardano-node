@@ -11,6 +11,13 @@
   # Derivations used to generate the topology projections
   profileJsonPath,
   topologyJsonPath,
+  # Bean node override:
+  # `nodeImpl` selects the node binary ("cardano" | "bean");
+  # `beanNodePackage` is the bean node derivation (`bean.packages.<system>.cardano-node`);
+  # `beanJavaOpts` is a list of extra JVM flags for bean nodes.
+  nodeImpl        ? "cardano",
+  beanJavaOpts    ? [],
+  beanNodePackage ? null,
 }:
 with pkgs.lib; let
   readJSONMay = fp: let
@@ -115,6 +122,38 @@ with pkgs.lib; let
     else 1000;
 
   ##
+  # Bean node override: which nodes run bean. PRODUCERS ONLY, by
+  # deliberate choice: the benchmark measures bean block forging while the
+  # explorer, relays, generator and tracer tooling stay on the reference
+  # implementation (cardano-cli tip queries, log/trace analysis and tx
+  # submission are cardano-node-specific). Swapping non-forging nodes adds
+  # build/run cost without benchmark signal, and would break analysis that
+  # parses cardano-node log formats.
+  isBeanNode = nodeSpec: nodeImpl == "bean" && (nodeSpec.isProducer or false);
+
+  beanNodeDrv =
+    if beanNodePackage == null
+    then throw "NODE=bean but no bean node package was provided: point the `bean` flake input at a bean flake exposing `packages.<system>.cardano-node` (see flake.nix)"
+    else beanNodePackage;
+
+  # JVM flags for bean nodes, from two channels that both work without
+  # editing this patch: (1) BEAN_JAVA_OPTS at shell entry (make/env), split
+  # on whitespace in shell.nix; (2) an optional profile key
+  # `node.bean_java_opts_override` in the profile JSON (forward-compatible:
+  # cardano-profile does not emit it yet, so `or []` keeps all current
+  # profiles working). Delivered via JAVA_TOOL_OPTIONS in the start script,
+  # never via argv: a JVM launcher requires -D... before the main class,
+  # while node extraArgs are appended after the `run` subcommand.
+  beanJavaFlags = beanJavaOpts ++ (profile.node.bean_java_opts_override or []);
+
+  # Exported at the top of every bean producer start script: eval-time flags
+  # (shell-escaped) plus a runtime `$BEAN_JAVA_OPTS` escape hatch, so flags
+  # can be adjusted for a single run without re-entering the shell.
+  beanJavaPrelude = ''
+    # Bean node override (NODE=bean): JVM flags for the bean node.
+    export JAVA_TOOL_OPTIONS="${concatStringsSep " " (map escapeShellArg beanJavaFlags)}''${BEAN_JAVA_OPTS:+ $BEAN_JAVA_OPTS}''${JAVA_TOOL_OPTIONS:+ $JAVA_TOOL_OPTIONS}"
+  '';
+
   ## nodeServiceConfig :: NodeSpec -> ServiceConfig
   ##
   nodeServiceConfig = {
@@ -124,10 +163,12 @@ with pkgs.lib; let
     port,
     isProducer,
     ...
-  } @ nodeSpec: valency:
-    {
+  } @ nodeSpec: valency: let
+    isBean = isBeanNode nodeSpec;
+  in {
       inherit isProducer port;
-      inherit (profile.node) rts_flags_override;
+      # RTS flags are GHC-only; the JVM bean node must not receive them.
+      rts_flags_override = if isBean then [] else profile.node.rts_flags_override;
 
       nodeId = i;
       databasePath = "db";
@@ -260,33 +301,43 @@ with pkgs.lib; let
             ))
           profile.node.verbatim);
 
+      # GHC RTS flags are cardano-only; bean nodes get JVM flags via
+      # JAVA_TOOL_OPTIONS in the start script instead (see nodeService).
       extraArgs =
-        ["+RTS" "-scardano-node.gcstats" "-RTS"]
-        ++ optionals (nodeSpec.shutdown_on_block_synced != null) [
+        optionals (!isBean) ["+RTS" "-scardano-node.gcstats" "-RTS"]
+        ++ optionals (!isBean && nodeSpec.shutdown_on_block_synced != null) [
           "--shutdown-on-block-synced"
           (toString nodeSpec.shutdown_on_block_synced)
         ]
-        ++ optionals (nodeSpec.shutdown_on_slot_synced != null) [
+        ++ optionals (!isBean && nodeSpec.shutdown_on_slot_synced != null) [
           "--shutdown-on-slot-synced"
           (toString nodeSpec.shutdown_on_slot_synced)
         ];
     }
-    // optionalAttrs ((profiling.profilingTypeParam or "none") != "none") {
+    // optionalAttrs (((profiling.profilingTypeParam or "none") != "none") && !isBean) {
       # Add the profiling `-h*` RTS option.
       profiling = profiling.profilingTypeParam;
     }
-    // optionalAttrs (profiling.eventlog or false) {
+    // optionalAttrs ((profiling.eventlog or false) && !isBean) {
       # Add the `-l` RTS param with profiling.
       eventlog = true;
     }
     # Decide where the executable comes from:
     #########################################
-    // optionalAttrs (!backend.useCabalRun) {
+    // optionalAttrs (!backend.useCabalRun && !isBean) {
       package = workbenchNix.haskellProject.exes.cardano-node;
     }
-    // optionalAttrs backend.useCabalRun {
+    // optionalAttrs (backend.useCabalRun && !isBean) {
       # Allow the shell function to take precedence.
       executable = "cardano-node";
+    }
+    #########################################
+    # Bean node override: producers run the bean Nix store binary.
+    # Bean has no cabal target in this repo, so `package` wins regardless
+    # of `useCabalRun` (what `cabal run` would build is the Haskell node,
+    # not bean). Prefer the -nix make variants with NODE=bean regardless.
+    // optionalAttrs isBean {
+      package = beanNodeDrv;
     }
     #########################################
     // optionalAttrs isProducer {
@@ -421,11 +472,14 @@ with pkgs.lib; let
         else length (topo.Producers or []);
     in
       val;
+
+    isBean = isBeanNode nodeSpec;
   in {
     start = ''
       #!${pkgs.stdenv.shell}
 
       export TRACE_DISPATCHER_LOGGING_HOSTNAME=${name}
+      ${optionalString isBean beanJavaPrelude}
 
       ${service.script}
     '';
