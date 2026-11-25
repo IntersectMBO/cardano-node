@@ -132,6 +132,7 @@ import           Data.Time (getZonedTime)
 import           Data.Version (showVersion)
 import qualified Network.Mux as Mux
 import           Network.Mux.Tracing ()
+import           Ouroboros.Network.Diffusion.PoolRelays (TracePoolRelays)
 import qualified Network.Socket as Socket
 import qualified Options.Applicative as Opt
 import           System.IO
@@ -699,6 +700,20 @@ docTracersFirstPhase condConfigFileName = do
     dtLocalMuxTrDoc <- documentTracer (dtLocalMuxTr ::
       Logging.Trace IO (Mux.WithBearer (ConnectionId LocalAddress) Mux.Trace))
 
+    dtMuxCountersTr   <-  mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["Net", "Mux", "Counters"]
+    configureTracers configReflection trConfig [dtMuxCountersTr]
+    dtMuxCountersTrDoc <- documentTracer (dtMuxCountersTr ::
+      Logging.Trace IO Mux.CountersTrace)
+
+    dtPoolRelaysTr   <-  mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["Net", "Peers", "PoolRelays"]
+    configureTracers configReflection trConfig [dtPoolRelaysTr]
+    dtPoolRelaysTrDoc <- documentTracer (dtPoolRelaysTr ::
+      Logging.Trace IO TracePoolRelays)
+
     dtDiffusionInitializationTr   <-  mkCardanoTracer
                 trBase trForward mbTrEKG
                 ["Startup", "DiffusionInit"]
@@ -910,6 +925,8 @@ docTracersFirstPhase condConfigFileName = do
 -- Diffusion
             <> dtMuxTrDoc
             <> dtLocalMuxTrDoc
+            <> dtMuxCountersTrDoc
+            <> dtPoolRelaysTrDoc
             <> dtDiffusionInitializationTrDoc
             <> dtLedgerPeersTrDoc
 -- DiffusionTracersExtra P2P

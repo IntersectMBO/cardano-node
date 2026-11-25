@@ -15,6 +15,7 @@ module Cardano.Benchmarking.GeneratorTx.NodeToNode
 
 import           Cardano.Benchmarking.LogTypes (EnvConsts (..), SendRecvConnect,
                    SendRecvTxSubmission2)
+import           Cardano.Network.Diffusion.Configuration (defaultNodeTxSubmissionConfig)
 import           Cardano.Network.NodeToClient (chainSyncPeerNull)
 import           Cardano.Network.NodeToNode (NetworkConnectTracers (..))
 import qualified Cardano.Network.NodeToNode as NtN
@@ -51,6 +52,7 @@ import           Ouroboros.Network.Protocol.PeerSharing.Client (PeerSharingClien
 import           Ouroboros.Network.Protocol.TxSubmission2.Client (TxSubmissionClient,
                    txSubmissionClientPeer)
 import           Ouroboros.Network.Snocket (socketSnocket)
+import           Ouroboros.Network.TxSubmission.Inbound.V2 (TxSubmissionLogicVersion (..))
 
 import           Prelude
 
@@ -134,7 +136,8 @@ benchmarkConnectTxSubmit EnvConsts { .. } handshakeTracer submissionTracer codec
        }) $
       \n2nData ->
         mkApp $
-        NtN.nodeToNodeProtocols mempty NtN.defaultMiniProtocolParameters
+        NtN.nodeToNodeProtocols mempty
+          (NtN.mkDefaultMiniProtocolParameters TxSubmissionLogicV1 defaultNodeTxSubmissionConfig)
           NtN.NodeToNodeProtocols
             { NtN.chainSyncProtocol = InitiatorProtocolOnly $ MiniProtocolCb $ \_ctx channel ->
                                         runPeer

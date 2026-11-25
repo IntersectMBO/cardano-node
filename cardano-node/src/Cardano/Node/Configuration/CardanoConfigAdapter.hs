@@ -155,6 +155,7 @@ cardanoConfigToPartialNodeConfiguration cfg =
       , pncProtocolIdleTimeout = Last (Just (runIdentity (Cfg.protocolIdleTimeout netCfg)))
       , pncTimeWaitTimeout = Last (Just (runIdentity (Cfg.timeWaitTimeout netCfg)))
       , pncEgressPollInterval = Last (Just (runIdentity (Cfg.egressPollInterval netCfg)))
+      , pncEgressBudgetMbps = Last Nothing
       , pncChainSyncIdleTimeout = Last (Just (runIdentity (Cfg.chainSyncIdleTimeout netCfg)))
       , pncTxSubmissionInitDelay =
           Last (Just (TxSubmissionInitDelay (runIdentity (Cfg.txSubmissionInitDelay netCfg))))

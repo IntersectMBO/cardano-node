@@ -81,6 +81,7 @@ import           Ouroboros.Network.ConnectionId (ConnectionId)
 import qualified Ouroboros.Network.ConnectionManager.Core as ConnectionManager
 import qualified Ouroboros.Network.ConnectionManager.Types as ConnectionManager
 import           Ouroboros.Network.Diffusion (DiffusionTracer)
+import           Ouroboros.Network.Diffusion.PoolRelays (TracePoolRelays)
 import           Ouroboros.Network.Driver.Simple (TraceSendRecv)
 import qualified Ouroboros.Network.Driver.Stateful as Stateful (TraceSendRecv)
 import qualified Ouroboros.Network.InboundGovernor as InboundGovernor
@@ -357,6 +358,10 @@ getAllNamespaces =
         dtLocalMuxChannelNS = map (nsGetTuple . nsReplacePrefix ["Net", "Mux", "Local", "Channel"])
                              (allNamespaces :: [Namespace
                                  (Mux.WithBearer (ConnectionId RemoteAddress) Mux.ChannelTrace)])
+        dtMuxCountersNS = map (nsGetTuple . nsReplacePrefix ["Net", "Mux", "Counters"])
+                             (allNamespaces :: [Namespace Mux.CountersTrace])
+        dtPoolRelaysNS = map (nsGetTuple . nsReplacePrefix ["Net", "Peers", "PoolRelays"])
+                             (allNamespaces :: [Namespace TracePoolRelays])
         dtHandshakeNS = map (nsGetTuple . nsReplacePrefix
                                 ["Net", "Handshake", "Remote"])
                             (allNamespaces :: [Namespace
@@ -525,6 +530,8 @@ getAllNamespaces =
             <> dtLocalMuxNS
             <> dtLocalMuxBearerNS
             <> dtLocalMuxChannelNS
+            <> dtMuxCountersNS
+            <> dtPoolRelaysNS
             <> dtHandshakeNS
             <> dtLocalHandshakeNS
             <> dtDiffusionInitializationNS

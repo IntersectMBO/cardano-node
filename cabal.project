@@ -204,8 +204,18 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: 0eaf7d854d9e4bf8723a64c5c37526414bac2691
-  --sha256: sha256-5QLbrLm9W+C7CLHtuVrSJ2I58XOTyXBVT0XyetCzWc0=
+  tag: af323e9ee3eacead8339b3eed646c2cb492fc12b
+  --sha256: sha256-gBie0LXx8dfuWIVHX51ch7mK0ujICRkqf9fJImvcqxo=
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-network
+  tag: e7579e4315530b3420cb8a7c728c3f1d5b81a5fc
+  --sha256: sha256-jaSmhpueLsXLdY/3Qry2BUmnwgMKQTv8pqKruWcP7bc=
+  subdir:
+    network-mux
+    ouroboros-network
+    cardano-diffusion
 
 source-repository-package
   type: git
