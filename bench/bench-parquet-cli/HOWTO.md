@@ -146,3 +146,28 @@ SELECT * FROM locli_blockprop_diff('RUN-DIR/analysis/blockprop.json',
 
 Something that proves generally useful moves into `sql/`, following
 [`sql/README.md`](sql/README.md).
+
+## 7. Query a run on another host
+
+A run converted on the deployer can be queried there, without copying it: only
+the results come back.
+
+```bash
+export WB_REMOTE='{"env":"deployer","depl":"CHECKOUT"}'   # ssh host, checkout in the home directory there
+                                             # (wb run as-remote deployer CHECKOUT prints this line)
+wb pq remote RUN run node_summary            # a prepared query on the deployer's copy of RUN
+wb pq remote RUN run --csv my-query.sql      # your own SQL file goes along
+wb pq remote RUN check                       # the package checks
+wb pq remote RUN query                       # an interactive session there
+bench-parquet remote deployer run /path/to/RUN/parquets node_summary   # without the workbench
+```
+
+`WB_REMOTE` isn't set by default; unset, `wb pq remote` (like `wb run`) falls
+back to the checkout `nomad-1` on host `deployer`. The run directory is `run/`
+in the checkout unless `WB_REMOTE` has a `"dir"`.
+
+The first call ships the package to the remote (a few seconds); after that a
+call costs one ssh round trip plus the query. Remote sessions are limited to
+4 GB and 4 threads by default (`--memory`, `--threads`), so they take longer
+than locally but leave the shared machine alone. Details:
+[README](README.md#remote-runs).

@@ -5,6 +5,11 @@ queryable with DuckDB. Independent of the workbench: every command except `conve
 directory written by `convert` (PQDIR: one `<process>.parquet` per log, plus `meta/`). The workbench
 calls it for a run, with `RUN/parquets` as PQDIR.
 
+Code: `bench-parquet` holds the usage, shared helpers and the command dispatch; the commands live in
+`lib/` by area (`slots.sh` scheduling, `convert.sh`, `session.sh` for query / run / check,
+`restore.sh` with verify, `logs.sh` for lines / host-summary / head / tail / excerpt, `remote.sh`),
+sourced by it; their SQL lives in `sql/`.
+
 New here? [HOWTO.md](HOWTO.md) walks through converting, querying and checking a run.
 
 ```bash
@@ -22,9 +27,11 @@ bench-parquet lines PQDIR PROCESS [--ns-file FILE]   # JSON lines in log order (
 bench-parquet host-summary PQDIR PROCESS             # counts per namespace, first/last timestamp (for locli)
 bench-parquet query PQDIR          # interactive DuckDB session
 bench-parquet run PQDIR FILE.sql   # the same, for a SQL file
-bench-parquet run PQDIR NAME       # a prepared query by name (sql/queries/*/NAME.sql)
+bench-parquet run PQDIR NAME       # a prepared query by name (sql/queries/*/NAME.sql); all rows; --csv for CSV
 bench-parquet check PQDIR [NAME..]   # the package checks, one tab-separated line per violation
 bench-parquet query PQDIR --ui     # query, plus the DuckDB UI on the same session in a new browser tab
+bench-parquet remote SSH-HOST COMMAND PQDIR ARGS..   # query, run, check, ... on PQDIR on another host
+wb parquet remote RUN COMMAND ARGS..                 # the same for RUN on $WB_REMOTE
 ```
 
 Needs `duckdb` (from `PATH`, or `DUCKDB=/path/to/duckdb`), bash ≥ 4 and GNU coreutils (on macOS from
@@ -133,6 +140,43 @@ DuckDB pitfalls:
 
 - **Parenthesise JSON extractions in comparisons**: `(f.data->>'$.block') = (a.data->>'$.blockHash')`.
   Without the parentheses `=` binds first and the condition silently never matches.
+
+## Remote runs
+
+`remote SSH-HOST [--memory SIZE] [--threads N] [--spill-limit SIZE] COMMAND PQDIR ARGS..` runs
+`query`, `run`, `check`, `verify`, `head`, `tail`, `lines` or `host-summary` on another host, over a
+PQDIR there (absolute, or relative to the home directory), and brings back output and exit status.
+Only results cross the network; the Parquet files stay where they are. `wb parquet remote RUN COMMAND
+ARGS..` does the same for a run on `$WB_REMOTE` (host `.env`, checkout `.depl`, run directory `.dir`,
+default `run`).
+
+What runs on the remote is exactly the local version, uncommitted edits included:
+
+- **The package** (the script, `lib/*.sh` and the `*.sql` files of `sql/` and `user_sql/`) is shipped as a tar into
+  `~/.cache/bench-parquet/pkg/HASH/` the first time a version is used (HASH: of its content).
+  Versions unused for 30 days are removed by the next call (and shipped again if used later).
+- **The tools** (bash, duckdb, coreutils, gawk, sed, findutils) come from the nixpkgs revision the
+  enclosing flake locks (its `nixpkgs` input in `flake.lock`). `lib/remote-tools.nix` evaluates their
+  store paths locally for x86_64-linux, aarch64-linux and aarch64-darwin (nothing is built; cached in
+  `~/.cache/bench-parquet/tools/` until `flake.lock` changes); the remote picks its system's paths,
+  fetches them with `nix-store -r` from its substituters (cache.nixos.org) and runs with nothing else
+  on `PATH`. So the local side needs nix and a `flake.lock` above the package; the remote needs nix
+  and that substituter, but no checkout, no build and no trusted user, and may be another platform
+  than the local machine. Without GC roots: after a garbage collection on the remote, the next call
+  fetches the tools again. A different nixpkgs (e.g. another DuckDB) comes with a flake bump.
+- **Local SQL files** given to `run`, `--load` or `lines --ns-file` are shipped per call into
+  `~/.cache/bench-parquet/req/` and removed afterwards; files of the package are used from its
+  shipped copy.
+
+Each remote session is bounded: 4 GB of memory and 4 threads (`--memory`, `--threads`), spilling into
+its own directory under `~/.cache/bench-parquet/spill/` (removed afterwards), at most 10 GB
+(`--spill-limit`). On a 52-node Leios run, package views, checks and prepared queries stay within these
+bounds without spilling; the locli cross-check needs more memory. Locally, sessions take the same bounds
+from `BENCH_PARQUET_MEMORY`, `BENCH_PARQUET_THREADS`, `BENCH_PARQUET_SPILL` and
+`BENCH_PARQUET_SPILL_LIMIT` when set (DuckDB's defaults otherwise).
+
+`query` is interactive (over `ssh -t`) when stdin is a terminal and there is no `-c`; `--ui` is not
+available remotely. `convert`, `restore` and `excerpt` write files and are not available remotely.
 
 ## Verification
 

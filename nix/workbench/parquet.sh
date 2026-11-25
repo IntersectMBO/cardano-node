@@ -23,8 +23,8 @@ usage_parquet() {
                           Interactive DuckDB session over the run's logs;
                             --ui         also opens the DuckDB UI in a new browser tab
                             --load PATH  also reads a SQL file or directory (repeatable)
-    $(helpcmd run RUN [--load PATH].. FILE.sql)
-    $(helpcmd run RUN [--load PATH].. NAME)
+    $(helpcmd run RUN [--load PATH].. [--csv] FILE.sql)
+    $(helpcmd run RUN [--load PATH].. [--csv] NAME)
                           Run a SQL file, or a prepared query by name
                             (sql/queries/*/NAME.sql), in such a session
     $(helpcmd head RUN PROCESS [-n N])
@@ -44,6 +44,11 @@ usage_parquet() {
     $(helpcmd host-summary RUN PROCESS)
                           Input for locli prepare-db-from-lines
     $(helpcmd path RUN)            The run's Parquet directory
+    $(helpcmd remote [--memory SIZE] [--threads N] [--spill-limit SIZE] RUN COMMAND ARGS..)
+                          COMMAND (query, run, check, verify, head, tail, lines,
+                            host-summary) on the remote's copy of RUN, from
+                            $(blue \$WB_REMOTE) (host, checkout, run directory); local
+                            SQL files are shipped, output comes back
 
   Details of each command: $(yellow bench-parquet --help).
 EOF
@@ -179,6 +184,25 @@ case "$op" in
     path )
         local run=${1:?USAGE: wb parquet $op RUN}
         parquet_dir "$run";;
+
+    remote )
+        ## The run on $WB_REMOTE (host .env, checkout .depl, run directory
+        ## .dir, default run; the same default as wb run): bench-parquet remote
+        ## with RUN's parquets/ there.
+        local usage="USAGE: wb parquet $op [--memory SIZE] [--threads N] [--spill-limit SIZE] RUN COMMAND ARGS.."
+        local opts=()
+        while test $# -gt 0
+        do case "$1" in
+               --memory | --threads | --spill-limit ) opts+=("$1" "${2:?$usage}"); shift;;
+               * ) break;;
+           esac; shift; done
+        local run=${1:?$usage} cmd=${2:?$usage}; shift 2
+        local remote=${WB_REMOTE:-'{"env":"deployer","depl":"nomad-1"}'}
+        local env depl rdir
+        env=$( jq -r '.env'          <<< "$remote")
+        depl=$(jq -r '.depl'         <<< "$remote")
+        rdir=$(jq -r '.dir // "run"' <<< "$remote")
+        bench_parquet remote "$env" "${opts[@]}" "$cmd" "$depl/$rdir/$run/parquets" "$@";;
 
     * ) usage_parquet;; esac
 }
