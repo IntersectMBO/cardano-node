@@ -1,5 +1,11 @@
 # Changelog for cardano-node
 
+## Next version
+
+- New configuration key `PerasEnabled` (default `false`). When it is `true`, the
+  node enables the experimental Peras mini-protocols.
+  ([#6773](https://github.com/IntersectMBO/cardano-node/pull/6773))
+
 ## 11.2.3 -- 2026-11-18
 
 - Update bounds: cardano-protocol-0.2.0.2

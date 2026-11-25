@@ -462,4 +462,6 @@ adapterGaps =
       <> " — the PBftSignatureThreshold and LastKnownBlockVersion-* keys are deliberately"
       <> " not modelled by cardano-config (they now come from consensus defaults), so"
       <> " Nothing and a fixed 1/0/0 are used here"
+  , "ncPerasEnabled: cardano-config does not model PerasEnabled yet, so the node"
+      <> " default (False) is used here"
   ]
