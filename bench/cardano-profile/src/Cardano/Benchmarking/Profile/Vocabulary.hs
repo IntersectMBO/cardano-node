@@ -10,7 +10,7 @@ module Cardano.Benchmarking.Profile.Vocabulary (
 , timescaleCompressed, timescaleSmall, timescaleModel
 , timescaleMainnet, timescaleDevops
 
-, genesisVariantLeios
+, genesisVariantLeios, genesisVariantDijkstra
 , genesisVariantLatest
 , genesisVariantPreVoltaire, genesisVariantVoltaire, genesisVariantVoltaire64k
 
@@ -99,6 +99,11 @@ timescaleDevops =
 -- Last epoch in data/genesis/epoch-timeline.json and v12Preview.
 genesisVariantLeios :: Types.Profile -> Types.Profile
 genesisVariantLeios = genesisVariantLatest . P.v12Preview
+
+-- genesisVariantLeios with Praos only: no committee and no endorser-block
+-- capacity.
+genesisVariantDijkstra :: Types.Profile -> Types.Profile
+genesisVariantDijkstra = genesisVariantLatest . P.praosOnly . P.v12Preview
 
 -- See: data/genesis/epoch-timeline.json
 -- should always reference the latest entry in data/genesis/epoch-timeline.json

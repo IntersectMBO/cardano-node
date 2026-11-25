@@ -42,7 +42,7 @@ module Cardano.Benchmarking.Profile.Primitives (
   , pparamsEpoch
   -- Overlays to use.
   , v8Preview, v9Preview, v11Preview, v12Preview
-  , leios6912k
+  , leios6912k, praosOnly
   -- Budget overlays:
   -- -- Block:
   -- -- -- Steps:
@@ -439,6 +439,11 @@ v12Preview = helper_addOverlayOrDie "v12-preview"
 -- 'v12Preview'.
 leios6912k :: HasCallStack => Types.Profile -> Types.Profile
 leios6912k = helper_addOverlayOrDie "leios-6912k"
+
+-- Praos only: no committee and no endorser-block capacity, so the mempool
+-- holds twice a block, as in Conway. Goes on top of 'v12Preview'.
+praosOnly :: HasCallStack => Types.Profile -> Types.Profile
+praosOnly = helper_addOverlayOrDie "praos-only"
 
 -- Budget:
 

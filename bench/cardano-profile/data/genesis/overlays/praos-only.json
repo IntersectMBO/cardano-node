@@ -1,0 +1,16 @@
+{
+  "description": "Turns Leios off in the Dijkstra genesis of v12-preview, which carries the prototype's committee and endorser-block capacity. Consensus sizes the default mempool as twice a block plus, under Dijkstra, an endorser block, whether or not endorser blocks are made: with v12-preview's 1,000,000-byte endorser block that is about 24 blocks of transactions where Praos holds 2, and the forger revalidates all of them for every block it makes. With the three endorser-block capacities at 0 the mempool holds twice a block in bytes, execution units and reference scripts, as in Conway. The committee at 0 leaves the genesis pools without BLS keys, the references size at 0 leaves no room for an endorser block, and minPoolMargin at 0 matches Conway, which has no such parameter. Goes on top of v12-preview.",
+  "epoch_params": {
+    "dijkstra": {
+      "leiosCommitteeSize": 0,
+      "maxEndorserBlockReferencesSize": 0,
+      "maxEndorserBlockTxsSize": 0,
+      "maxEndorserBlockExecutionUnits": {
+        "memory": 0,
+        "steps": 0
+      },
+      "maxRefScriptSizePerEndorserBlock": 0,
+      "minPoolMargin": 0
+    }
+  }
+}

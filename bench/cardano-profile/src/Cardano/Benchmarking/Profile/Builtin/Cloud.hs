@@ -56,12 +56,12 @@ baseVoltaire =
     baseInternal
   . V.genesisVariantVoltaire
 
--- Dijkstra: the latest mainnet parameters with the v12 preview. Runs with
--- ERA=dijkstra.
+-- Dijkstra: the latest mainnet parameters with the v12 preview, Praos only.
+-- Runs with ERA=dijkstra.
 baseDijkstra :: Types.Profile -> Types.Profile
 baseDijkstra =
     baseInternal
-  . V.genesisVariantLeios
+  . V.genesisVariantDijkstra
 
 baseVoting :: Types.Profile -> Types.Profile
 baseVoting =
