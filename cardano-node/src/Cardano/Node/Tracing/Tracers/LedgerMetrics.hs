@@ -14,10 +14,11 @@ module Cardano.Node.Tracing.Tracers.LedgerMetrics
   , startLedgerMetricsTracer
   ) where
 
-import           Cardano.Ledger.BaseTypes (SlotNo (..), StrictMaybe (..))
+import           Cardano.Ledger.BaseTypes (SlotNo (..))
 import           Cardano.Logging hiding (traceWith)
-import           Cardano.Node.Queries (LedgerQueries (..), NodeKernelData (..), mapNodeKernelDataIO,
-                   nkQueryChain, nkQueryLedger)
+import           Cardano.Network.NodeToClient (LocalConnectionId)
+import           Cardano.Network.NodeToNode (RemoteAddress)
+import           Cardano.Node.Queries (LedgerQueries (..), nkQueryChain, nkQueryLedger)
 import           Ouroboros.Consensus.BlockchainTime.API
 import           Ouroboros.Consensus.HardFork.Combinator
 import           Ouroboros.Consensus.Ledger.Abstract (IsLedger)
@@ -29,13 +30,12 @@ import           Ouroboros.Consensus.Tracing (fragmentChainDensity)
 import qualified Ouroboros.Network.AnchoredFragment as AF
 
 import           Control.Concurrent (threadDelay)
-import           Control.Concurrent.Async (async)
-import           Control.Monad.Class.MonadAsync (link)
+import           Control.Monad (void)
 import           Control.Monad.STM (atomically, retry)
+import           Control.ResourceRegistry (ResourceRegistry, forkLinkedThread)
 import           "contra-tracer" Control.Tracer (Tracer, traceWith)
 import           Data.Aeson (Value (Number, String), toJSON, (.=))
 import           Data.Text as Text
-import           GHC.Conc (labelThread, myThreadId)
 
 
 startLedgerMetricsTracer
@@ -46,39 +46,34 @@ startLedgerMetricsTracer
   => AF.HasHeader blk
   => Tracer IO LedgerMetrics
   -> Int                         -- ^ Every Nth slot
-  -> NodeKernelData blk
+  -> ResourceRegistry IO         -- ^ The consensus registry; see Note [Lifetime]
+  -> NodeKernel IO RemoteAddress LocalConnectionId blk
   -> IO ()
-startLedgerMetricsTracer _ 0 _ = pure ()  -- Disabled if 0
-startLedgerMetricsTracer tr everyNThSlot nodeKernelData =
-  async ledgerMetricsThread >>= link
+startLedgerMetricsTracer _ 0 _ _ = pure ()  -- Disabled if 0
+startLedgerMetricsTracer tr everyNThSlot registry nodeKern =
+  void $ forkLinkedThread registry "Ledger Metrics" $ go 1 CurrentSlotUnknown
   where
-    ledgerMetricsThread :: IO ()
-    ledgerMetricsThread = do
-      myThreadId >>= flip labelThread "Ledger Metrics"
-      go 1 CurrentSlotUnknown
-      where
-        go :: Int -> CurrentSlot -> IO ()
-        go !countdown !prevSlot = do
-          !query <- waitForDifferentSlot prevSlot
-          threadDelay $ 700 * 1000                      -- 700ms; see Note [Interval]
-          case query of
-            SJust current@(CurrentSlot slot')
-              | countdown == 1  -> traceLedgerMetrics nodeKernelData slot' tr >> go everyNThSlot current
-              | otherwise       -> go (countdown - 1) current
-            _ -> go countdown prevSlot
+    go :: Int -> CurrentSlot -> IO ()
+    go !countdown !prevSlot = do
+      !current <- waitForDifferentSlot prevSlot
+      threadDelay $ 700 * 1000                      -- 700ms; see Note [Interval]
+      case current of
+        CurrentSlot slot'
+          | countdown == 1  -> traceLedgerMetrics nodeKern slot' tr >> go everyNThSlot current
+          | otherwise       -> go (countdown - 1) current
+        CurrentSlotUnknown  -> go countdown prevSlot
 
-        waitForDifferentSlot :: CurrentSlot -> IO (StrictMaybe CurrentSlot)
-        waitForDifferentSlot prev =
-          mapNodeKernelDataIO (\nk -> atomically $ do
-            mSlot <- getCurrentSlot (getBlockchainTime nk)
-            case mSlot of
-              current@(CurrentSlot s') | isDifferentSlotNo s' -> return current
-              _ -> retry
-            ) nodeKernelData
-          where
-            isDifferentSlotNo = case prev of
-              CurrentSlot s       -> (/= s)
-              CurrentSlotUnknown  -> const True
+    waitForDifferentSlot :: CurrentSlot -> IO CurrentSlot
+    waitForDifferentSlot prev =
+      atomically $ do
+        mSlot <- getCurrentSlot (getBlockchainTime nodeKern)
+        case mSlot of
+          current@(CurrentSlot s') | isDifferentSlotNo s' -> return current
+          _ -> retry
+      where
+        isDifferentSlotNo = case prev of
+          CurrentSlot s       -> (/= s)
+          CurrentSlotUnknown  -> const True
 
 data LedgerMetrics =
   LedgerMetrics {
@@ -97,36 +92,30 @@ traceLedgerMetrics ::
   ,  LedgerQueries blk
   , AF.HasHeader blk
   ,  AF.HasHeader (Header blk))
-  => NodeKernelData blk
+  => NodeKernel IO RemoteAddress LocalConnectionId blk
   -> SlotNo
   -> Tracer IO LedgerMetrics
   -> IO ()
 traceLedgerMetrics nodeKern slotNo tracer = do
-  query <- mapNodeKernelDataIO
-              (\nk ->
-                (,,) -- (,,,,)
-                  <$> ChainDB.getStatistics (getChainDB nk)
-                  <*> nkQueryLedger (ledgerDelegMapSize . ledgerState) nk
-                  <*> nkQueryChain fragmentChainDensity nk
+  (ledgerStatistics, delegMapSize, {- drepCount, drepMapSize, -} chainDensity) <-
+    (,,) -- (,,,,)
+      <$> ChainDB.getStatistics (getChainDB nodeKern)
+      <*> nkQueryLedger (ledgerDelegMapSize . ledgerState) nodeKern
+      <*> nkQueryChain fragmentChainDensity nodeKern
 {- see Note [GovMetrics]
-                  <*> nkQueryLedger (ledgerDRepCount . ledgerState) nk
-                  <*> nkQueryLedger (ledgerDRepMapSize . ledgerState) nk
+      <*> nkQueryLedger (ledgerDRepCount . ledgerState) nodeKern
+      <*> nkQueryLedger (ledgerDRepMapSize . ledgerState) nodeKern
 -}
-              )
-              nodeKern
-  case query of
-    SNothing -> pure ()
-    SJust (ledgerStatistics, delegMapSize, {- drepCount, drepMapSize, -} chainDensity) ->
-        let msg = LedgerMetrics
-                    slotNo
-                    (LedgerDB.ledgerTableSize ledgerStatistics)
-                    delegMapSize
+  let msg = LedgerMetrics
+              slotNo
+              (LedgerDB.ledgerTableSize ledgerStatistics)
+              delegMapSize
 {- see Note [GovMetrics]
-                    drepCount
-                    drepMapSize
+              drepCount
+              drepMapSize
 -}
-                    (fromRational chainDensity)
-        in traceWith tracer msg
+              (fromRational chainDensity)
+  traceWith tracer msg
 
 --------------------------------------------------------------------------------
 -- LedgerMetrics
@@ -205,3 +194,12 @@ instance MetaTrace LedgerMetrics where
 --
 -- The interval has been picked as the best from different candidates, based on benchmarks that compared performance impact on block production and diffusion.
 -- The previous state of affairs (which would correspond to a delay of 0ms) has shown to possess the least beneficial impact on performance.
+
+
+-- Note [Lifetime]
+-- ---------------------------
+-- The tracer thread queries the ChainDB, so it must not outlive it. Hence it is forked into the
+-- consensus resource registry, after the ChainDB has been allocated in it: as resources are released
+-- in reverse order of allocation, shutdown cancels the thread and waits for it before closing the ChainDB.
+-- Running it outside of that registry lets a query race against the ChainDB being closed, raising a
+-- 'ClosedDBError' which then gets rethrown in the main thread, failing a regular shutdown (issue #6781).
