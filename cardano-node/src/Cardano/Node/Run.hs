@@ -140,6 +140,7 @@ import           Control.Monad.IO.Class (MonadIO (..))
 import           Control.Monad.Trans.Except (ExceptT, runExceptT)
 import           Control.Monad.Trans.Except.Extra (left, hushM)
 import           Control.Monad.Trans.Maybe (MaybeT(runMaybeT, MaybeT), hoistMaybe)
+import           Control.ResourceRegistry (ResourceRegistry)
 import           "contra-tracer" Control.Tracer
 import           Data.Bits
 import           Data.Bifunctor (first)
@@ -244,7 +245,7 @@ handleNodeWithTracers cmdPc nc mTrConfig (SomeConsensusProtocol blockType runP) 
   -- initial state is the one 'rnNodeKernelHook' below installs.
   forgingStateVar <- newForgingStateVar
                        (not (ncStartAsNonProducingNode nc) && not (null blockForging))
-  tracers <-
+  (tracers, startLedgerMetrics) <-
     initTraceDispatcher
       nc
       mTrConfig
@@ -266,9 +267,10 @@ handleNodeWithTracers cmdPc nc mTrConfig (SomeConsensusProtocol blockType runP) 
                                   else EnabledBlockForging))
 
   handleSimpleNode blockType shelleyGenesisHash pInfo mkBlockForging tracers forgingStateVar nc cmdPc networkMagic
-    (\nk -> do
+    (\registry nk -> do
         setNodeKernel nodeKernelData nk
-        traceWith (nodeStateTracer tracers) NodeKernelOnline)
+        traceWith (nodeStateTracer tracers) NodeKernelOnline
+        startLedgerMetrics registry nk)
 
 -- | Currently, we trace only 'ShelleyBased'-info which will be asked
 --   by 'cardano-tracer' service as a datapoint. It can be extended in the future.
@@ -312,8 +314,8 @@ handleSimpleNode
   -- ^ Original CLI configuration, used for SIGHUP config reload so CLI
   -- overrides are preserved when re-reading the YAML file.
   -> NetworkMagic
-  -> (NodeKernel IO RemoteAddress LocalConnectionId blk -> IO ())
-  -- ^ Called on the 'NodeKernel' after creating it, but before the network
+  -> (ResourceRegistry IO -> NodeKernel IO RemoteAddress LocalConnectionId blk -> IO ())
+  -- ^ Called on the consensus resource registry and the 'NodeKernel' after creating it, but before the network
   -- layer is initialised.  This implies this function must not block,
   -- otherwise the node won't actually start.
   -> IO ()
@@ -423,7 +425,7 @@ handleSimpleNode blockType shelleyGenesisHash pInfo mkBlockForging tracers forgi
                 (shutdownTracer tracers)
                 registry
                 (Node.getChainDB nodeKernel)
-              onKernel nodeKernel
+              onKernel registry nodeKernel
           , rnPeerSharing    = ncPeerSharing nc
           , rnGetUseBootstrapPeers = readTVar useBootstrapVar
           , rnTxSubmissionLogicVersion = ncTxSubmissionLogicVersion nc

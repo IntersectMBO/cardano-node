@@ -44,6 +44,7 @@ import           Prelude
 import           Control.Concurrent.Async (link)
 import           Control.DeepSeq (deepseq)
 import           Control.Exception (SomeException (..))
+import           Control.ResourceRegistry (ResourceRegistry)
 import           "contra-tracer" Control.Tracer (nullTracer, traceWith)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe
@@ -76,7 +77,11 @@ initTraceDispatcher ::
   -> NodeKernelData blk
   -> Bool
   -> ForgingStateVar
-  -> IO (Tracers RemoteAddress LocalAddress blk  IO)
+  -> IO ( Tracers RemoteAddress LocalAddress blk  IO
+        , ResourceRegistry IO -> NodeKernel IO RemoteAddress LocalConnectionId blk -> IO ()
+        )
+     -- ^ The tracers, and the action starting the ledger metrics tracer once the
+     -- node kernel is up; it is to be given the consensus resource registry.
 initTraceDispatcher nc mTrConfig blockType cfg networkMagic nodeKernel noBlockForging forgingStateVar = do
   trConfig <- case mTrConfig of
     Just resolved -> pure resolved
@@ -103,12 +108,12 @@ initTraceDispatcher nc mTrConfig blockType cfg networkMagic nodeKernel noBlockFo
     (resourcesTracer tracers)
     (fromMaybe 1000 (tcResourceFrequency trConfig))
 
-  startLedgerMetricsTracer
-    (ledgerMetricsTracer tracers)
-    (fromMaybe ledgerMetricsDefaultFreq (tcLedgerMetricsFrequency trConfig))
-    nodeKernel
+  let startLedgerMetrics =
+        startLedgerMetricsTracer
+          (ledgerMetricsTracer tracers)
+          (fromMaybe ledgerMetricsDefaultFreq (tcLedgerMetricsFrequency trConfig))
 
-  pure tracers
+  pure (tracers, startLedgerMetrics)
  where
   -- this is the backwards compatible default: block producers emit these metrics every second, relays never.
   ledgerMetricsDefaultFreq = if noBlockForging then 0 else 1

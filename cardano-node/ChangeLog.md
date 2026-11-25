@@ -1,5 +1,13 @@
 # Changelog for cardano-node
 
+## Next version
+
+- The ledger metrics tracer no longer fails a regular shutdown. Its thread now
+  runs in the consensus resource registry, which stops it before the ChainDB is
+  closed. Before, a sample taken while the ChainDB was closing raised
+  `ClosedDBError`, and the node exited with status 1.
+  ([#6781](https://github.com/IntersectMBO/cardano-node/issues/6781))
+
 ## 11.2.3 -- 2026-11-18
 
 - Update bounds: cardano-protocol-0.2.0.2
