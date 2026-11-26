@@ -294,6 +294,7 @@ minimalTestnetConfig = object
   , "RequiresNetworkMagic"           .= ("RequiresMagic" :: String)
   , "ExperimentalHardForksEnabled"   .= True
   , "ExperimentalProtocolsEnabled"   .= True
+  , "PerasEnabled"                   .= True
   , "TestShelleyHardForkAtEpoch"     .= (0 :: Int)
   , "TestAllegraHardForkAtEpoch"     .= (0 :: Int)
   , "TestMaryHardForkAtEpoch"        .= (0 :: Int)

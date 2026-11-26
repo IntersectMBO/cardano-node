@@ -127,6 +127,7 @@ library
                       , base16-bytestring
                       , bytestring
                       , cardano-api ^>= 11.12
+                      , cardano-base ^>=0.1
                       , cardano-config ^>= 2.2.3
                       , cardano-crypto-class ^>=2.6
                       , cardano-crypto-wrapper

@@ -105,6 +105,7 @@ nodeRunParser = do
            , pncDatabaseFile = dbFp
            , pncDiffusionMode = mempty
            , pncExperimentalProtocolsEnabled = mempty
+           , pncPerasEnabled = mempty
            , pncProtocolFiles =
                Last . Just $
                  withDeprecatedByronCredentials
