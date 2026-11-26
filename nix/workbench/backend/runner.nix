@@ -11,6 +11,10 @@
 , workbenchStartArgs
 ##
 , cardano-node-rev
+# Bean node override: implementation selector plus JVM flags and package.
+, nodeImpl        ? "cardano"
+, beanJavaOpts    ? []
+, beanNodePackage ? null
 }:
 let
 
@@ -22,7 +26,8 @@ let
   backendName = backend.name;
   inherit (backend) stateDir basePort useCabalRun profiling;
 
-  profileBundle  = profile.profileBundle { inherit eraName backend; };
+  profileBundle  = profile.profileBundle
+    { inherit eraName backend nodeImpl beanJavaOpts beanNodePackage; };
 
   profileDataDir = profile.materialise-profile { inherit profileBundle; };
   backendDataDir = backend.materialise-profile { inherit profileBundle; };
@@ -279,8 +284,12 @@ let
 
 in
 {
-  # Don't expose the backend. Just what the shell could need. 
+  # Don't expose the backend. Just what the shell could need.
   inherit (backend) useCabalRun profiling extraShellPkgs;
+
+  # Bean node override: surfaced so `nix/workbench/shell.nix` can
+  # display the active node implementation on shell entry.
+  inherit nodeImpl;
 
   inherit workbench-envars;
   inherit workbench-interactive-start;

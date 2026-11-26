@@ -18,6 +18,8 @@ project.shellFor {
 
   shellHook =
     let inherit (workbench-runner) profiling useCabalRun;
+        # Bean node override: default keeps the display unchanged.
+        nodeImpl = workbench-runner.nodeImpl or "cardano";
     in
     ''
     while test $# -gt 0
@@ -32,6 +34,7 @@ project.shellFor {
     progress "backend name"            $WB_BACKEND_NAME
     progress "profiling"               'profiledBuild=${if profiling.profiledBuild or false then "yes" else "no"} profilingType=${profiling.profilingType or ""}'
     progress "params"                  'useCabalRun=${toString useCabalRun} workbenchDevMode=${toString workbenchDevMode}'
+    progress "node impl"                 '${nodeImpl}'
     progress "deployment name"         $WB_DEPLOYMENT_NAME
     progress "WB_SHELL_PROFILE_DATA="  $WB_SHELL_PROFILE_DATA
     progress "WB_BACKEND_DATA="        $WB_BACKEND_DATA

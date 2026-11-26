@@ -11,6 +11,14 @@ in
 , eraName ? defaultCustomConfig.localCluster.eraName
 , backendName ? defaultCustomConfig.localCluster.backendName
 , useCabalRun ? true
+# Bean node override (`make ... NODE=bean`):
+# node implementation ("cardano" | "bean"), extra JVM flags as one
+# space-separated string, and the flake ref the bean node package is read
+# from (`bean.packages.<system>.cardano-node`). The package is resolved
+# lazily: cardano runs never evaluate the bean flake.
+, nodeImpl ? "cardano"
+, beanJavaOptsStr ? ""
+, beanFlakeRef ? "https://bean.zw3rk.com/flake/bean-0.1.0-cut.cbed267c0def.tar.gz"
 , workbenchDevMode ? defaultCustomConfig.localCluster.workbenchDevMode
 , workbenchStartArgs ? defaultCustomConfig.localCluster.workbenchStartArgs
 , customConfig ? {
@@ -186,6 +194,15 @@ let
                 { inherit pkgs; haskellProject = project; }
   ;
 
+  # Bean node override: resolve the bean node package lazily (only
+  # evaluated when NODE=bean) and split the BEAN_JAVA_OPTS string into flags.
+  beanJavaOpts = lib.filter (s: s != "")
+    (lib.splitString " " beanJavaOptsStr);
+  beanNodePackage =
+    if nodeImpl != "bean"
+    then null
+    else (builtins.getFlake beanFlakeRef).packages.${pkgs.stdenv.hostPlatform.system}.cardano-node or null;
+
   workbench-shell =
     with customConfig.localCluster;
       import ./nix/workbench/shell.nix
@@ -198,6 +215,7 @@ let
               inherit profileName eraName backendName;
               inherit useCabalRun;
               inherit workbenchStartArgs cardano-node-rev;
+              inherit nodeImpl beanJavaOpts beanNodePackage;
               inherit (customConfig.localCluster) stateDir basePort batchName;
             };
         };

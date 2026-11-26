@@ -51,7 +51,14 @@ let
   # Helper to use around Nix to build the workbench.
   ##############################################################################
 
-  profileBundle = { backend, eraName }:
+  # Bean node override: `nodeImpl` selects the node binary for producers,
+  # `beanNodePackage` is the bean node derivation (null unless bean mode),
+  # `beanJavaOpts` extra JVM flags.
+  profileBundle = { backend, eraName
+    , nodeImpl        ? "cardano"
+    , beanJavaOpts    ? []
+    , beanNodePackage ? null
+    }:
     let
       profile = __fromJSON (__readFile profileJsonPath);
       nodeSpecs = __fromJSON (__readFile nodeSpecsJsonPath);
@@ -61,6 +68,7 @@ let
           { inherit pkgs;
             inherit workbenchNix;
             inherit backend profile eraName nodeSpecs;
+            inherit nodeImpl beanJavaOpts beanNodePackage;
             inherit (backend) profiling;
             inherit profileJsonPath topologyJsonPath;
             ## This ports the (very minimal) config of the deprecated iohk-nix
@@ -123,6 +131,7 @@ let
           { inherit pkgs;
             inherit (workbenchNix) haskellProject;
             inherit backend profile nodeSpecs;
+            inherit nodeImpl beanNodePackage;
           }
         )
       ;
