@@ -204,14 +204,14 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: af323e9ee3eacead8339b3eed646c2cb492fc12b
-  --sha256: sha256-gBie0LXx8dfuWIVHX51ch7mK0ujICRkqf9fJImvcqxo=
+  tag: 8a0218dc318a343878a0a350924273e2e916b020
+  --sha256: sha256-dna6YnFhhVD1UWOGUn5etFYx92Y/UT82z4cnwlV4Fu0=
 
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-network
-  tag: e7579e4315530b3420cb8a7c728c3f1d5b81a5fc
-  --sha256: sha256-jaSmhpueLsXLdY/3Qry2BUmnwgMKQTv8pqKruWcP7bc=
+  tag: a89cba684889a27c04f352c135a9f3932d075244
+  --sha256: sha256-iX3v/Sxq0nikFlv9K+jS4uNGrO/9YurVIToNOKXJbH4=
   subdir:
     network-mux
     ouroboros-network
