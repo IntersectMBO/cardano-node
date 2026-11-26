@@ -63,9 +63,11 @@ BACKEND ?= supervisor
 ##   make ci-test-nix NODE=bean BEAN_JAVA_OPTS="-Dbean.backpressure.window=64"
 NODE ?= cardano
 
-## Extra JVM flags for bean nodes, space-separated (make/env channel). Also
-## honored at service start time via $BEAN_JAVA_OPTS, so a single run can add
-## flags without re-entering the shell.
+## Extra JVM flags for bean nodes, space-separated (make/env channel), baked
+## into the start scripts at shell entry. Inside the shell, setting
+## $BEAN_JAVA_OPTS before a run adds flags for that run without re-entering;
+## those come last and win. Bean flags also win over an inherited
+## JAVA_TOOL_OPTIONS.
 BEAN_JAVA_OPTS ?=
 
 ## Flake ref the bean node package is read from: the published bean release by
@@ -92,7 +94,10 @@ RUN     ?=
 ## The single nix-shell invocation. The top-level Makefile's shell / -nix /
 ## -prof / -dev targets run it; every per-profile alias below runs it with
 ## PROFILE and flags preset.
-WB_ENTER = nix-shell -A 'workbench-shell' --max-jobs 8 --cores 0 --show-trace \
+## BEAN_JAVA_OPTS is unset for the nix-shell call: Make exports a command-line
+## variable to the recipe, and the shell would otherwise hand the same flags to
+## the services a second time at run time.
+WB_ENTER = env -u BEAN_JAVA_OPTS nix-shell -A 'workbench-shell' --max-jobs 8 --cores 0 --show-trace \
   --argstr profileName $(PROFILE) --argstr eraName $(ERA) --argstr backendName $(BACKEND) \
   --argstr nodeImpl $(NODE) --argstr beanJavaOptsStr "$(BEAN_JAVA_OPTS)" --argstr beanFlakeRef "$(BEAN_FLAKE)" \
   $(ARGS) $(if $(CMD),--command "$(CMD)") $(if $(RUN),--run "$(RUN)")

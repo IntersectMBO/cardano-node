@@ -141,17 +141,27 @@ with pkgs.lib; let
   # on whitespace in shell.nix; (2) an optional profile key
   # `node.bean_java_opts_override` in the profile JSON (forward-compatible:
   # cardano-profile does not emit it yet, so `or []` keeps all current
-  # profiles working). Delivered via JAVA_TOOL_OPTIONS in the start script,
+  # profiles working). Delivered via BEAN_JAVA_OPTS in the start script,
   # never via argv: a JVM launcher requires -D... before the main class,
   # while node extraArgs are appended after the `run` subcommand.
   beanJavaFlags = beanJavaOpts ++ (profile.node.bean_java_opts_override or []);
 
-  # Exported at the top of every bean producer start script: eval-time flags
-  # (shell-escaped) plus a runtime `$BEAN_JAVA_OPTS` escape hatch, so flags
-  # can be adjusted for a single run without re-entering the shell.
+  # Exported at the top of every bean producer start script. The bean
+  # launcher puts $BEAN_JAVA_OPTS on the java command line, after the JVM has
+  # read any inherited JAVA_TOOL_OPTIONS, so these flags win over it; an
+  # inherited JAVA_TOOL_OPTIONS is left untouched. Eval-time flags come first
+  # and a runtime `$BEAN_JAVA_OPTS` (set inside the shell, for a single run
+  # without re-entering it) follows, so the runtime value wins. Make's
+  # BEAN_JAVA_OPTS reaches only the eval-time list: lib.mk unsets it for the
+  # nix-shell call, so it is not applied twice. The launcher splits the value
+  # on whitespace, so a flag must not contain any.
+  beanJavaFlagEscaped = flag:
+    if builtins.match ".*[[:space:]].*" flag != null
+    then throw "bean JVM flag must not contain whitespace: ${flag}"
+    else escape [ "\\" "\"" "$" "`" ] flag;
   beanJavaPrelude = ''
     # Bean node override (NODE=bean): JVM flags for the bean node.
-    export JAVA_TOOL_OPTIONS="${concatStringsSep " " (map escapeShellArg beanJavaFlags)}''${BEAN_JAVA_OPTS:+ $BEAN_JAVA_OPTS}''${JAVA_TOOL_OPTIONS:+ $JAVA_TOOL_OPTIONS}"
+    export BEAN_JAVA_OPTS="${concatStringsSep " " (map beanJavaFlagEscaped beanJavaFlags)}''${BEAN_JAVA_OPTS:+ $BEAN_JAVA_OPTS}"
   '';
 
   ## nodeServiceConfig :: NodeSpec -> ServiceConfig
@@ -302,7 +312,7 @@ with pkgs.lib; let
           profile.node.verbatim);
 
       # GHC RTS flags are cardano-only; bean nodes get JVM flags via
-      # JAVA_TOOL_OPTIONS in the start script instead (see nodeService).
+      # BEAN_JAVA_OPTS in the start script instead (see nodeService).
       extraArgs =
         optionals (!isBean) ["+RTS" "-scardano-node.gcstats" "-RTS"]
         ++ optionals (!isBean && nodeSpec.shutdown_on_block_synced != null) [
