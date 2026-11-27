@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE LambdaCase #-}
 {-# OPTIONS_GHC -Wno-partial-fields #-}
 
 --------------------------------------------------------------------------------
@@ -21,8 +22,8 @@ module Cardano.Benchmarking.Profile.Types (
 , Node (..)
 , NodeVerbatim (..)
 
-, Generator (..)
-, Plutus (..), Redeemer (..)
+, Generator (..), SubTxs (..)
+, Plutus (..), Redeemer (..), Variants (..), ScriptSource (..), ScriptPadding (..)
 
 , Workload (..)
 , Entrypoints (..)
@@ -435,19 +436,51 @@ data Generator = Generator
   , tx_count :: Maybe Integer
   -- TODO: Not used! ???
   , add_tx_size :: Integer
+  -- | Sub-transactions each transaction carries (Dijkstra only), if any.
+  , sub_txs :: Maybe SubTxs
   }
   deriving (Eq, Show, Generic)
 
-instance Aeson.ToJSON Generator
+-- Fields that are Nothing are left out, so that `sub_txs` only shows up in
+-- the profiles that set it.
+instance Aeson.ToJSON Generator where
+  toJSON     = Aeson.genericToJSON     (Aeson.defaultOptions {Aeson.omitNothingFields = True})
+  toEncoding = Aeson.genericToEncoding (Aeson.defaultOptions {Aeson.omitNothingFields = True})
 
 instance Aeson.FromJSON Generator where
   parseJSON = Aeson.genericParseJSON
     (Aeson.defaultOptions {Aeson.rejectUnknownFields = True})
 
+-- | The sub-transactions of a transaction: how many, and the inputs and
+-- outputs of each. The JSON keys are those the tx-generator expects.
+data SubTxs = SubTxs
+  { sub_tx_count   :: Integer
+  , sub_tx_inputs  :: Integer
+  , sub_tx_outputs :: Integer
+  }
+  deriving (Eq, Show, Generic)
+
+instance Aeson.ToJSON SubTxs where
+  toJSON s =
+    Aeson.object
+      [ "count"   Aeson..= sub_tx_count s
+      , "inputs"  Aeson..= sub_tx_inputs s
+      , "outputs" Aeson..= sub_tx_outputs s
+      ]
+
+instance Aeson.FromJSON SubTxs where
+  parseJSON =
+    Aeson.withObject "SubTxs" $ \o ->
+      SubTxs
+        <$> o Aeson..: "count"
+        <*> o Aeson..: "inputs"
+        <*> o Aeson..: "outputs"
+
 data Plutus = Plutus
   { plutusType :: Maybe String -- TODO: Rename in workbench/bash to "plutus_type"
   , plutusScript :: Maybe String
   , redeemer :: Maybe Redeemer
+  , variants :: Maybe Variants
   }
   deriving (Eq, Show, Generic)
 
@@ -460,6 +493,8 @@ instance Aeson.ToJSON Plutus where
       ++
       -- TODO: Needed to replicate the old "jq" JSON output.
       ["redeemer" Aeson..= redeemer p | isJust (redeemer p)]
+      ++
+      ["variants" Aeson..= variants p | isJust (variants p)]
 
 instance Aeson.FromJSON Plutus where
   parseJSON =
@@ -468,6 +503,77 @@ instance Aeson.FromJSON Plutus where
         <$> o Aeson..:? "type"
         <*> o Aeson..:? "script"
         <*> o Aeson..:? "redeemer"
+        <*> o Aeson..:? "variants"
+
+-- | Variants of the Plutus script, with distinct hashes, for the benchmark
+-- to spend in turn: how many, the size of each in bytes (without one, as
+-- small as they can be), where the transactions spending them find the
+-- script, how many consecutive inputs are locked at one variant (without
+-- it, as many as a transaction spends), and what they are padded with
+-- (without it, the tx-generator's default). The JSON keys are those the
+-- tx-generator expects.
+data Variants = Variants
+  { variants_count   :: Integer
+  , variants_size    :: Maybe Integer
+  , variants_source  :: ScriptSource
+  , variants_group   :: Maybe Integer
+  , variants_padding :: Maybe ScriptPadding
+  }
+  deriving (Eq, Show, Generic)
+
+instance Aeson.ToJSON Variants where
+  toJSON v =
+    Aeson.object $
+      [ "count"  Aeson..= variants_count v
+      , "source" Aeson..= variants_source v
+      ]
+      ++
+      ["size" Aeson..= variants_size v | isJust (variants_size v)]
+      ++
+      ["group" Aeson..= variants_group v | isJust (variants_group v)]
+      ++
+      ["padding" Aeson..= variants_padding v | isJust (variants_padding v)]
+
+instance Aeson.FromJSON Variants where
+  parseJSON =
+    Aeson.withObject "Variants" $ \o ->
+      Variants
+        <$> o Aeson..:  "count"
+        <*> o Aeson..:? "size"
+        <*> o Aeson..:  "source"
+        <*> o Aeson..:? "group"
+        <*> o Aeson..:? "padding"
+
+-- | What the variants of a script are padded with to their size: pieces of
+-- program like compiled scripts have, or a spine of applications over error
+-- terms, two terms to decode per byte.
+data ScriptPadding = PaddingMixed | PaddingErrorSpine
+  deriving (Eq, Show, Generic)
+
+instance Aeson.ToJSON ScriptPadding where
+  toJSON PaddingMixed      = Aeson.String "mixed"
+  toJSON PaddingErrorSpine = Aeson.String "error-spine"
+
+instance Aeson.FromJSON ScriptPadding where
+  parseJSON = Aeson.withText "ScriptPadding" $ \case
+    "mixed"       -> pure PaddingMixed
+    "error-spine" -> pure PaddingErrorSpine
+    other         -> fail $ "ScriptPadding: \"mixed\" or \"error-spine\", not " ++ show other
+
+-- | Where the transactions spending outputs locked by a script find it: in
+-- their witnesses, or in a reference input.
+data ScriptSource = ScriptInWitness | ScriptByReference
+  deriving (Eq, Show, Generic)
+
+instance Aeson.ToJSON ScriptSource where
+  toJSON ScriptInWitness   = Aeson.String "witness"
+  toJSON ScriptByReference = Aeson.String "reference"
+
+instance Aeson.FromJSON ScriptSource where
+  parseJSON = Aeson.withText "ScriptSource" $ \case
+    "witness"   -> pure ScriptInWitness
+    "reference" -> pure ScriptByReference
+    other       -> fail $ "ScriptSource: \"witness\" or \"reference\", not " ++ show other
 
 data Redeemer =
     RedeemerInt

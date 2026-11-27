@@ -17,14 +17,18 @@ module Cardano.TxGenerator.Fund
     , getFundKey
     , getFundCoin
     , getFundWitness
+    , getFundReferenceInput
     )
     where
 
 import           Cardano.Api as Api
+import qualified Cardano.Api.Experimental as Exp
+import qualified Cardano.Api.Experimental.Tx as Exp (getAnyWitnessReferenceInput)
 
 import qualified Cardano.Ledger.Coin as L
 
 import           Data.Function (on)
+import           Data.Type.Equality (TestEquality (..), (:~:) (..))
 
 
 -- $Types
@@ -36,8 +40,8 @@ import           Data.Function (on)
 -- use of lenses.
 data FundInEra era = FundInEra {
     _fundTxIn       :: !TxIn
-  , _fundWitness    :: Witness WitCtxTxIn era
-  , _fundVal        :: !(TxOutValue era)
+  , _fundWitness    :: Exp.AnyWitness (ShelleyLedgerEra era)
+  , _fundVal        :: !L.Coin
   , _fundSigningKey :: !(Maybe (SigningKey PaymentKey))
   }
   deriving (Show)
@@ -68,25 +72,19 @@ getFundTxIn (Fund (InAnyCardanoEra _ a)) = _fundTxIn a
 getFundKey :: Fund -> Maybe (SigningKey PaymentKey)
 getFundKey (Fund (InAnyCardanoEra _ a)) = _fundSigningKey a
 
+-- | Funds only ever hold ada.
 getFundCoin :: Fund -> L.Coin
-getFundCoin (Fund (InAnyCardanoEra _ a)) = case _fundVal a of
-  TxOutValueByron l -> l
-  TxOutValueShelleyBased era v -> selectLovelace $ Api.fromLedgerValue era v
+getFundCoin (Fund (InAnyCardanoEra _ a)) = _fundVal a
 
 -- TODO: facilitate casting KeyWitnesses between eras -- Note [Era transitions]
 -- | The `Fund` alternative is checked against `cardanoEra`, but
 -- `getFundWitness` otherwise wraps `_fundWitness`.
-getFundWitness :: forall era. IsShelleyBasedEra era => Fund -> Witness WitCtxTxIn era
-getFundWitness fund = case (cardanoEra @era, fund) of
-  (ByronEra   , Fund (InAnyCardanoEra ByronEra    a)) -> _fundWitness a
-  (ShelleyEra , Fund (InAnyCardanoEra ShelleyEra  a)) -> _fundWitness a
-  (AllegraEra , Fund (InAnyCardanoEra AllegraEra  a)) -> _fundWitness a
-  (MaryEra    , Fund (InAnyCardanoEra MaryEra     a)) -> _fundWitness a
-  (AlonzoEra  , Fund (InAnyCardanoEra AlonzoEra   a)) -> _fundWitness a
-  (BabbageEra , Fund (InAnyCardanoEra BabbageEra  a)) -> _fundWitness a
-  (ConwayEra  , Fund (InAnyCardanoEra ConwayEra   a)) -> _fundWitness a
-  (DijkstraEra, Fund (InAnyCardanoEra DijkstraEra a)) -> _fundWitness a
-  _                                                   -> error "getFundWitness: era mismatch"
+getFundWitness :: forall era. IsCardanoEra era => Fund -> Exp.AnyWitness (ShelleyLedgerEra era)
+getFundWitness (Fund (InAnyCardanoEra fundEra a)) =
+  case testEquality (cardanoEra @era) fundEra of
+    Just Refl -> _fundWitness a
+    Nothing   -> error $ "getFundWitness: era mismatch: fund is in " ++ show fundEra
+                         ++ ", spending in " ++ show (cardanoEra @era)
 
 {-
 Note [Era transitions]
@@ -97,3 +95,7 @@ only exists in the same era as the fund.
 However, that is too constrained: this approach rules out era transitions for transactions, which is 1) a valid case
 and 2) a potential use case for benchmarking.
 -}
+
+-- | The output whose reference script spending the fund uses, if any.
+getFundReferenceInput :: Fund -> Maybe TxIn
+getFundReferenceInput (Fund (InAnyCardanoEra _ a)) = Exp.getAnyWitnessReferenceInput (_fundWitness a)

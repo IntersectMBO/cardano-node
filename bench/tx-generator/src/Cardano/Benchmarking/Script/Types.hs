@@ -26,12 +26,15 @@ things one might do with the connexion.
 module Cardano.Benchmarking.Script.Types (
           Action(..)
         , EndpointUri(..)
-        , Generator(Cycle, NtoM, OneOf, RoundRobin, SecureGenesis,
-                Sequence, Split, SplitN, Take)
-        , PayMode(PayToAddr, PayToScript)
+        , Generator(Cycle, NestedNtoM, NtoM, OneOf, PublishScripts, RoundRobin,
+                SecureGenesis, Sequence, Split, SplitN, Take)
+        , PayMode(PayToAddr, PayToScript, PayToScriptSet)
         , ProtocolParameterMode(..)
         , ProtocolParametersSource(QueryLocalNode, UseLocalProtocolFile)
-        , ScriptBudget(AutoScript, StaticScriptBudget)
+        , ScriptBudget(AutoScript, MeasuredScript, StaticScriptBudget)
+        , ScriptSetPayment(..)
+        , ScriptSetSpec(..)
+        , ScriptSource(..)
         , ScriptSpec(..)
         , SubmissionEndpoint(..)
         , SubmissionEndpointProtocol(..)
@@ -45,6 +48,7 @@ import qualified Cardano.Api.Ledger as L
 
 import           Cardano.Benchmarking.OuroborosImports (SigningKeyFile)
 import           Cardano.TxGenerator.ProtocolParameters (ProtocolParameters)
+import           Cardano.TxGenerator.ScriptVariants (ScriptSizeSpec)
 import           Cardano.TxGenerator.Setup.NixService (EndpointUri (..), NodeDescription,
                    SubmissionEndpoint (..), SubmissionEndpointProtocol (..))
 import           Cardano.TxGenerator.Types
@@ -123,6 +127,10 @@ data Action where
   -- another to pass directly and just sets a state variable for
   -- the @protoParams@ field of 'Cardano.Benchmarking.Script.Env.Env'.
   SetProtocolParameters :: ProtocolParametersSource -> Action
+  -- | 'DefineScriptSet' builds the variants of a script, see
+  -- "Cardano.TxGenerator.ScriptVariants", and keeps them in the 'Env'
+  -- under a name, for 'PublishScripts' and 'PayToScriptSet' to use.
+  DefineScriptSet    :: !String -> !ScriptSetSpec -> Action
   -- | 'LogMsg' logs its message calling
   -- 'Cardano.Benchmarking.GeneratorTx.traceDebug' i.e. via the tracer.
   LogMsg             :: !Text -> Action
@@ -150,6 +158,21 @@ data Generator where
   -- but it's difficult to tell what it's doing.
   NtoM  :: !String -> !PayMode -> !NumberOfInputsPerTx -> !NumberOfOutputsPerTx
         -> !(Maybe Int) -> Maybe String -> Generator
+  -- | 'NestedNtoM' is an 'NtoM' transaction that also carries sub-transactions,
+  -- which needs the Dijkstra era. The top-level transaction spends its N
+  -- inputs into M outputs, pays the fee for the whole transaction and
+  -- carries the metadata. Each sub-transaction spends its own inputs into its
+  -- own outputs, balanced on its own. All the inputs come from the same
+  -- wallet, and all the outputs are paid according to the same 'PayMode'.
+  NestedNtoM :: !String -> !PayMode -> !NumberOfInputsPerTx -> !NumberOfOutputsPerTx
+        -> !(Maybe Int) -> Maybe String -> !SubTxShape -> Generator
+  -- | 'PublishScripts' publishes the variants of a script set as reference
+  -- scripts: each variant in an output of its own, as many outputs per
+  -- transaction as fit, at the address of the named key, which nothing spends
+  -- from. Every transaction spends one fund of the source wallet and pays its
+  -- change according to the 'PayMode'. The script set records each variant's
+  -- reference output.
+  PublishScripts :: !String -> !String -> !String -> !PayMode -> Generator
   -- | 'Sequence' represents sequentially issuing a series in the form
   -- of a list of transaction series represented by 'Generator' itself,
   -- but the nesting is done by first translating to
@@ -197,12 +220,54 @@ deriving instance Generic SubmitMode
 data PayMode where
   PayToAddr :: !String -> !String -> PayMode
   PayToScript :: !ScriptSpec -> !String -> PayMode
+  -- | 'PayToScriptSet' locks outputs at the addresses of the variants of a
+  -- script set, cycling through the variants, and stores each output in the
+  -- wallet with the witness for spending it by its own variant.
+  PayToScriptSet :: !ScriptSetPayment -> !String -> PayMode
   deriving (Show, Eq)
 deriving instance Generic PayMode
+
+-- | Where the transaction spending a script output finds the script.
+data ScriptSource
+  = ScriptInWitness
+    -- ^ The script is included in the transaction's witnesses.
+  | ScriptByReference
+    -- ^ The transaction references the output that a 'PublishScripts' step
+    -- created for the script.
+  deriving (Show, Eq)
+deriving instance Generic ScriptSource
+
+-- | How 'PayToScriptSet' locks outputs at a script set's variants.
+data ScriptSetPayment = ScriptSetPayment
+  { scriptSetName       :: !String
+  , scriptSetBudget     :: !ScriptBudget
+    -- ^ Calibrated on the first variant; all variants cost the same.
+  , scriptSetPlutusType :: !TxGenPlutusType
+  , scriptSetSource     :: !ScriptSource
+  , scriptSetGroupSize  :: !Int
+    -- ^ The number of consecutive outputs locked at one variant: the number
+    -- of inputs per transaction, for every transaction to spend one variant.
+  }
+  deriving (Show, Eq)
+deriving instance Generic ScriptSetPayment
+
+-- | The variants of one script that 'DefineScriptSet' builds.
+data ScriptSetSpec = ScriptSetSpec
+  { scriptSetBase  :: !(Either String FilePath)
+    -- ^ The script, as for 'ScriptSpec': a bundled script's name, or a file.
+  , scriptSetCount :: !Int
+  , scriptSetSize  :: !ScriptSizeSpec
+  }
+  deriving (Show, Eq)
+deriving instance Generic ScriptSetSpec
 
 data ScriptBudget where
   StaticScriptBudget :: !FilePath -> !FilePath -> !ExecutionUnits -> !Bool -> ScriptBudget
   AutoScript :: !FilePath -> !Int -> ScriptBudget
+  -- | 'MeasuredScript' spends with the redeemer in the file as it is, at the
+  -- execution units of one run of the script, for transactions spending the
+  -- given number of inputs locked by it.
+  MeasuredScript :: !FilePath -> !Int -> ScriptBudget
   deriving (Show, Eq)
 deriving instance Generic ScriptBudget
 

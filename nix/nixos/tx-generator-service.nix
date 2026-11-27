@@ -25,7 +25,7 @@ let
           ## going to be deployed.
           redeemer = cfg.plutusRedeemerFile or null;
           datum    = cfg.plutusDatumFile or null;
-          inherit (cfg.plutus) limitExecutionMem limitExecutionSteps;
+          inherit (cfg.plutus) limitExecutionMem limitExecutionSteps variants;
         };
       targetNodes =
         if endpointConfigured
@@ -46,6 +46,7 @@ let
         nodeConfigFile
         outputs_per_tx
         sigKey
+        sub_txs
         submissionEndpointProtocol
         submissionEndpointURI
         tps
@@ -97,6 +98,7 @@ in pkgs.commonLib.defServiceModule
           limitExecutionSteps = mayOpt int   "Limit for saturation tuning: steps;  null means per-Tx limit from ProtocolParameters.";
           datum               = mayOpt attrs "Plutus script datum.";
           redeemer            = mayOpt attrs "Plutus script redeemer.";
+          variants            = mayOpt attrs "Variants of the script with distinct hashes, for the benchmark to spend in turn: { count, size, source, group, padding }, where size is in bytes (null for as small as can be), source is \"reference\" or \"witness\", group is the number of consecutive inputs locked at one variant, and padding is \"mixed\" (default) or \"error-spine\"; null for the script itself.";
         };
 
         # Overrides the usage of Nix Store paths by default.
@@ -109,11 +111,15 @@ in pkgs.commonLib.defServiceModule
         add_tx_size     = opt int 100        "Extra Tx payload, in bytes.";
         inputs_per_tx   = opt int 4          "Inputs per Tx.";
         outputs_per_tx  = opt int 4          "Outputs per Tx.";
+        sub_txs         = mayOpt attrs       "Sub-transactions per Tx (Dijkstra only): { count, inputs, outputs }; null for none.";
         tx_fee          = opt int 10000000   "Tx fee, in Lovelace.";
         tps             = opt (either float int) 100
                                              "Strength of generated load, in TPS.";
         init_cooldown   = opt int 50         "Delay between init and main submissions.";
-        min_utxo_value  = opt int 10000000   "Minimum value allowed per UTxO entry";
+        ## Above the ledger's minimum (about 1 ADA at mainnet parameters) for
+        ## every output the generator creates, script outputs with a datum hash
+        ## included.
+        min_utxo_value  = opt int 2000000    "Minimum value allowed per UTxO entry";
         keepalive       = opt int 30         "Default timeout for keep-alive mini-protocol";
 
         runScriptFn     = opt (functionTo attrs) defaultGeneratorScriptFn
