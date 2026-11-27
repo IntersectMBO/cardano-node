@@ -1,0 +1,5 @@
+pr: 6683
+project: cardano-testnet
+kind:
+  - compatible
+description: "The cardano-testnet library exposes two new functions from Testnet.Signal: pauseProcess suspends a running process with SIGSTOP and returns once it has stopped, and resumeProcess continues it with SIGCONT. On Windows both throw an IOError. The cardano-testnet test suite also gains end-to-end tests for the UTxO RPC mempool methods against a running testnet: ReadMempool returns the pending transactions, WatchMempool streams mempool changes as they happen, and WaitForTx waits until a submitted transaction is confirmed, including the error returned for an invalid transaction reference. No existing function changes."
